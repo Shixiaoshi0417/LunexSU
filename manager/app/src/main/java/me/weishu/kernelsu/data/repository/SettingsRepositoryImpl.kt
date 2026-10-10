@@ -9,10 +9,13 @@ import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 import com.topjohnwu.superuser.ShellUtils
 import me.weishu.kernelsu.Natives
+import me.weishu.kernelsu.data.model.HomeLayoutStyle
 import me.weishu.kernelsu.ksuApp
 import me.weishu.kernelsu.magica.BootCompletedReceiver
 import me.weishu.kernelsu.ui.UiMode
 import me.weishu.kernelsu.ui.screen.modulerepo.RepoSort
+import me.weishu.kernelsu.ui.theme.ColorContrast
+import me.weishu.kernelsu.ui.theme.ThemePreferenceMigration
 import me.weishu.kernelsu.ui.util.execKsud
 import me.weishu.kernelsu.ui.util.getFeaturePersistValue
 import me.weishu.kernelsu.ui.util.getFeatureValue
@@ -69,6 +72,30 @@ class SettingsRepositoryImpl : SettingsRepository {
     override var colorSpec: String
         get() = prefs.getString("color_spec", ColorSpec.SpecVersion.SPEC_2025.name) ?: ColorSpec.SpecVersion.SPEC_2025.name
         set(value) = prefs.edit { putString("color_spec", value) }
+
+    override var amoledBlack: Boolean
+        get() = prefs.getBoolean("amoled_black", false)
+        set(value) = prefs.edit { putBoolean("amoled_black", value) }
+
+    override var useDynamicColor: Boolean
+        get() = prefs.getBoolean("use_dynamic_color", ThemePreferenceMigration.defaultUseDynamicColor(keyColor))
+        set(value) = prefs.edit { putBoolean("use_dynamic_color", value) }
+
+    override var colorContrast: String
+        get() = prefs.getString("color_contrast", ColorContrast.STANDARD.name) ?: ColorContrast.STANDARD.name
+        set(value) = prefs.edit { putString("color_contrast", value) }
+
+    override var homeLayoutStyle: String
+        get() = HomeLayoutStyle.fromValue(prefs.getString("home_layout_style", null))
+        set(value) = prefs.edit { putString("home_layout_style", HomeLayoutStyle.fromValue(value)) }
+
+    override var statsTopLayout: String
+        get() = HomeLayoutStyle.statsTopFromValue(prefs.getString("stats_top_layout", null))
+        set(value) = prefs.edit { putString("stats_top_layout", HomeLayoutStyle.statsTopFromValue(value)) }
+
+    override var homeHideWorkingMode: Boolean
+        get() = prefs.getBoolean("home_hide_working_mode", false)
+        set(value) = prefs.edit { putBoolean("home_hide_working_mode", value) }
 
     override var enablePredictiveBack: Boolean
         get() = prefs.getBoolean("enable_predictive_back", false)

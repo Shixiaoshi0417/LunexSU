@@ -1,7 +1,6 @@
 package me.weishu.kernelsu.ui.component.material
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material3.Card
@@ -14,7 +13,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 
+/**
+ * A rounded tonal card. A clickable card answers a press with the shared scale-and-haptic feedback
+ * instead of a ripple (the press model adapted from FolkSU, GPL-3.0).
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TonalCard(
@@ -28,38 +33,36 @@ fun TonalCard(
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     content: @Composable () -> Unit,
 ) {
+    val haptic = LocalHapticFeedback.current
     val colors = CardDefaults.cardColors(
         containerColor = containerColor,
         contentColor = contentColor,
     )
-    when {
-        onLongClick != null -> Card(
-            modifier = modifier
-                .clip(shape)
-                .combinedClickable(
-                    enabled = enabled,
-                    onClick = onClick ?: {},
-                    onLongClick = onLongClick,
-                    interactionSource = interactionSource,
-                    indication = LocalIndication.current,
-                ),
-            colors = colors,
-            shape = shape,
-        ) { content() }
-
-        onClick != null -> Card(
-            onClick = onClick,
-            modifier = modifier,
-            enabled = enabled,
-            colors = colors,
-            shape = shape,
-            interactionSource = interactionSource,
-        ) { content() }
-
-        else -> Card(
-            modifier = modifier,
-            colors = colors,
-            shape = shape,
-        ) { content() }
+    val clickModifier = if (onClick != null || onLongClick != null) {
+        Modifier
+            .clip(shape)
+            .folkPressScale(interactionSource, enabled)
+            .combinedClickable(
+                enabled = enabled,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClick?.invoke()
+                },
+                onLongClick = onLongClick?.let {
+                    {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        it()
+                    }
+                },
+                interactionSource = interactionSource,
+                indication = null,
+            )
+    } else {
+        Modifier
     }
+    Card(
+        modifier = modifier.then(clickModifier),
+        colors = colors,
+        shape = shape,
+    ) { content() }
 }

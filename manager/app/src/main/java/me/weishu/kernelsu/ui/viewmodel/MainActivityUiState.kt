@@ -2,6 +2,7 @@ package me.weishu.kernelsu.ui.viewmodel
 
 import androidx.compose.runtime.Immutable
 import me.weishu.kernelsu.ui.UiMode
+import me.weishu.kernelsu.ui.screen.home.HomeLayoutOptions
 import me.weishu.kernelsu.ui.theme.AppSettings
 
 @Immutable
@@ -16,4 +17,5 @@ data class MainActivityUiState(
     val pagerInterceptionMode: Int,
     val moduleDescriptionMaxLines: Int = 4,
     val uiMode: UiMode,
+    val homeLayout: HomeLayoutOptions = HomeLayoutOptions(),
 )

@@ -43,6 +43,9 @@ data class HomeUiState(
     val canInstallKernelUpdate: Boolean
         get() = lkmMode == true && !isLateLoadMode
 
+    val showKernelUpdateAction: Boolean
+        get() = canInstallKernelUpdate && (requiresNewKernel || showLkmUpdate)
+
     val showCustomLkmBadge: Boolean
         get() = lkmMode == true && !isLkmBundled
 
@@ -57,6 +60,10 @@ data class HomeUiState(
 
     val hasUpdate: Boolean
         get() = latestVersionInfo.versionCode > currentManagerVersionCode
+
+    /** Same condition as [me.weishu.kernelsu.Natives.isFullFeatured], read from this snapshot. */
+    val isFullFeatured: Boolean
+        get() = isManager && kernelUAPIVersion == managerUAPIVersion && isRootAvailable
 }
 
 @Immutable
@@ -64,4 +71,6 @@ data class HomeActions(
     val onInstallClick: () -> Unit,
     val onOpenUrl: (String) -> Unit,
     val onJailbreakClick: () -> Unit = {},
+    val onOpenSuperUser: () -> Unit = {},
+    val onOpenModule: () -> Unit = {},
 )

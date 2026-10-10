@@ -3,7 +3,9 @@ package me.weishu.kernelsu.ui.screen.settings
 import androidx.compose.runtime.Immutable
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
+import me.weishu.kernelsu.data.model.HomeLayoutStyle
 import me.weishu.kernelsu.ui.UiMode
+import me.weishu.kernelsu.ui.theme.ColorContrast
 
 @Immutable
 data class SettingsUiState(
@@ -15,6 +17,12 @@ data class SettingsUiState(
     val keyColor: Int = 0,
     val colorStyle: String = PaletteStyle.TonalSpot.name,
     val colorSpec: String = ColorSpec.SpecVersion.SPEC_2025.name,
+    val amoledBlack: Boolean = false,
+    val useDynamicColor: Boolean = true,
+    val colorContrast: String = ColorContrast.STANDARD.name,
+    val homeLayoutStyle: String = HomeLayoutStyle.DEFAULT,
+    val statsTopLayout: String = HomeLayoutStyle.STATS_TOP_STATUS,
+    val homeHideWorkingMode: Boolean = false,
     val enablePredictiveBack: Boolean = false,
     val enableSwipeDismiss: Boolean = true,
     val pagerInterceptionMode: Int = 1,

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 import me.weishu.kernelsu.ui.screen.settings.SettingsUiState
+import me.weishu.kernelsu.ui.theme.ColorContrast
 import me.weishu.kernelsu.ui.theme.ColorMode
 
 @Immutable
@@ -12,6 +13,7 @@ data class ColorPaletteUiState(
     val currentColorMode: ColorMode,
     val currentPaletteStyle: PaletteStyle,
     val currentColorSpec: ColorSpec.SpecVersion,
+    val currentContrast: ColorContrast = ColorContrast.STANDARD,
 )
 
 @Immutable
@@ -32,4 +34,13 @@ data class ColorPaletteScreenActions(
     val onSetPagerInterceptionMode: (Int) -> Unit,
     val onSetPageScale: (Float) -> Unit,
     val onSetModuleDescriptionMaxLines: (Int) -> Unit,
+    val onSelectKeyColor: (Int) -> Unit = {},
+    val onResetKeyColor: () -> Unit = {},
+    val onSetUseDynamicColor: (Boolean) -> Unit = {},
+    val onSetAmoledBlack: (Boolean) -> Unit = {},
+    val onSetColorContrast: (ColorContrast) -> Unit = {},
+    val onSetHomeLayoutStyle: (String) -> Unit = {},
+    val onSetStatsTopLayout: (String) -> Unit = {},
+    val onSetHomeHideWorkingMode: (Boolean) -> Unit = {},
+    val onOpenFont: () -> Unit = {},
 )

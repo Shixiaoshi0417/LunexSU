@@ -38,8 +38,10 @@ import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.BlurOn
 import androidx.compose.material.icons.rounded.CallToAction
 import androidx.compose.material.icons.rounded.Colorize
+import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.DesignServices
+import androidx.compose.material.icons.rounded.FontDownload
 import androidx.compose.material.icons.rounded.Pin
 import androidx.compose.material.icons.rounded.Style
 import androidx.compose.material.icons.rounded.Wallpaper
@@ -283,6 +285,40 @@ fun ColorPaletteScreenMiuix(
                                 }
                             }
                         }
+                    }
+
+                    Card(
+                        modifier = Modifier
+                            .padding(top = 12.dp)
+                            .fillMaxWidth(),
+                    ) {
+                        SwitchPreference(
+                            title = stringResource(id = R.string.settings_amoled),
+                            summary = stringResource(id = R.string.settings_amoled_summary),
+                            startAction = {
+                                Icon(
+                                    Icons.Rounded.DarkMode,
+                                    modifier = Modifier.padding(end = 6.dp),
+                                    contentDescription = stringResource(id = R.string.settings_amoled),
+                                    tint = colorScheme.onBackground
+                                )
+                            },
+                            checked = uiState.amoledBlack,
+                            onCheckedChange = actions.onSetAmoledBlack,
+                        )
+                        ArrowPreference(
+                            title = stringResource(id = R.string.font_title),
+                            summary = stringResource(id = R.string.settings_font_summary),
+                            startAction = {
+                                Icon(
+                                    Icons.Rounded.FontDownload,
+                                    modifier = Modifier.padding(end = 6.dp),
+                                    contentDescription = stringResource(id = R.string.font_title),
+                                    tint = colorScheme.onBackground
+                                )
+                            },
+                            onClick = actions.onOpenFont,
+                        )
                     }
 
                     Card(

@@ -25,6 +25,28 @@ fun ColorScheme.amoledBackground(amoled: Boolean): ColorScheme =
         surfaceContainerHighest = Color.Black,
     )
 
+/**
+ * Pins the error family to the fixed Material 3 error palette.
+ *
+ * MaterialKolor derives error from the seed, so the hue drifts with the key color: the same warning
+ * card could render soft on one seed and loud on another. Attention and destructive states must stay
+ * recognisable, so the semantic error role stays fixed whatever the seed does.
+ *
+ * Adapted from FolkSU (https://github.com/LyraVoid/FolkSU), GPL-3.0.
+ */
+fun ColorScheme.withSemanticError(isDark: Boolean): ColorScheme = copy(
+    error = if (isDark) Color(0xFFFFB4AB) else Color(0xFFBA1A1A),
+    onError = if (isDark) Color(0xFF690005) else Color(0xFFFFFFFF),
+    errorContainer = if (isDark) Color(0xFF93000A) else Color(0xFFFFDAD6),
+    onErrorContainer = if (isDark) Color(0xFFFFDAD6) else Color(0xFF410002),
+)
+
+/**
+ * Builds the app color scheme.
+ *
+ * [seedColor] set to [Color.Unspecified] means the system Monet palette: its primary color seeds
+ * the generated scheme so the palette style and spec still apply on top of the wallpaper colors.
+ */
 @Composable
 fun rememberKernelSUColorScheme(
     seedColor: Color,
@@ -32,6 +54,7 @@ fun rememberKernelSUColorScheme(
     isAmoled: Boolean,
     paletteStyle: PaletteStyle,
     colorSpec: ColorSpec.SpecVersion,
+    contrastLevel: Double = 0.0,
 ): ColorScheme {
     val context = LocalContext.current
     val seed = if (seedColor == Color.Unspecified) {
@@ -45,7 +68,8 @@ fun rememberKernelSUColorScheme(
         isAmoled = isAmoled,
         style = paletteStyle,
         specVersion = colorSpec.effectiveFor(paletteStyle),
-    ).amoledBackground(isAmoled)
+        contrastLevel = contrastLevel,
+    ).withSemanticError(isDark).amoledBackground(isAmoled)
 }
 
 @Composable

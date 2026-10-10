@@ -13,6 +13,8 @@ import me.weishu.kernelsu.KernelSUApplication
 import me.weishu.kernelsu.ui.LocalUiMode
 import me.weishu.kernelsu.ui.UiMode
 import me.weishu.kernelsu.ui.navigation3.LocalNavigator
+import me.weishu.kernelsu.ui.navigation3.Route
+import me.weishu.kernelsu.ui.theme.ColorContrast
 import me.weishu.kernelsu.ui.theme.ColorMode
 import me.weishu.kernelsu.ui.viewmodel.SettingsViewModel
 
@@ -38,6 +40,7 @@ fun ColorPaletteScreen() {
         currentColorMode = ColorMode.fromValue(uiState.themeMode),
         currentPaletteStyle = currentPaletteStyle,
         currentColorSpec = currentColorSpec,
+        currentContrast = ColorContrast.fromName(uiState.colorContrast),
     )
     val actions = ColorPaletteScreenActions(
         onBack = dropUnlessResumed { navigator.pop() },
@@ -60,6 +63,15 @@ fun ColorPaletteScreen() {
         onSetPagerInterceptionMode = viewModel::setPagerInterceptionMode,
         onSetPageScale = viewModel::setPageScale,
         onSetModuleDescriptionMaxLines = viewModel::setModuleDescriptionMaxLines,
+        onSelectKeyColor = viewModel::selectKeyColor,
+        onResetKeyColor = viewModel::resetKeyColor,
+        onSetUseDynamicColor = viewModel::setUseDynamicColor,
+        onSetAmoledBlack = viewModel::setAmoledBlack,
+        onSetColorContrast = viewModel::setColorContrast,
+        onSetHomeLayoutStyle = viewModel::setHomeLayoutStyle,
+        onSetStatsTopLayout = viewModel::setStatsTopLayout,
+        onSetHomeHideWorkingMode = viewModel::setHomeHideWorkingMode,
+        onOpenFont = dropUnlessResumed { navigator.push(Route.Font) },
     )
 
     when (LocalUiMode.current) {

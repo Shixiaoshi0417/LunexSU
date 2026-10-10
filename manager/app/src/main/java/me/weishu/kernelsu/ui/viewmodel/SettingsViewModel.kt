@@ -17,7 +17,9 @@ import me.weishu.kernelsu.data.repository.SettingsRepository
 import me.weishu.kernelsu.data.repository.SettingsRepositoryImpl
 import me.weishu.kernelsu.ksuApp
 import me.weishu.kernelsu.ui.screen.settings.SettingsUiState
+import me.weishu.kernelsu.ui.theme.ColorContrast
 import me.weishu.kernelsu.ui.theme.ColorMode
+import me.weishu.kernelsu.ui.theme.ThemeController
 
 class SettingsViewModel(
     private val repo: SettingsRepository = SettingsRepositoryImpl()
@@ -32,6 +34,8 @@ class SettingsViewModel(
 
     fun refresh() {
         viewModelScope.launch {
+            // Applies the legacy AMOLED color-mode migration before the values are read.
+            ThemeController.getAppSettings(repo)
             val checkUpdate = repo.checkUpdate
             val checkModuleUpdate = repo.checkModuleUpdate
             val themeMode = repo.themeMode
@@ -49,6 +53,12 @@ class SettingsViewModel(
             val enableWebDebugging = repo.enableWebDebugging
             val colorStyle = repo.colorStyle
             val colorSpec = repo.colorSpec
+            val amoledBlack = repo.amoledBlack
+            val useDynamicColor = repo.useDynamicColor
+            val colorContrast = repo.colorContrast
+            val homeLayoutStyle = repo.homeLayoutStyle
+            val statsTopLayout = repo.statsTopLayout
+            val homeHideWorkingMode = repo.homeHideWorkingMode
             val isLkmMode = repo.isLkmMode()
 
             // Async loading for natives/features
@@ -106,6 +116,12 @@ class SettingsViewModel(
                     enableWebDebugging = enableWebDebugging,
                     colorStyle = colorStyle,
                     colorSpec = colorSpec,
+                    amoledBlack = amoledBlack,
+                    useDynamicColor = useDynamicColor,
+                    colorContrast = colorContrast,
+                    homeLayoutStyle = homeLayoutStyle,
+                    statsTopLayout = statsTopLayout,
+                    homeHideWorkingMode = homeHideWorkingMode,
                     suCompatStatus = suCompatStatus,
                     suCompatMode = suCompatMode,
                     isSuEnabled = isSuEnabled,
@@ -199,6 +215,50 @@ class SettingsViewModel(
     fun setKeyColor(color: Int) {
         repo.keyColor = color
         _uiState.update { it.copy(keyColor = color) }
+    }
+
+    /** Material: picking a key color turns Monet off so the picked color is what the app shows. */
+    fun selectKeyColor(color: Int) {
+        repo.keyColor = color
+        repo.useDynamicColor = false
+        _uiState.update { it.copy(keyColor = color, useDynamicColor = false) }
+    }
+
+    /** Clears the custom key color and returns to the system Monet palette. */
+    fun resetKeyColor() {
+        repo.keyColor = 0
+        repo.useDynamicColor = true
+        _uiState.update { it.copy(keyColor = 0, useDynamicColor = true) }
+    }
+
+    fun setUseDynamicColor(enabled: Boolean) {
+        repo.useDynamicColor = enabled
+        _uiState.update { it.copy(useDynamicColor = enabled) }
+    }
+
+    fun setAmoledBlack(enabled: Boolean) {
+        repo.amoledBlack = enabled
+        _uiState.update { it.copy(amoledBlack = enabled) }
+    }
+
+    fun setColorContrast(contrast: ColorContrast) {
+        repo.colorContrast = contrast.name
+        _uiState.update { it.copy(colorContrast = contrast.name) }
+    }
+
+    fun setHomeLayoutStyle(style: String) {
+        repo.homeLayoutStyle = style
+        _uiState.update { it.copy(homeLayoutStyle = repo.homeLayoutStyle) }
+    }
+
+    fun setStatsTopLayout(layout: String) {
+        repo.statsTopLayout = layout
+        _uiState.update { it.copy(statsTopLayout = repo.statsTopLayout) }
+    }
+
+    fun setHomeHideWorkingMode(hidden: Boolean) {
+        repo.homeHideWorkingMode = hidden
+        _uiState.update { it.copy(homeHideWorkingMode = hidden) }
     }
 
     fun setColorStyle(style: String) {

@@ -54,7 +54,7 @@ class WebUIActivity : ComponentActivity() {
 
             DisposableEffect(prefs) {
                 val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-                    if (key in listOf("color_mode", "key_color", "color_style", "color_spec")) {
+                    if (key in listOf("color_mode", "key_color", "color_style", "color_spec", "miuix_monet", "amoled_black", "use_dynamic_color", "color_contrast")) {
                         appSettings = ThemeController.getAppSettings()
                     } else if (key == "ui_mode") {
                         uiModeValue = settingsRepo.uiMode

@@ -11,6 +11,7 @@ import me.weishu.kernelsu.data.repository.SettingsRepository
 import me.weishu.kernelsu.data.repository.SettingsRepositoryImpl
 import me.weishu.kernelsu.ksuApp
 import me.weishu.kernelsu.ui.UiMode
+import me.weishu.kernelsu.ui.screen.home.HomeLayoutOptions
 import me.weishu.kernelsu.ui.theme.ThemeController
 
 class MainActivityViewModel(
@@ -54,6 +55,11 @@ class MainActivityViewModel(
             pagerInterceptionMode = settingRepo.pagerInterceptionMode,
             moduleDescriptionMaxLines = settingRepo.moduleDescriptionMaxLines,
             uiMode = UiMode.fromValue(settingRepo.uiMode),
+            homeLayout = HomeLayoutOptions(
+                style = settingRepo.homeLayoutStyle,
+                statsTopLayout = settingRepo.statsTopLayout,
+                hideWorkingMode = settingRepo.homeHideWorkingMode,
+            ),
         )
     }
 
@@ -63,6 +69,13 @@ class MainActivityViewModel(
             "key_color",
             "color_style",
             "color_spec",
+            "miuix_monet",
+            "amoled_black",
+            "use_dynamic_color",
+            "color_contrast",
+            "home_layout_style",
+            "stats_top_layout",
+            "home_hide_working_mode",
             "page_scale",
             "module_description_max_lines",
             "enable_blur",

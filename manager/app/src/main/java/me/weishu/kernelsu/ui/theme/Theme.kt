@@ -4,6 +4,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 import me.weishu.kernelsu.data.repository.SettingsRepository
@@ -18,6 +19,8 @@ enum class ColorMode(val value: Int) {
     MONET_SYSTEM(3),
     MONET_LIGHT(4),
     MONET_DARK(5),
+
+    /** Legacy value: AMOLED is now a separate switch, see [ThemePreferenceMigration]. */
     DARK_AMOLED(6);
 
     companion object {
@@ -28,6 +31,14 @@ enum class ColorMode(val value: Int) {
     val isDark: Boolean get() = value == 2 || value == 5 || value == 6
     val isAmoled: Boolean get() = value == 6
     val isMonet: Boolean get() = value >= 3
+
+    /** The light/dark/system choice without the MIUIX Monet flag: 0 system, 1 light, 2 dark. */
+    val baseIndex: Int
+        get() = when (this) {
+            SYSTEM, MONET_SYSTEM -> 0
+            LIGHT, MONET_LIGHT -> 1
+            DARK, MONET_DARK, DARK_AMOLED -> 2
+        }
 
     fun toNonMonetMode(): Int = when (this) {
         MONET_SYSTEM -> 0
@@ -44,11 +55,30 @@ enum class ColorMode(val value: Int) {
     }
 }
 
+/** The contrast level of the generated scheme, persisted by name. */
+enum class ColorContrast(val level: Double) {
+    STANDARD(0.0),
+    MEDIUM(0.5),
+    HIGH(1.0);
+
+    companion object {
+        fun fromName(name: String?): ColorContrast = entries.firstOrNull { it.name == name } ?: STANDARD
+    }
+}
+
+/** The seed used when Monet is off and no key color was picked. */
+val DefaultKeyColor = Color(0xFF6750A4)
+
 data class AppSettings(
     val colorMode: ColorMode,
     val keyColor: Int,
     val paletteStyle: PaletteStyle,
     val colorSpec: ColorSpec.SpecVersion,
+    /** Material: seed the palette from the system wallpaper colors instead of [keyColor]. */
+    val useDynamicColor: Boolean = keyColor == 0,
+    /** Pure black surfaces, applied whenever the effective theme is dark. */
+    val amoled: Boolean = colorMode.isAmoled,
+    val contrast: ColorContrast = ColorContrast.STANDARD,
 )
 
 val PaletteStyle.supportsSpec2025: Boolean
@@ -64,10 +94,28 @@ fun ColorSpec.SpecVersion.effectiveFor(style: PaletteStyle): ColorSpec.SpecVersi
         this
     }
 
+object ThemePreferenceMigration {
+    /**
+     * Older builds stored AMOLED as its own color mode (dark only). It is now a switch on top of any
+     * dark theme, so the legacy mode splits into plain dark plus the switch.
+     */
+    fun splitAmoled(themeMode: Int, amoled: Boolean): Pair<Int, Boolean> =
+        if (themeMode == ColorMode.DARK_AMOLED.value) ColorMode.DARK.value to true else themeMode to amoled
+
+    /** Monet is on by default only for users who never picked a key color. */
+    fun defaultUseDynamicColor(keyColor: Int): Boolean = keyColor == 0
+}
+
 object ThemeController {
     fun getAppSettings(repo: SettingsRepository = SettingsRepositoryImpl()): AppSettings {
+        val (storedMode, storedAmoled) = ThemePreferenceMigration.splitAmoled(repo.themeMode, repo.amoledBlack)
+        if (storedMode != repo.themeMode) {
+            repo.amoledBlack = storedAmoled
+            repo.themeMode = storedMode
+        }
+
         val uiMode = repo.uiMode
-        var colorModeValue = repo.themeMode
+        var colorModeValue = storedMode
 
         if (uiMode == "miuix") {
             val miuixMonet = repo.miuixMonet
@@ -96,7 +144,15 @@ object ThemeController {
             ColorSpec.SpecVersion.SPEC_2025
         }
 
-        return AppSettings(colorMode, keyColor, paletteStyle, colorSpec)
+        return AppSettings(
+            colorMode = colorMode,
+            keyColor = keyColor,
+            paletteStyle = paletteStyle,
+            colorSpec = colorSpec,
+            useDynamicColor = repo.useDynamicColor,
+            amoled = storedAmoled,
+            contrast = ColorContrast.fromName(repo.colorContrast),
+        )
     }
 }
 

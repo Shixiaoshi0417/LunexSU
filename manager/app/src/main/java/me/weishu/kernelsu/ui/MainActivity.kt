@@ -73,7 +73,9 @@ import me.weishu.kernelsu.ui.screen.appprofile.AppProfileScreen
 import me.weishu.kernelsu.ui.screen.colorpalette.ColorPaletteScreen
 import me.weishu.kernelsu.ui.screen.executemoduleaction.ExecuteModuleActionScreen
 import me.weishu.kernelsu.ui.screen.flash.FlashScreen
+import me.weishu.kernelsu.ui.screen.font.FontScreen
 import me.weishu.kernelsu.ui.screen.home.HomePager
+import me.weishu.kernelsu.ui.screen.home.LocalHomeLayoutOptions
 import me.weishu.kernelsu.ui.screen.install.InstallScreen
 import me.weishu.kernelsu.ui.screen.module.ModulePager
 import me.weishu.kernelsu.ui.screen.modulerepo.ModuleRepoDetailScreen
@@ -172,6 +174,7 @@ class MainActivity : ComponentActivity() {
                 LocalEnableNavigationBadge provides uiState.enableNavigationBadge,
                 LocalModuleDescriptionMaxLines provides uiState.moduleDescriptionMaxLines,
                 LocalUiMode provides uiMode,
+                LocalHomeLayoutOptions provides uiState.homeLayout,
             ) {
                 KernelSUTheme(appSettings = appSettings, uiMode = uiMode) {
                     IntentDispatcher(intentChannel = intentChannel)
@@ -215,6 +218,7 @@ class MainActivity : ComponentActivity() {
                             entry<Route.About>(swipeDismiss = swipeDismiss) { AboutScreen() }
                             entry<Route.Sulog>(swipeDismiss = swipeDismiss) { SulogScreen() }
                             entry<Route.ColorPalette>(swipeDismiss = swipeDismiss) { ColorPaletteScreen() }
+                            entry<Route.Font>(swipeDismiss = swipeDismiss) { FontScreen() }
                             entry<Route.AppProfileTemplate>(swipeDismiss = swipeDismiss) { AppProfileTemplateScreen() }
                             entry<Route.TemplateEditor>(swipeDismiss = swipeDismiss) { key -> TemplateEditorScreen(key.template, key.readOnly) }
                             entry<Route.AppProfile>(swipeDismiss = swipeDismiss) { key -> AppProfileScreen(key.uid) }
@@ -327,16 +331,18 @@ fun MainScreen(
         startupPreloadStarted = true
     }
 
-    // Loading the app list just for a badge is too expensive; read the kernel allowlist instead.
+    // Loading the app list just for a count is too expensive; read the kernel allowlist instead.
+    // The home layouts show it too, so it is read whenever the kernel is usable, not only for badges.
     var superuserCount by remember { mutableIntStateOf(0) }
-    LaunchedEffect(badgeEnabled, grantedUidCount) {
-        superuserCount = if (badgeEnabled) withContext(Dispatchers.IO) { getSuperuserCount() } else 0
+    LaunchedEffect(isFullFeatured, grantedUidCount) {
+        superuserCount = if (isFullFeatured) withContext(Dispatchers.IO) { getSuperuserCount() } else 0
     }
+    val moduleEnabledCount = moduleUiState.modules.count { it.enabled }
 
     val navigationBadge = if (badgeEnabled) {
         NavigationBadgeState(
             superuserCount = superuserCount,
-            moduleEnabledCount = moduleUiState.modules.count { it.enabled },
+            moduleEnabledCount = moduleEnabledCount,
             moduleUpdatableCount = moduleUiState.updateInfo.count { it.value.downloadUrl.isNotBlank() },
         )
     } else {
@@ -399,7 +405,13 @@ fun MainScreen(
                 ) { page ->
                     val isCurrentPage = page == settledPage
                     when (page) {
-                        0 -> if (contentReady || isCurrentPage) HomePager(navController, bottomInnerPadding, isCurrentPage)
+                        0 -> if (contentReady || isCurrentPage) HomePager(
+                            navigator = navController,
+                            bottomInnerPadding = bottomInnerPadding,
+                            isCurrentPage = isCurrentPage,
+                            superuserCount = superuserCount,
+                            moduleEnabledCount = moduleEnabledCount,
+                        )
                         1 -> if (contentReady || isCurrentPage) SuperUserPager(navController, bottomInnerPadding, isCurrentPage)
                         2 -> if (contentReady || isCurrentPage) ModulePager(bottomInnerPadding, isCurrentPage)
                         3 -> if (contentReady || isCurrentPage) SettingPager(navController, bottomInnerPadding, isCurrentPage)

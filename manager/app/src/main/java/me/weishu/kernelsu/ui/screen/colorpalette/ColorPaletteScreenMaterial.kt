@@ -42,20 +42,28 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.MenuOpen
-import androidx.compose.material.icons.filled.Brightness1
 import androidx.compose.material.icons.filled.Brightness3
 import androidx.compose.material.icons.filled.Brightness4
 import androidx.compose.material.icons.filled.Brightness7
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Contrast
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.DesignServices
+import androidx.compose.material.icons.rounded.FontDownload
+import androidx.compose.material.icons.automirrored.rounded.LabelOff
 import androidx.compose.material.icons.rounded.Pin
+import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Style
 import androidx.compose.material.icons.rounded.Swipe
+import androidx.compose.material.icons.rounded.ViewAgenda
 import androidx.compose.material.icons.rounded.ViewCarousel
+import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeFlexibleTopAppBar
@@ -85,16 +93,20 @@ import androidx.compose.ui.unit.dp
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 import me.weishu.kernelsu.R
+import me.weishu.kernelsu.data.model.HomeLayoutStyle
 import me.weishu.kernelsu.ui.component.bottombar.useNavigationRail
 import me.weishu.kernelsu.ui.component.material.ExpressiveScaffold
 import me.weishu.kernelsu.ui.component.material.ExpressiveToggleButton
 import me.weishu.kernelsu.ui.component.material.SegmentedColumn
 import me.weishu.kernelsu.ui.component.material.SegmentedDropdownItem
+import me.weishu.kernelsu.ui.component.material.SegmentedListItem
 import me.weishu.kernelsu.ui.component.material.SegmentedSwitchItem
 import me.weishu.kernelsu.ui.component.material.TonalCard
 import me.weishu.kernelsu.ui.component.material.TopBarBackButton
 import me.weishu.kernelsu.ui.component.material.expressiveTopAppBarColors
+import me.weishu.kernelsu.ui.theme.ColorContrast
 import me.weishu.kernelsu.ui.theme.ColorMode
+import me.weishu.kernelsu.ui.theme.DefaultKeyColor
 import me.weishu.kernelsu.ui.theme.keyColorOptions
 import me.weishu.kernelsu.ui.theme.rememberKernelSUColorScheme
 import kotlin.math.roundToInt
@@ -129,7 +141,8 @@ fun ColorPaletteScreenMaterial(
         val navBars = WindowInsets.navigationBars.asPaddingValues()
         val captionBar = WindowInsets.captionBar.asPaddingValues()
         val isDark = currentColorMode.isDark || currentColorMode.isSystem && isSystemInDarkTheme()
-        val isAmoled = currentColorMode.isAmoled
+        val isAmoled = uiState.amoledBlack && isDark
+        val contrastLevel = state.currentContrast.level
 
         LazyColumn(
             modifier = Modifier
@@ -140,11 +153,16 @@ fun ColorPaletteScreenMaterial(
         ) {
             item {
                 ThemePreviewCard(
-                    keyColor = currentKeyColor,
+                    seedColor = when {
+                        uiState.useDynamicColor -> Color.Unspecified
+                        currentKeyColor != 0 -> Color(currentKeyColor)
+                        else -> DefaultKeyColor
+                    },
                     isDark = isDark,
                     isAmoled = isAmoled,
                     paletteStyle = colorStyle,
                     colorSpec = colorSpec,
+                    contrastLevel = contrastLevel,
                 )
             }
 
@@ -157,13 +175,13 @@ fun ColorPaletteScreenMaterial(
                     item {
                         ColorButtonMaterial(
                             color = Color.Unspecified,
-                            isSelected = currentKeyColor == 0,
+                            isSelected = uiState.useDynamicColor,
                             isDark = isDark,
                             isAmoled = isAmoled,
                             paletteStyle = colorStyle,
                             colorSpec = colorSpec,
                             onClick = {
-                                actions.onSetKeyColor(0)
+                                actions.onSetUseDynamicColor(true)
                             }
                         )
                     }
@@ -171,13 +189,13 @@ fun ColorPaletteScreenMaterial(
                     items(keyColorOptions) { color ->
                         ColorButtonMaterial(
                             color = Color(color),
-                            isSelected = currentKeyColor == color,
+                            isSelected = !uiState.useDynamicColor && currentKeyColor == color,
                             isDark = isDark,
                             isAmoled = isAmoled,
                             paletteStyle = colorStyle,
                             colorSpec = colorSpec,
                             onClick = {
-                                actions.onSetKeyColor(color)
+                                actions.onSelectKeyColor(color)
                             }
                         )
                     }
@@ -189,7 +207,6 @@ fun ColorPaletteScreenMaterial(
                     listOf(ColorMode.SYSTEM) to stringResource(R.string.settings_theme_mode_system),
                     listOf(ColorMode.LIGHT) to stringResource(R.string.settings_theme_mode_light),
                     listOf(ColorMode.DARK) to stringResource(R.string.settings_theme_mode_dark),
-                    listOf(ColorMode.DARK_AMOLED) to stringResource(R.string.settings_theme_mode_dark)
                 )
 
                 Column(
@@ -205,7 +222,7 @@ fun ColorPaletteScreenMaterial(
                         ) {
                             rowOptions.forEachIndexed { index, (modes, label) ->
                                 ExpressiveToggleButton(
-                                    checked = currentColorMode in modes,
+                                    checked = currentColorMode.baseIndex == modes.first().baseIndex,
                                     onCheckedChange = {
                                         if (it) {
                                             haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
@@ -223,19 +240,54 @@ fun ColorPaletteScreenMaterial(
                                 ) {
                                     Icon(
                                         imageVector = when (modes.first()) {
-                                            ColorMode.SYSTEM -> Icons.Filled.Brightness4
                                             ColorMode.LIGHT -> Icons.Filled.Brightness7
                                             ColorMode.DARK -> Icons.Filled.Brightness3
-                                            ColorMode.DARK_AMOLED -> Icons.Filled.Brightness1
                                             else -> Icons.Filled.Brightness4
                                         },
                                         contentDescription = label
                                     )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(label, maxLines = 1)
                                 }
                             }
                         }
                     }
                 }
+            }
+
+            item {
+                SegmentedColumn(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    content = listOf(
+                        {
+                            SegmentedSwitchItem(
+                                icon = Icons.Rounded.Wallpaper,
+                                title = stringResource(R.string.settings_dynamic_color),
+                                summary = stringResource(R.string.settings_dynamic_color_summary),
+                                checked = uiState.useDynamicColor,
+                                onCheckedChange = actions.onSetUseDynamicColor,
+                            )
+                        },
+                        {
+                            SegmentedSwitchItem(
+                                icon = Icons.Rounded.DarkMode,
+                                title = stringResource(R.string.settings_amoled),
+                                summary = stringResource(R.string.settings_amoled_summary),
+                                checked = uiState.amoledBlack,
+                                onCheckedChange = actions.onSetAmoledBlack,
+                            )
+                        },
+                        {
+                            SegmentedListItem(
+                                onClick = actions.onResetKeyColor,
+                                enabled = !uiState.useDynamicColor || currentKeyColor != 0,
+                                headlineContent = { Text(stringResource(R.string.settings_key_color_reset)) },
+                                supportingContent = { Text(stringResource(R.string.settings_key_color_reset_summary)) },
+                                leadingContent = { Icon(Icons.Rounded.RestartAlt, null) },
+                            )
+                        },
+                    )
+                )
             }
 
             item {
@@ -265,8 +317,97 @@ fun ColorPaletteScreenMaterial(
                                     actions.onSetColorSpec(specs[index].name)
                                 }
                             )
+                        },
+                        {
+                            val contrasts = ColorContrast.entries
+                            SegmentedDropdownItem(
+                                icon = Icons.Rounded.Contrast,
+                                title = stringResource(R.string.settings_color_contrast),
+                                items = listOf(
+                                    stringResource(R.string.settings_color_contrast_standard),
+                                    stringResource(R.string.settings_color_contrast_medium),
+                                    stringResource(R.string.settings_color_contrast_high),
+                                ),
+                                selectedIndex = contrasts.indexOf(state.currentContrast),
+                                onItemSelected = { index ->
+                                    actions.onSetColorContrast(contrasts[index])
+                                }
+                            )
                         }
                     )
+                )
+            }
+
+            item {
+                SegmentedColumn(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    content = listOf {
+                        SegmentedListItem(
+                            onClick = actions.onOpenFont,
+                            headlineContent = { Text(stringResource(R.string.font_title)) },
+                            supportingContent = { Text(stringResource(R.string.settings_font_summary)) },
+                            leadingContent = { Icon(Icons.Rounded.FontDownload, null) },
+                            trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null) },
+                        )
+                    }
+                )
+            }
+
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = stringResource(R.string.settings_home_layout),
+                        modifier = Modifier.padding(horizontal = 28.dp),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    HomeLayoutPicker(
+                        selected = uiState.homeLayoutStyle,
+                        onSelect = actions.onSetHomeLayoutStyle,
+                    )
+                }
+            }
+
+            item {
+                SegmentedColumn(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    content = buildList {
+                        add {
+                            val styles = HomeLayoutStyle.supported
+                            SegmentedDropdownItem(
+                                icon = Icons.Rounded.Dashboard,
+                                title = stringResource(R.string.settings_home_layout),
+                                summary = stringResource(R.string.settings_home_layout_summary),
+                                items = styles.map { homeLayoutLabel(it) },
+                                selectedIndex = styles.indexOf(uiState.homeLayoutStyle).coerceAtLeast(0),
+                                onItemSelected = { index -> actions.onSetHomeLayoutStyle(styles[index]) }
+                            )
+                        }
+                        if (uiState.homeLayoutStyle == HomeLayoutStyle.STATS) {
+                            add {
+                                val tops = listOf(HomeLayoutStyle.STATS_TOP_STATUS, HomeLayoutStyle.STATS_TOP_GRID)
+                                SegmentedDropdownItem(
+                                    icon = Icons.Rounded.ViewAgenda,
+                                    title = stringResource(R.string.settings_home_stats_top),
+                                    items = listOf(
+                                        stringResource(R.string.settings_home_layout_circle),
+                                        stringResource(R.string.settings_home_layout_grid),
+                                    ),
+                                    selectedIndex = tops.indexOf(uiState.statsTopLayout).coerceAtLeast(0),
+                                    onItemSelected = { index -> actions.onSetStatsTopLayout(tops[index]) }
+                                )
+                            }
+                        }
+                        add {
+                            SegmentedSwitchItem(
+                                icon = Icons.AutoMirrored.Rounded.LabelOff,
+                                title = stringResource(R.string.settings_home_hide_working_mode),
+                                summary = stringResource(R.string.settings_home_hide_working_mode_summary),
+                                checked = uiState.homeHideWorkingMode,
+                                onCheckedChange = actions.onSetHomeHideWorkingMode,
+                            )
+                        }
+                    }
                 )
             }
 
@@ -451,11 +592,12 @@ fun ColorPaletteScreenMaterial(
 @SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
 private fun ThemePreviewCard(
-    keyColor: Int,
+    seedColor: Color,
     isDark: Boolean,
     isAmoled: Boolean = false,
     paletteStyle: PaletteStyle = PaletteStyle.TonalSpot,
     colorSpec: ColorSpec.SpecVersion = ColorSpec.SpecVersion.SPEC_2025,
+    contrastLevel: Double = 0.0,
 ) {
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.toFloat()
@@ -464,11 +606,12 @@ private fun ThemePreviewCard(
     val useRail = useNavigationRail(enableFloatingBottomBar = false)
 
     val colorScheme = rememberKernelSUColorScheme(
-        seedColor = if (keyColor == 0) Color.Unspecified else Color(keyColor),
+        seedColor = seedColor,
         isDark = isDark,
         isAmoled = isAmoled,
         paletteStyle = paletteStyle,
         colorSpec = colorSpec,
+        contrastLevel = contrastLevel,
     )
 
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
