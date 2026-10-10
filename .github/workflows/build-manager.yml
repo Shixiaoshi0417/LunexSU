@@ -62,7 +62,7 @@ jobs:
             -validity 1 \
             -storepass "$KEYSTORE_PASSWORD" \
             -keypass "$KEY_PASSWORD" \
-            -dname "CN=KernelSU PR Build" \
+            -dname "CN=LunexSU PR Build" \
             -storetype JKS \
             -keystore pr-key.jks
 
@@ -194,9 +194,9 @@ jobs:
       - name: Build with Gradle
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            ./gradlew clean assembleRelease -PIS_PR_BUILD=true
+            ./gradlew clean assembleRelease :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin -PIS_PR_BUILD=true
           else
-            ./gradlew clean assembleRelease
+            ./gradlew clean assembleRelease :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin
           fi
 
       - name: Upload build artifact

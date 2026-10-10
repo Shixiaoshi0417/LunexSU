@@ -13,6 +13,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.core.content.edit
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
 
@@ -98,10 +101,11 @@ object FontConfig {
      * Copies the picked file into private storage and switches to it. The file is rejected unless
      * the platform can parse it as a font, so an arbitrary document cannot be "applied".
      */
-    fun importFont(context: Context, uri: Uri, token: Long): Boolean {
+    suspend fun importFont(context: Context, uri: Uri, token: Long): Boolean {
         ensureLoaded(context)
         val newFilename = "$FILE_PREFIX${UUID.randomUUID()}.ttf"
         val destFile = File(context.filesDir, newFilename)
+        var applied = false
         return try {
             val copied = context.contentResolver.openInputStream(uri)?.use { input ->
                 destFile.outputStream().use { output -> input.copyTo(output) }
@@ -111,19 +115,23 @@ object FontConfig {
                 destFile.delete()
                 return false
             }
-            val applied = imports.commit(token) {
-                val oldFilename = customFontFilename
-                customFontFilename = newFilename
-                fontMode = FontMode.CUSTOM
-                invalidateFontCache()
-                save(context)
-                oldFilename?.let { File(context.filesDir, it).delete() }
+            // Selection, Compose state and the Typeface cache are all updated on the UI thread.
+            withContext(Dispatchers.Main) {
+                applied = imports.commit(token) {
+                    val oldFilename = customFontFilename
+                    customFontFilename = newFilename
+                    fontMode = FontMode.CUSTOM
+                    invalidateFontCache()
+                    save(context)
+                    oldFilename?.let { File(context.filesDir, it).delete() }
+                }
             }
             if (!applied) destFile.delete()
             applied
         } catch (e: Exception) {
+            if (!applied) destFile.delete()
+            if (e is CancellationException) throw e
             Log.e(TAG, "Failed to import font", e)
-            destFile.delete()
             false
         }
     }

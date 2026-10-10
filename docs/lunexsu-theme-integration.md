@@ -6,8 +6,8 @@
 - [x] Merge `codex/root-authorization-expiry`, including its persistence/KEEP review fixes.
 - [x] Resolve the English/Chinese resources without removing either feature's strings.
 - [x] Use LunexSU for the app name, APK prefix, messages, exported logs and fork update/source URLs.
-- [ ] Refresh effective authorization counts while the Manager is resumed.
-- [ ] Prevent a slow font import from overriding a newer font selection or reset.
+- [x] Refresh effective authorization counts while the Manager is resumed.
+- [x] Prevent a slow font import from overriding a newer font selection or reset.
 - [ ] Run authorization host tests, Android unit tests, instrumentation compilation and a clean release build.
 - [ ] Commit and submit a bilingual draft PR; leave `main` unchanged.
 
@@ -21,6 +21,9 @@ The theme merge adds no second Root request UI or userspace policy engine.
 
 Integration changes are confined to Manager build settings, localized resources,
 About/update/log UI, `ui/MainActivity.kt`, `ui/theme/FontConfig.kt` and font tests.
+ksud help, diagnostics and installer output also use LunexSU; the `su -v`
+KernelSU identity remains compatible with existing module detection. The Manager
+CI build now runs unit tests and compiles its authorization instrumentation runner.
 Existing package IDs, JNI names, module protocols, stored layout tokens and
 KernelSU/FolkSU copyright attribution are retained for compatibility. Donation
 and upstream documentation destinations remain explicitly attributed to upstream.
@@ -33,6 +36,11 @@ and ksud; the original theme checkout was UAPI 5 with a UAPI 6 bundled ksud.
 
 ## Validation
 
-Pending. Device execution, reboot/time-change and injected kernel I/O failures
+On 2026-10-11 the merged production authorization state tests passed with 64
+threads and 1.28M attempts. The persistence driver tests passed all 10 I/O faults,
+interruption, reboot rejection and safe retry cases. Android resources parsed
+without duplicate names. Final Android/ksud build results are pending.
+
+Device execution, reboot/time-change and injected kernel I/O failures
 require a disposable device running the matching Core and Manager; APK compilation
 and host tests do not claim those runtime checks passed.

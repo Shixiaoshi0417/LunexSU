@@ -2641,7 +2641,7 @@ pub fn patch_boot(args: &BootPatchV2Args) -> Result<()> {
         println!("- KMI: {kmi}");
         println!("- Embedded module: {name}");
         assets::get_asset_data(&name)
-            .with_context(|| format!("no embedded KernelSU module for KMI {kmi}: {name}"))?
+            .with_context(|| format!("no embedded LunexSU module for KMI {kmi}: {name}"))?
             .into_owned()
     };
 

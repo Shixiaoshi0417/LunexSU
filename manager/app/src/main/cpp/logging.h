@@ -6,7 +6,7 @@
 #include <string>
 
 #ifndef LOG_TAG
-# define LOG_TAG "KernelSU"
+# define LOG_TAG "LunexSU"
 #endif
 
 #ifndef NDEBUG

@@ -131,8 +131,8 @@ fn init_driver_fd() -> Option<RawFd> {
             )
         });
         if take_sigsys_occurred() {
-            eprintln!("KernelSU driver install syscall was blocked by seccomp");
-            log::error!("KernelSU driver install syscall was blocked by seccomp");
+            eprintln!("LunexSU driver install syscall was blocked by seccomp");
+            log::error!("LunexSU driver install syscall was blocked by seccomp");
         }
         if fd >= 0 { Some(fd) } else { None }
     } else {
@@ -204,7 +204,7 @@ pub fn ensure_uapi_version_matched() -> anyhow::Result<()> {
     let userspace_uapi = uapi_version();
     if kernel_uapi != userspace_uapi {
         bail!(
-            "UAPI version mismatch: kernel={kernel_uapi}, ksud={userspace_uapi}. Please update KernelSU!"
+            "UAPI version mismatch: kernel={kernel_uapi}, ksud={userspace_uapi}. Please update LunexSU!"
         );
     }
     Ok(())
