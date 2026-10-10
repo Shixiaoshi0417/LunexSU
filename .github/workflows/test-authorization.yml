@@ -1,0 +1,32 @@
+name: Authorization policy tests
+
+on:
+  push:
+    paths:
+      - 'kernel/policy/**'
+      - 'kernel/feature/sucompat.c'
+      - 'kernel/supercall/dispatch.c'
+      - 'kernel/hook/**'
+      - 'uapi/**'
+      - 'tests/authorization/**'
+      - '.github/workflows/test-authorization.yml'
+  pull_request:
+    paths:
+      - 'kernel/policy/**'
+      - 'kernel/feature/sucompat.c'
+      - 'kernel/supercall/dispatch.c'
+      - 'kernel/hook/**'
+      - 'uapi/**'
+      - 'tests/authorization/**'
+      - '.github/workflows/test-authorization.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  state-machine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: python3 tests/authorization/run_host_tests.py

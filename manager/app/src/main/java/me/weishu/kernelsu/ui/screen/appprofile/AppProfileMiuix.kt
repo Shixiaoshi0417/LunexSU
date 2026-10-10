@@ -53,6 +53,7 @@ import me.weishu.kernelsu.ui.component.AppIconImage
 import me.weishu.kernelsu.ui.component.ListPopupDefaults
 import me.weishu.kernelsu.ui.component.miuix.DropdownItem
 import me.weishu.kernelsu.ui.component.profile.AppProfileConfig
+import me.weishu.kernelsu.ui.component.profile.AuthorizationConfig
 import me.weishu.kernelsu.ui.component.profile.RootProfileConfig
 import me.weishu.kernelsu.ui.component.profile.TemplateConfig
 import me.weishu.kernelsu.ui.component.statustag.StatusTag
@@ -320,12 +321,15 @@ private fun AppProfileInner(
                         )
                     },
                     title = stringResource(id = R.string.superuser),
-                    checked = isRootGranted,
-                    onCheckedChange = { onProfileChange(profile.copy(allowSu = it)) },
+                    checked = isRootGranted && (profile.authorizationMode == 0 || profile.authorizationState == 1),
+                    onCheckedChange = {
+                        onProfileChange(profile.copy(allowSu = it, authorizationOperation = if (it) 1 else 0))
+                    },
                 )
             }
         }
 
+        if (!isSpecialApp) AuthorizationConfig(profile, onProfileChange)
         val initialRootMode = if (profile.rootUseDefault) {
             Mode.Default
         } else if (profile.rootTemplate != null) {

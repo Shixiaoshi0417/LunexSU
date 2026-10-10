@@ -141,12 +141,18 @@ static void fillArrayWithList(JNIEnv *env, jobject list, int *data, int count) {
 extern "C"
 JNIEXPORT jobject JNICALL
 Java_me_weishu_kernelsu_Natives_getAppProfile(JNIEnv *env, jobject, jstring pkg, jint uid) {
-    if (env->GetStringLength(pkg) > KSU_MAX_PACKAGE_NAME) {
+    if (!pkg || env->GetStringLength(pkg) >= KSU_MAX_PACKAGE_NAME) {
         return nullptr;
     }
 
     p_key_t key = {};
     auto cpkg = env->GetStringUTFChars(pkg, nullptr);
+    if (!cpkg)
+        return nullptr;
+    if (strlen(cpkg) >= sizeof(key)) {
+        env->ReleaseStringUTFChars(pkg, cpkg);
+        return nullptr;
+    }
     strcpy(key, cpkg);
     env->ReleaseStringUTFChars(pkg, cpkg);
 
@@ -156,7 +162,19 @@ Java_me_weishu_kernelsu_Natives_getAppProfile(JNIEnv *env, jobject, jstring pkg,
     strcpy(profile.key, key);
     profile.curr_uid = uid;
 
-    bool useDefaultProfile = get_app_profile(&profile) != 0;
+    ksu_auth_profile_cmd auth = {};
+    auth.profile = profile;
+    const bool authSupported = get_kernel_uapi_version() >= 6;
+    bool useDefaultProfile;
+    if (authSupported) {
+        useDefaultProfile = get_auth_profile(&auth) != 0;
+        if (!useDefaultProfile)
+            profile = auth.profile;
+    } else {
+        useDefaultProfile = get_app_profile(&profile) != 0;
+        // Legacy kernels only have permanent grants.
+        auth.state = !useDefaultProfile && profile.allow_su ? KSU_AUTH_ACTIVE : KSU_AUTH_INACTIVE;
+    }
 
     auto cls = env->FindClass("me/weishu/kernelsu/Natives$Profile");
     auto constructor = env->GetMethodID(cls, "<init>", "()V");
@@ -181,6 +199,12 @@ Java_me_weishu_kernelsu_Natives_getAppProfile(JNIEnv *env, jobject, jstring pkg,
 
     env->SetObjectField(obj, keyField, env->NewStringUTF(profile.key));
     env->SetIntField(obj, currentUidField, profile.curr_uid);
+    env->SetIntField(obj, env->GetFieldID(cls, "authorizationMode", "I"), auth.mode);
+    env->SetIntField(obj, env->GetFieldID(cls, "authorizationState", "I"), auth.state);
+    env->SetLongField(obj, env->GetFieldID(cls, "authorizationGeneration", "J"), auth.generation);
+    env->SetLongField(obj, env->GetFieldID(cls, "authorizationRemainingSeconds", "J"), auth.remaining_seconds);
+    env->SetLongField(obj, env->GetFieldID(cls, "authorizationDurationSeconds", "J"),
+                      auth.duration_seconds ? auth.duration_seconds : 300);
 
     if (useDefaultProfile) {
         // no profile found, so just use default profile:
@@ -239,6 +263,8 @@ Java_me_weishu_kernelsu_Natives_getAppProfile(JNIEnv *env, jobject, jstring pkg,
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_me_weishu_kernelsu_Natives_setAppProfile(JNIEnv *env, jobject clazz, jobject profile) {
+    if (!profile)
+        return false;
     auto cls = env->FindClass("me/weishu/kernelsu/Natives$Profile");
 
     auto keyField = env->GetFieldID(cls, "name", "Ljava/lang/String;");
@@ -263,12 +289,18 @@ Java_me_weishu_kernelsu_Natives_setAppProfile(JNIEnv *env, jobject clazz, jobjec
     if (!key) {
         return false;
     }
-    if (env->GetStringLength((jstring) key) > KSU_MAX_PACKAGE_NAME) {
+    if (env->GetStringLength((jstring) key) >= KSU_MAX_PACKAGE_NAME) {
         return false;
     }
 
     auto cpkg = env->GetStringUTFChars((jstring) key, nullptr);
     p_key_t p_key = {};
+    if (!cpkg)
+        return false;
+    if (strlen(cpkg) >= sizeof(p_key)) {
+        env->ReleaseStringUTFChars((jstring) key, cpkg);
+        return false;
+    }
     strcpy(p_key, cpkg);
     env->ReleaseStringUTFChars((jstring) key, cpkg);
 
@@ -294,6 +326,12 @@ Java_me_weishu_kernelsu_Natives_setAppProfile(JNIEnv *env, jobject clazz, jobjec
         auto templateName = env->GetObjectField(profile, rootTemplateField);
         if (templateName) {
             auto ctemplateName = env->GetStringUTFChars((jstring) templateName, nullptr);
+            if (!ctemplateName)
+                return false;
+            if (strlen(ctemplateName) >= sizeof(p.rp_config.template_name)) {
+                env->ReleaseStringUTFChars((jstring) templateName, ctemplateName);
+                return false;
+            }
             strcpy(p.rp_config.template_name, ctemplateName);
             env->ReleaseStringUTFChars((jstring) templateName, ctemplateName);
         }
@@ -312,6 +350,12 @@ Java_me_weishu_kernelsu_Natives_setAppProfile(JNIEnv *env, jobject clazz, jobjec
         p.rp_config.profile.capabilities.effective = capListToBits(env, capabilities);
 
         auto cdomain = env->GetStringUTFChars((jstring) domain, nullptr);
+        if (!cdomain)
+            return false;
+        if (strlen(cdomain) >= sizeof(p.rp_config.profile.selinux_domain)) {
+            env->ReleaseStringUTFChars((jstring) domain, cdomain);
+            return false;
+        }
         strcpy(p.rp_config.profile.selinux_domain, cdomain);
         env->ReleaseStringUTFChars((jstring) domain, cdomain);
 
@@ -323,6 +367,17 @@ Java_me_weishu_kernelsu_Natives_setAppProfile(JNIEnv *env, jobject clazz, jobjec
         p.nrp_config.profile.umount_modules = umountModules;
     }
 
+    ksu_auth_profile_cmd auth = {};
+    auth.profile = p;
+    auth.mode = env->GetIntField(profile, env->GetFieldID(cls, "authorizationMode", "I"));
+    auth.operation = env->GetIntField(profile, env->GetFieldID(cls, "authorizationOperation", "I"));
+    auth.duration_seconds = env->GetLongField(profile, env->GetFieldID(cls, "authorizationDurationSeconds", "J"));
+    auth.generation = env->GetLongField(profile, env->GetFieldID(cls, "authorizationGeneration", "J"));
+    if (get_kernel_uapi_version() >= 6)
+        return set_auth_profile(&auth);
+    // Never silently downgrade a requested temporary authorization.
+    if (auth.mode != KSU_AUTH_PERMANENT)
+        return false;
     return set_app_profile(&p);
 }
 extern "C"

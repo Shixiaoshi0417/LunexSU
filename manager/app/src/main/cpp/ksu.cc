@@ -169,6 +169,14 @@ int get_app_profile(app_profile *profile) {
     return ret;
 }
 
+int get_auth_profile(ksu_auth_profile_cmd *cmd) {
+    return ksuctl(KSU_IOCTL_GET_AUTH_PROFILE, cmd);
+}
+
+bool set_auth_profile(const ksu_auth_profile_cmd *cmd) {
+    return ksuctl(KSU_IOCTL_SET_AUTH_PROFILE, cmd) == 0;
+}
+
 bool set_su_enabled(bool enabled) {
     struct ksu_set_feature_cmd cmd = {};
     cmd.feature_id = KSU_FEATURE_SU_COMPAT;

@@ -159,6 +159,13 @@ object Natives {
         var rules: String = "", // this field is save in ksud!!
 
         val flags: Long = FLAG_KSU_NO_NEW_PRIVS,
+        val authorizationMode: Int = 0,
+        val authorizationDurationSeconds: Long = 300,
+        val authorizationRemainingSeconds: Long = 0,
+        val authorizationState: Int = 0,
+        val authorizationGeneration: Long = 0,
+        // Explicit grant/renew only. A normal profile edit always uses KEEP.
+        val authorizationOperation: Int = 0,
     ) : Parcelable {
         @Keep
         enum class RootProfileFlag(val display: String, val desc: Int) {

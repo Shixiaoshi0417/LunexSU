@@ -27,11 +27,16 @@ static int do_grant_root(void __user *arg)
     int ret;
     __u32 audit_uid = current_uid().val;
     __u32 audit_euid = current_euid().val;
+    struct ksu_auth_lease lease;
 
     // we already check uid above on allowed_for_su()
 
     pr_info("allow root for: %d\n", audit_uid);
-    ret = escape_with_root_profile();
+    ret = ksu_authorization_begin(audit_uid, false, &lease);
+    if (!ret) {
+        ret = escape_with_root_profile_selected(&lease.profile);
+        ksu_authorization_finish(&lease, !ret);
+    }
     ksu_sulog_emit_grant_root(ret, audit_uid, audit_euid, GFP_KERNEL);
 
     return ret;
@@ -390,6 +395,36 @@ static int do_set_app_profile(void __user *arg)
         ksu_mark_running_process();
     }
     return ret;
+}
+
+static int do_get_auth_profile(void __user *arg)
+{
+    struct ksu_auth_profile_cmd cmd;
+    int ret;
+    if (copy_from_user(&cmd, arg, sizeof(cmd)))
+        return -EFAULT;
+    if (strnlen(cmd.profile.key, sizeof(cmd.profile.key)) >= sizeof(cmd.profile.key))
+        return -EINVAL;
+    ret = ksu_get_auth_profile(&cmd);
+    if (!ret && copy_to_user(arg, &cmd, sizeof(cmd)))
+        return -EFAULT;
+    return ret;
+}
+
+static int do_set_auth_profile(void __user *arg)
+{
+#ifdef CONFIG_KSU_DISABLE_POLICY
+    return -EOPNOTSUPP;
+#else
+    struct ksu_auth_profile_cmd cmd;
+    int ret;
+    if (copy_from_user(&cmd, arg, sizeof(cmd)))
+        return -EFAULT;
+    ret = ksu_set_auth_profile(&cmd);
+    if (!ret)
+        ksu_mark_running_process();
+    return ret;
+#endif
 }
 
 static int do_get_feature(void __user *arg)
@@ -811,6 +846,18 @@ static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
         .name = "GET_FEATURE",
         .handler = do_get_feature,
         .perm_check = manager_or_root
+    },
+    {
+        .cmd = KSU_IOCTL_GET_AUTH_PROFILE,
+        .name = "GET_AUTH_PROFILE",
+        .handler = do_get_auth_profile,
+        .perm_check = only_manager
+    },
+    {
+        .cmd = KSU_IOCTL_SET_AUTH_PROFILE,
+        .name = "SET_AUTH_PROFILE",
+        .handler = do_set_auth_profile,
+        .perm_check = only_manager
     },
     {
         .cmd = KSU_IOCTL_SET_FEATURE,

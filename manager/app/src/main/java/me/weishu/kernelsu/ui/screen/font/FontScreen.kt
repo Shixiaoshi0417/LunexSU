@@ -94,8 +94,9 @@ fun FontScreen() {
 }
 
 private fun importFont(context: Context, scope: CoroutineScope, uri: Uri) {
+    val token = FontConfig.beginImport(context)
     scope.launch {
-        val ok = withContext(Dispatchers.IO) { FontConfig.importFont(context, uri) }
+        val ok = withContext(Dispatchers.IO) { FontConfig.importFont(context, uri, token) }
         Toast.makeText(
             context,
             if (ok) R.string.font_applied else R.string.font_apply_failed,

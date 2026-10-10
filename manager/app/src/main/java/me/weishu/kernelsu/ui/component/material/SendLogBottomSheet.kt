@@ -111,7 +111,7 @@ fun SendLogBottomSheet(
                         onClick = {
                             val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH_mm")
                             val current = LocalDateTime.now().format(formatter)
-                            exportBugreportLauncher.launch("KernelSU_bugreport_${current}.tar.gz")
+                            exportBugreportLauncher.launch("LunexSU_bugreport_${current}.tar.gz")
                         }) {
                         Icon(
                             Icons.Filled.Save,

@@ -46,11 +46,15 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -331,11 +335,21 @@ fun MainScreen(
         startupPreloadStarted = true
     }
 
-    // Loading the app list just for a count is too expensive; read the kernel allowlist instead.
-    // The home layouts show it too, so it is read whenever the kernel is usable, not only for badges.
+    // Read effective kernel grants: an unchanged app list cannot report Once consumption or expiry.
+    // Stop polling when backgrounded and refresh immediately when resumed.
     var superuserCount by remember { mutableIntStateOf(0) }
-    LaunchedEffect(isFullFeatured, grantedUidCount) {
-        superuserCount = if (isFullFeatured) withContext(Dispatchers.IO) { getSuperuserCount() } else 0
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner, isFullFeatured, grantedUidCount) {
+        if (!isFullFeatured) {
+            superuserCount = 0
+            return@LaunchedEffect
+        }
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                superuserCount = withContext(Dispatchers.IO) { getSuperuserCount() }
+                delay(1000)
+            }
+        }
     }
     val moduleEnabledCount = moduleUiState.modules.count { it.enabled }
 

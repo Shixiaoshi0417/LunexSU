@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.core.content.edit
 import java.io.File
+import java.util.UUID
 
 /**
  * How the application renders text: [SYSTEM_DEFAULT] keeps the platform font, [CUSTOM] uses a
@@ -42,6 +43,7 @@ object FontConfig {
     private const val KEY_CUSTOM_FONT_FILE = "custom_font_file"
     private const val FILE_PREFIX = "custom_font_"
     private const val TAG = "FontConfig"
+    private val imports = FontImportGuard()
 
     var fontMode: FontMode by mutableStateOf(FontMode.SYSTEM_DEFAULT)
         private set
@@ -74,20 +76,31 @@ object FontConfig {
      */
     fun setFontMode(context: Context, mode: FontMode): Boolean {
         ensureLoaded(context)
-        if (mode == FontMode.CUSTOM && customFontFilename == null) return false
-        fontMode = mode
-        invalidateFontCache()
-        save(context)
-        return true
+        return imports.change {
+            if (mode == FontMode.CUSTOM && customFontFilename == null) {
+                false
+            } else {
+                fontMode = mode
+                invalidateFontCache()
+                save(context)
+                true
+            }
+        }
+    }
+
+    /** Capture the user's choice before dispatching the file read to an IO worker. */
+    fun beginImport(context: Context): Long {
+        ensureLoaded(context)
+        return imports.begin()
     }
 
     /**
      * Copies the picked file into private storage and switches to it. The file is rejected unless
      * the platform can parse it as a font, so an arbitrary document cannot be "applied".
      */
-    fun importFont(context: Context, uri: Uri): Boolean {
+    fun importFont(context: Context, uri: Uri, token: Long): Boolean {
         ensureLoaded(context)
-        val newFilename = "$FILE_PREFIX${System.currentTimeMillis()}.ttf"
+        val newFilename = "$FILE_PREFIX${UUID.randomUUID()}.ttf"
         val destFile = File(context.filesDir, newFilename)
         return try {
             val copied = context.contentResolver.openInputStream(uri)?.use { input ->
@@ -98,13 +111,16 @@ object FontConfig {
                 destFile.delete()
                 return false
             }
-            val oldFilename = customFontFilename
-            customFontFilename = newFilename
-            fontMode = FontMode.CUSTOM
-            invalidateFontCache()
-            save(context)
-            if (oldFilename != null && oldFilename != newFilename) File(context.filesDir, oldFilename).delete()
-            true
+            val applied = imports.commit(token) {
+                val oldFilename = customFontFilename
+                customFontFilename = newFilename
+                fontMode = FontMode.CUSTOM
+                invalidateFontCache()
+                save(context)
+                oldFilename?.let { File(context.filesDir, it).delete() }
+            }
+            if (!applied) destFile.delete()
+            applied
         } catch (e: Exception) {
             Log.e(TAG, "Failed to import font", e)
             destFile.delete()
@@ -115,11 +131,13 @@ object FontConfig {
     /** Deletes the imported file and returns to the system font. */
     fun restoreDefault(context: Context) {
         ensureLoaded(context)
-        customFontFilename?.let { File(context.filesDir, it).delete() }
-        customFontFilename = null
-        fontMode = FontMode.SYSTEM_DEFAULT
-        invalidateFontCache()
-        save(context)
+        imports.change {
+            customFontFilename?.let { File(context.filesDir, it).delete() }
+            customFontFilename = null
+            fontMode = FontMode.SYSTEM_DEFAULT
+            invalidateFontCache()
+            save(context)
+        }
     }
 
     private fun save(context: Context) {
