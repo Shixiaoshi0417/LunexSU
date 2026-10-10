@@ -21,6 +21,14 @@ struct ksu_authorization_state {
     __u64 duration_seconds;
 };
 
+/* KEEP may edit configured grants or revoke them, but cannot create a grant.
+ * The legacy SET_APP_PROFILE ABI is deliberately validated separately.
+ */
+static inline bool ksu_auth_operation_valid(__u32 operation, bool was_allowed, bool allow_su)
+{
+    return operation == KSU_AUTH_GRANT || (operation == KSU_AUTH_KEEP && (!allow_su || was_allowed));
+}
+
 static inline bool ksu_auth_available(const struct ksu_authorization_state *s, __u64 now)
 {
     switch (s->mode) {

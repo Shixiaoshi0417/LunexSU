@@ -2,6 +2,11 @@
 
 Host: `python3 tests/authorization/run_host_tests.py` (Linux GCC + pthread).
 It compiles the real policy header, not a Python/Rust reimplementation.
+It also compiles the production persistence transaction driver and exercises
+real files with partial/later-record write, fsync, rename and cleanup failures,
+interrupted transactions, stale staging hard links and safe retry. Pending
+transactions are rejected on reboot rather than restoring rejected candidates
+or a stale Permanent snapshot. KEEP validation includes new/denied entries.
 
 Device prerequisites:
 
@@ -48,6 +53,13 @@ operations on real devices):
   allocation/storage/exec failures on a debug kernel. Updates return busy/stale
   errors rather than overwriting live state; revocation still blocks subsequent
   admissions while an exec is pending, with no duplicate consumption or revival.
+  In particular, inject a later-record write failure after a complete Permanent
+  candidate, staging fsync failure, rename failure and directory fsync failure
+  after rename. The ioctl must fail without publishing the candidate; reboot
+  must refuse saved grants while `.allowlist.pending` remains. After a successful
+  retry, verify the marker is removed and only committed policy is restored.
+  Guard cleanup errors after durable replacement must not report a rejected
+  grant; a retained marker may conservatively deny saved grants after reboot.
 - Check both Material and MIUIX modes, presets/custom duration validation,
   countdown after background/resume, renewal/revoke, and editing Root templates
   without resetting remaining time. Verify module + Metamodule regression flows.

@@ -41,6 +41,12 @@ class AuthorizationTestRunner : Instrumentation() {
                 ))) { "Grant failed (busy/stale/identity/storage)" }
                 "revoke" -> check(Natives.setAppProfile(profile.copy(allowSu = false))) { "Revoke failed" }
                 "edit" -> check(Natives.setAppProfile(profile.copy(authorizationOperation = 0))) { "KEEP edit failed" }
+                "keep_grant" -> {
+                    check(!profile.allowSu) { "KEEP grant regression requires a denied fixture" }
+                    check(!Natives.setAppProfile(profile.copy(allowSu = true, authorizationOperation = 0))) {
+                        "KEEP created or restored an authorization"
+                    }
+                }
                 "stale" -> {
                     check(Natives.setAppProfile(profile.copy(authorizationOperation = 0))) { "KEEP edit failed" }
                     check(!Natives.setAppProfile(profile.copy(

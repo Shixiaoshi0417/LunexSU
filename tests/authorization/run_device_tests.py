@@ -55,6 +55,8 @@ if original[4] != "false":
     raise SystemExit("Refusing a fixture with existing authorization. Revoke it explicitly first.")
 try:
     assert not su(), "denied fixture unexpectedly has Root"
+    control("keep_grant")
+    assert not su(), "KEEP created a new authorization"
     control("grant", mode=1)
     with ThreadPoolExecutor(max_workers=32) as pool:
         successes = sum(pool.map(su, range(32)))
@@ -89,6 +91,9 @@ try:
     assert not su(), "revocation failed"
     control("grant", mode=0)
     assert su() and su(), "Permanent regression"
+    control("revoke")
+    control("keep_grant")
+    assert not su(), "KEEP restored a revoked Permanent authorization"
     print("PASS: actual su contention, expiry/renew/revoke/KEEP/stale writes, Permanent" + (", failed exec/ioctl" if args.probe else " (probe tests skipped)"))
 finally:
     control("revoke")

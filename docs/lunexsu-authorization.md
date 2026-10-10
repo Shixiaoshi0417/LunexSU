@@ -19,6 +19,7 @@ Metamodule code are unchanged.
 
 Files: `uapi/authorization.h`, `uapi/supercall.h`,
 `kernel/policy/authorization_state.h`, `kernel/policy/allowlist.{c,h}`,
+`kernel/policy/authorization_persistence.h`,
 `kernel/policy/app_profile.{c,h}`, `kernel/feature/sucompat.c`,
 `kernel/supercall/dispatch.c`, Manager JNI/Natives and AppProfile screens,
 `kernel/hook/{setuid_hook,tp_marker}.c`,
@@ -47,7 +48,9 @@ localized strings, and `tests/authorization`. Implementation is on
 - Once and Timed are **boot-scoped**. Reboot (or module unload/reload) retains
   the selected mode/duration but invalidates all deadlines and credits. Soft
   Android framework restart within the same kernel does not reset boottime.
-- KEEP edits cannot rearm, renew, or change mode. Explicit GRANT is required.
+- KEEP edits cannot rearm, renew, or change mode. Creating an authorized entry
+  or changing `allow_su` from false to true requires explicit GRANT, including
+  Permanent. Legacy SET_APP_PROFILE keeps its existing Permanent semantics.
   Revocation invalidates runtime policy. Stale generation tokens fail with
   EAGAIN; grant/profile changes while a lease is in flight fail with EBUSY.
   Revocation can replace a live entry with denied policy; outstanding leases
@@ -87,12 +90,26 @@ Disk format 5 is a v4 profile followed by u32 mode and u64 configured duration.
 No deadline/credit/install handle is persisted. Formats 2-4 migrate as permanent.
 Unknown modes, truncated records and future versions are rejected. An upstream
 downgrade rejects format 5 rather than reading temporary grants as permanent.
-Explicit policy writes are synchronous and fsynced **before** publishing the
-new in-memory profile; all file writers hold the same mutex from open through
-fsync. A failed write reports failure and does not publish the candidate.
-The existing truncate-in-place storage strategy can lose entries on a crash;
-it fails closed and does not recover a temporary grant as permanent. No backup
-containing stale permanent grants is used.
+Explicit policy writes are synchronous and durable **before** publishing the
+new in-memory profile; all file writers hold the same mutex throughout the
+transaction. A complete snapshot is written to a newly created `.allowlist.tmp`,
+fsynced, atomically renamed to `.allowlist`, then its parent directory is fsynced.
+An old staging pathname is unlinked before exclusive creation, never truncated.
+
+Before any replacement, `.allowlist.pending` and its directory are fsynced.
+The loader refuses saved grants if this marker exists or its absence cannot
+be established. It never loads staging files. A failed transaction leaves the
+marker intact, including if rename succeeded but the directory fsync failed;
+the candidate is not published in memory and cannot grant Root after reboot.
+This conservatively denies all saved App grants on reboot after an interrupted
+transaction, even when the old snapshot itself remains intact. A later successful
+save of the current in-memory policy restores normal persistence. There is no
+automatic recovery of a possibly stale Permanent snapshot.
+
+Only after the replacement and directory are durable is the marker removed.
+Marker cleanup errors are logged, not returned as a failed grant after commit;
+the new policy is published, but a retained/reappearing marker can cause reboot
+to deny saved grants. This is an availability cost rather than unintended Root.
 
 ## Validation
 
@@ -103,6 +120,15 @@ invalid durations/overflow and v4/new ioctl layout assertions:
 ```sh
 python3 tests/authorization/run_host_tests.py
 ```
+
+The same command also compiles the production persistence transaction driver
+against real temporary files. Fault injection covers partial and later-record
+writes, staging fsync, rename, directory fsync and marker cleanup, plus interrupted
+transaction stages, stale staging hard links and safe retry. Rejected Permanent
+candidates never load; interrupted changes from Permanent to Timed cannot restore
+the old Permanent snapshot. KEEP validation tests cover denied/new and authorized
+entries across all modes. Device tests exercise denied/new and revoked Permanent
+KEEP writes through the actual Manager JNI path.
 
 Device integration tests require a disposable **debuggable** fixture app, a
 kernel built from this branch and a recognized matching Manager+ksud. They must
@@ -137,3 +163,12 @@ test needs Core configured to recognize that Manager signature plus matching
 UAPI 6 components. Object compilation against desktop Linux headers is not an
 Android GKI build or proof of runtime correctness. Device tests were unavailable
 because there was no usable matching Android/Core/fixture environment.
+
+### Review fixes on 2026-10-11
+
+The P1 rejected-candidate persistence finding is addressed by staged atomic
+replacement and the durable pending marker. The P2 implicit Permanent grant
+finding is addressed by requiring GRANT for new/false-to-true authorizations.
+Host regression tests, Core object compilation, kernel formatting and Python
+harness syntax passed. The new device regression cases still require a matching
+device environment; compiling the instrumentation runner does not execute them.

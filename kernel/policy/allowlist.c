@@ -19,6 +19,7 @@
 #include <linux/namei.h>
 #include <linux/timekeeping.h>
 #include <linux/file.h>
+#include <linux/mount.h>
 
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"
@@ -28,6 +29,7 @@
 #include "manager/manager_identity.h"
 #include "infra/su_mount_ns.h"
 #include "policy/authorization_state.h"
+#include "policy/authorization_persistence.h"
 
 #define FILE_MAGIC 0x7f4b5355 // ' KSU', u32
 #define FILE_FORMAT_VERSION 5 // v4 profile followed by authorization mode
@@ -78,7 +80,10 @@ static DEFINE_HASHTABLE(allow_list, ALLOW_LIST_BITS);
 static u16 allow_list_count = 0;
 static u64 authorization_generation;
 
-#define KERNEL_SU_ALLOWLIST "/data/adb/ksu/.allowlist"
+#define KERNEL_SU_ALLOWLIST_DIR "/data/adb/ksu"
+#define KERNEL_SU_ALLOWLIST KERNEL_SU_ALLOWLIST_DIR "/.allowlist"
+#define KERNEL_SU_ALLOWLIST_TMP KERNEL_SU_ALLOWLIST_DIR "/.allowlist.tmp"
+#define KERNEL_SU_ALLOWLIST_PENDING KERNEL_SU_ALLOWLIST_DIR "/.allowlist.pending"
 
 void ksu_persistent_allow_list(void);
 static int write_allowlist_locked(struct perm_data *replacement);
@@ -322,6 +327,10 @@ static int set_profile(struct app_profile *profile, struct ksu_auth_profile_cmd 
 publish:
     if (cmd) {
         if (cmd->mode > KSU_AUTH_TIMED || cmd->operation > KSU_AUTH_GRANT || cmd->reserved) {
+            result = -EINVAL;
+            goto free_new;
+        }
+        if (!restoring && !ksu_auth_operation_valid(cmd->operation, p && p->profile.allow_su, profile->allow_su)) {
             result = -EINVAL;
             goto free_new;
         }
@@ -690,40 +699,106 @@ bool ksu_get_allow_list(int *array, u16 length, u16 *out_length, u16 *out_total,
     return true;
 }
 
-// TODO: move to kernel thread or work queue
-/* Caller holds allowlist_mutex across open, write and fsync. Async legacy
- * saves and synchronous authorization transactions cannot truncate each other.
- * A short/corrupt record is never loaded as a v4 permanent grant.
- */
-static int write_allowlist_locked(struct perm_data *replacement)
+struct allowlist_store {
+    struct perm_data *replacement;
+    struct file *directory;
+    struct file *staging;
+};
+
+static struct dentry *lookup_allowlist_name(const struct path *parent, const char *name)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 16, 0)
+    struct qstr qname = QSTR_INIT(name, strlen(name));
+    return lookup_one(mnt_idmap(parent->mnt), &qname, parent->dentry);
+#else
+    return lookup_one_len(name, parent->dentry, strlen(name));
+#endif
+}
+
+static int unlink_allowlist_name(struct allowlist_store *store, const char *name)
+{
+    const struct path *parent = &store->directory->f_path;
+    struct dentry *entry;
+    int ret = mnt_want_write(parent->mnt);
+
+    if (ret)
+        return ret;
+    inode_lock(d_inode(parent->dentry));
+    entry = lookup_allowlist_name(parent, name);
+    if (IS_ERR(entry)) {
+        ret = PTR_ERR(entry);
+    } else {
+        if (d_is_positive(entry)) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+            ret = vfs_unlink(mnt_idmap(parent->mnt), d_inode(parent->dentry), entry, NULL);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+            ret = vfs_unlink(mnt_user_ns(parent->mnt), d_inode(parent->dentry), entry, NULL);
+#else
+            ret = vfs_unlink(d_inode(parent->dentry), entry, NULL);
+#endif
+        }
+        dput(entry);
+    }
+    inode_unlock(d_inode(parent->dentry));
+    mnt_drop_write(parent->mnt);
+    return ret;
+}
+
+static int prepare_allowlist_store(void *ctx)
+{
+    struct allowlist_store *store = ctx;
+    struct file *guard;
+    int ret;
+
+    guard = filp_open(KERNEL_SU_ALLOWLIST_PENDING, O_WRONLY | O_CREAT | O_NOFOLLOW, 0600);
+    if (IS_ERR(guard))
+        return PTR_ERR(guard);
+    ret = -EINVAL;
+    if (S_ISREG(file_inode(guard)->i_mode) && guard->f_path.mnt == store->directory->f_path.mnt &&
+        guard->f_path.dentry->d_parent == store->directory->f_path.dentry)
+        ret = vfs_fsync(guard, 0);
+    filp_close(guard, 0);
+    if (ret)
+        return ret;
+    /* Before rename can expose any candidate, reboot must see the guard. */
+    return vfs_fsync(store->directory, 0);
+}
+
+static int write_allowlist_snapshot(void *ctx)
+{
+    struct allowlist_store *store = ctx;
+    struct perm_data *replacement = store->replacement;
     u32 magic = FILE_MAGIC;
     u32 version = FILE_FORMAT_VERSION;
     struct perm_data *p = NULL;
     loff_t off = 0;
     int i;
-    int ret = 0;
     bool replaced = false;
+    int ret;
+    struct file *fp;
 
-    const struct cred *saved = override_creds(ksu_cred);
-    struct file *fp = filp_open(KERNEL_SU_ALLOWLIST, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    /* Never truncate an old staging inode: it could be a hard link. */
+    ret = unlink_allowlist_name(store, ".allowlist.tmp");
+    if (ret)
+        return ret;
+    fp = filp_open(KERNEL_SU_ALLOWLIST_TMP, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0600);
     if (IS_ERR(fp)) {
-        pr_err("save_allow_list create file failed: %ld\n", PTR_ERR(fp));
-        ret = PTR_ERR(fp);
-        goto out;
+        return PTR_ERR(fp);
     }
+    store->staging = fp;
+    if (!S_ISREG(file_inode(fp)->i_mode) || file_inode(fp)->i_nlink != 1 ||
+        fp->f_path.dentry->d_parent != store->directory->f_path.dentry)
+        return -EINVAL;
 
     // store magic and version
     if (kernel_write(fp, &magic, sizeof(magic), &off) != sizeof(magic)) {
         pr_err("save_allow_list write magic failed.\n");
-        ret = -EIO;
-        goto close_file;
+        return -EIO;
     }
 
     if (kernel_write(fp, &version, sizeof(version), &off) != sizeof(version)) {
         pr_err("save_allow_list write version failed.\n");
-        ret = -EIO;
-        goto close_file;
+        return -EIO;
     }
 
     hash_for_each (allow_list, i, p, list) {
@@ -736,8 +811,7 @@ static int write_allowlist_locked(struct perm_data *replacement)
             kernel_write(fp, &entry->auth.mode, sizeof(entry->auth.mode), &off) != sizeof(entry->auth.mode) ||
             kernel_write(fp, &entry->auth.duration_seconds, sizeof(entry->auth.duration_seconds), &off) !=
                 sizeof(entry->auth.duration_seconds)) {
-            ret = -EIO;
-            goto close_file;
+            return -EIO;
         }
     }
     if (replacement && !replaced &&
@@ -746,14 +820,122 @@ static int write_allowlist_locked(struct perm_data *replacement)
              sizeof(replacement->auth.mode) ||
          kernel_write(fp, &replacement->auth.duration_seconds, sizeof(replacement->auth.duration_seconds), &off) !=
              sizeof(replacement->auth.duration_seconds))) {
-        ret = -EIO;
-        goto close_file;
+        return -EIO;
     }
-    ret = vfs_fsync(fp, 0);
+    return 0;
+}
 
-close_file:
-    filp_close(fp, 0);
-out:
+static int sync_allowlist_snapshot(void *ctx)
+{
+    struct allowlist_store *store = ctx;
+    return vfs_fsync(store->staging, 0);
+}
+
+static int replace_allowlist_snapshot(void *ctx)
+{
+    struct allowlist_store *store = ctx;
+    const struct path *parent = &store->directory->f_path;
+    struct dentry *source, *destination;
+    int ret;
+
+    if (store->staging->f_path.mnt != parent->mnt)
+        return -EXDEV;
+    ret = mnt_want_write(parent->mnt);
+    if (ret)
+        return ret;
+    lock_rename(parent->dentry, parent->dentry);
+    source = lookup_allowlist_name(parent, ".allowlist.tmp");
+    if (IS_ERR(source)) {
+        ret = PTR_ERR(source);
+        goto unlock;
+    }
+    /* Rename exactly the synced inode, never a substituted staging pathname. */
+    if (source != store->staging->f_path.dentry) {
+        ret = -ESTALE;
+        goto put_source;
+    }
+    destination = lookup_allowlist_name(parent, ".allowlist");
+    if (IS_ERR(destination)) {
+        ret = PTR_ERR(destination);
+        goto put_source;
+    }
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+    struct renamedata rd = {
+        .old_dentry = source,
+        .new_dentry = destination,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 17, 0)
+        .old_parent = parent->dentry,
+        .new_parent = parent->dentry,
+#else
+        .old_dir = d_inode(parent->dentry),
+        .new_dir = d_inode(parent->dentry),
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 18, 0)
+        .mnt_idmap = mnt_idmap(parent->mnt),
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+        .old_mnt_idmap = mnt_idmap(parent->mnt),
+        .new_mnt_idmap = mnt_idmap(parent->mnt),
+#else
+        .old_mnt_userns = mnt_user_ns(parent->mnt),
+        .new_mnt_userns = mnt_user_ns(parent->mnt),
+#endif
+    };
+    ret = vfs_rename(&rd);
+#else
+    ret = vfs_rename(d_inode(parent->dentry), source, d_inode(parent->dentry), destination, NULL, 0);
+#endif
+    dput(destination);
+put_source:
+    dput(source);
+unlock:
+    unlock_rename(parent->dentry, parent->dentry);
+    mnt_drop_write(parent->mnt);
+    return ret;
+}
+
+static int sync_allowlist_directory(void *ctx)
+{
+    struct allowlist_store *store = ctx;
+    return vfs_fsync(store->directory, 0);
+}
+
+static void cleanup_allowlist_store(void *ctx)
+{
+    struct allowlist_store *store = ctx;
+    int ret = unlink_allowlist_name(store, ".allowlist.pending");
+    if (!ret)
+        ret = sync_allowlist_directory(ctx);
+    if (ret)
+        pr_err("allowlist committed; guard cleanup failed (%d), reboot may deny saved grants\n", ret);
+}
+
+/* Caller holds allowlist_mutex for the entire transaction. A durable guard
+ * prevents both an uncommitted candidate and an old permanent snapshot from
+ * being restored after an interrupted replacement. No staging file is loaded.
+ */
+static int write_allowlist_locked(struct perm_data *replacement)
+{
+    const struct ksu_auth_storage_ops ops = {
+        .prepare = prepare_allowlist_store,
+        .write = write_allowlist_snapshot,
+        .sync = sync_allowlist_snapshot,
+        .replace = replace_allowlist_snapshot,
+        .sync_directory = sync_allowlist_directory,
+        .cleanup = cleanup_allowlist_store,
+    };
+    struct allowlist_store store = { .replacement = replacement };
+    const struct cred *saved = override_creds(ksu_cred);
+    int ret;
+
+    store.directory = filp_open(KERNEL_SU_ALLOWLIST_DIR, O_RDONLY | O_DIRECTORY | O_NOFOLLOW, 0);
+    if (IS_ERR(store.directory)) {
+        ret = PTR_ERR(store.directory);
+    } else {
+        ret = ksu_auth_store(&ops, &store);
+        if (store.staging)
+            filp_close(store.staging, 0);
+        filp_close(store.directory, 0);
+    }
     revert_creds(saved);
     return ret;
 }
@@ -833,6 +1015,17 @@ void ksu_load_allow_list()
     u32 magic;
     u32 version;
     size_t app_profile_size;
+
+    /* Failed/interrupted transactions are never a source of Root grants,
+     * including when rename succeeded but the directory fsync failed. */
+    struct path pending;
+    ret = kern_path(KERNEL_SU_ALLOWLIST_PENDING, 0, &pending);
+    if (!ksu_auth_snapshot_loadable(ret)) {
+        if (!ret)
+            path_put(&pending);
+        pr_err("allowlist transaction pending/unreadable; refusing saved grants\n");
+        return;
+    }
 
     // load allowlist now!
     fp = filp_open(KERNEL_SU_ALLOWLIST, O_RDONLY, 0);

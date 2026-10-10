@@ -31,6 +31,17 @@ static void *request(void *unused)
 int main(void)
 {
     struct ksu_authorization_state state = {0};
+    for (unsigned mode = KSU_AUTH_PERMANENT; mode <= KSU_AUTH_TIMED; ++mode) {
+        /* KEEP cannot create or restore a grant, independent of its mode. */
+        state.mode = mode;
+        assert(!ksu_auth_operation_valid(KSU_AUTH_KEEP, false, true));
+        assert(ksu_auth_operation_valid(KSU_AUTH_GRANT, false, true));
+        assert(ksu_auth_operation_valid(KSU_AUTH_KEEP, true, true));
+        assert(ksu_auth_operation_valid(KSU_AUTH_KEEP, true, false));
+        assert(ksu_auth_operation_valid(KSU_AUTH_KEEP, false, false));
+    }
+    assert(!ksu_auth_operation_valid(99, true, true));
+    state.mode = KSU_AUTH_PERMANENT;
     assert(ksu_auth_available(&state, UINT64_MAX)); /* permanent legacy */
     assert(ksu_auth_grant(&state, KSU_AUTH_ONCE, 0, 10));
     assert(!ksu_auth_reserve(&state, 10, false)); /* ioctl cannot bypass su */
