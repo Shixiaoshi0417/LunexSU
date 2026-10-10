@@ -8,8 +8,8 @@
 - [x] Use LunexSU for the app name, APK prefix, messages, exported logs and fork update/source URLs.
 - [x] Refresh effective authorization counts while the Manager is resumed.
 - [x] Prevent a slow font import from overriding a newer font selection or reset.
-- [ ] Run authorization host tests, Android unit tests, instrumentation compilation and a clean release build.
-- [ ] Commit and submit a bilingual draft PR; leave `main` unchanged.
+- [x] Run authorization host tests, Android unit tests, instrumentation compilation and a clean release build.
+- [x] Commit and submit a bilingual draft PR; leave `main` unchanged.
 
 ## Contracts and affected files
 
@@ -39,7 +39,29 @@ and ksud; the original theme checkout was UAPI 5 with a UAPI 6 bundled ksud.
 On 2026-10-11 the merged production authorization state tests passed with 64
 threads and 1.28M attempts. The persistence driver tests passed all 10 I/O faults,
 interruption, reboot rejection and safe retry cases. Android resources parsed
-without duplicate names. Final Android/ksud build results are pending.
+without duplicate names. Code commit `c49ac85a` passed:
+
+| Check | Result |
+| --- | --- |
+| Android arm64 cargo ndk check, clippy, cargo fmt and release build | Passed (API 26) |
+| Manager clean assembleRelease, unit tests and instrumentation compilation | Passed (110 tasks) |
+| Theme/home/font-ordering unit tests | 15 passed |
+| Release application label in every packaged locale | LunexSU |
+| Release JNI authorization fields and packaged ksud executable/data sections | Passed |
+| GitHub checks, including eight Android GKI versions and multi-platform ksud | All 27 reported checks passed |
+| CI APK repack with arm64-v8a, x86_64 and riscv64 ksud | Passed |
+
+The local release uses the existing `me.weishu.kernelsu` application ID and the
+build's debug-signing fallback, with arm64 ksud. The downloaded CI test APK uses
+`LunexSU PR` / `me.weishu.kernelsu.pr` and contains all three ksud architectures
+and the CI-built modules. Its temporary certificate matches that CI's Core
+builds. A device needs the matching Core/UAPI/signature; compilation does not
+verify Root operation on an arbitrary installed kernel. See
+[PR #2](https://github.com/Shixiaoshi0417/LunexSU/pull/2) for current CI results.
+
+Both artifacts are generated files, excluded from Git. Build tools/caches are
+isolated in ignored `target/` and WSL temporary directories; no device was
+flashed and no app was installed.
 
 Device execution, reboot/time-change and injected kernel I/O failures
 require a disposable device running the matching Core and Manager; APK compilation
