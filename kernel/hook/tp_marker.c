@@ -93,7 +93,7 @@ void ksu_mark_running_process_locked(void)
         bool is_shell = uid == 2000;
         // before boot completed, we shall mark init for marking zygote
         bool is_init = t->pid == 1;
-        if (ksu_root_process || is_zygote_process || is_shell || is_init || ksu_is_allow_uid(uid)) {
+        if (ksu_root_process || is_zygote_process || is_shell || is_init || ksu_has_root_profile(uid)) {
             ksu_set_task_tracepoint_flag(t);
             pr_info("tp_marker: mark process: pid:%d, uid: %d, comm:%s\n", t->pid, uid, t->comm);
         } else {

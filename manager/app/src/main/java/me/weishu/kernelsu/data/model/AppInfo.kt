@@ -28,11 +28,15 @@ data class AppInfo(
         get() = special && uid == WEBVIEW_ZYGOTE_UID
 
     val allowSu: Boolean
-        get() = !isWebViewZygote && profile != null && profile.allowSu
+        get() = !isWebViewZygote && profile != null && profile.allowSu &&
+                (profile.authorizationMode == 0 || profile.authorizationState == 1)
     val hasCustomProfile: Boolean
         get() {
             if (profile == null) {
                 return false
+            }
+            if (profile.authorizationMode != 0) {
+                return true
             }
 
             return if (isWebViewZygote) {

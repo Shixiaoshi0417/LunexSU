@@ -16,6 +16,9 @@
 #include <linux/compiler_types.h>
 #include <linux/hashtable.h>
 #include <linux/kref.h>
+#include <linux/namei.h>
+#include <linux/timekeeping.h>
+#include <linux/file.h>
 
 #include "klog.h" // IWYU pragma: keep
 #include "ksu.h"
@@ -24,9 +27,10 @@
 #include "policy/allowlist.h"
 #include "manager/manager_identity.h"
 #include "infra/su_mount_ns.h"
+#include "policy/authorization_state.h"
 
 #define FILE_MAGIC 0x7f4b5355 // ' KSU', u32
-#define FILE_FORMAT_VERSION 4 // u32
+#define FILE_FORMAT_VERSION 5 // v4 profile followed by authorization mode
 
 #define KSU_APP_PROFILE_PRESERVE_UID 9999 // NOBODY_UID
 #define KSU_DEFAULT_SELINUX_DOMAIN "u:r:" KERNEL_SU_DOMAIN ":s0"
@@ -61,16 +65,84 @@ struct perm_data {
     struct rcu_head rcu;
     struct kref ref;
     struct app_profile profile;
+    struct ksu_authorization_state auth;
+    u64 generation;
+    unsigned int in_flight;
+    bool revoked;
+    struct file *data_identity;
 };
 
 // protected by rcu
 #define ALLOW_LIST_BITS 8
 static DEFINE_HASHTABLE(allow_list, ALLOW_LIST_BITS);
 static u16 allow_list_count = 0;
+static u64 authorization_generation;
 
 #define KERNEL_SU_ALLOWLIST "/data/adb/ksu/.allowlist"
 
 void ksu_persistent_allow_list(void);
+static int write_allowlist_locked(struct perm_data *replacement);
+
+/* Only temporary App grants require an install identity. Full Android UID is
+ * used, including the userId. Reinstall/data reset or removal of this user
+ * invalidates the grant even when PackageManager reuses the same UID.
+ */
+static struct file *open_app_data(struct app_profile *profile)
+{
+    struct file *file;
+    struct inode *inode;
+    const struct cred *saved;
+    char name[KSU_MAX_PACKAGE_NAME + 48];
+    const char *c;
+
+    if (!is_appuid(profile->curr_uid) || !profile->key[0])
+        return ERR_PTR(-EINVAL);
+    for (c = profile->key; *c; c++) {
+        if (!((*c >= 'a' && *c <= 'z') || (*c >= 'A' && *c <= 'Z') || (*c >= '0' && *c <= '9') || *c == '_' ||
+              *c == '.'))
+            return ERR_PTR(-EINVAL);
+    }
+    if (strstr(profile->key, "..") || profile->key[0] == '.')
+        return ERR_PTR(-EINVAL);
+    snprintf(name, sizeof(name), "/data/user/%u/%s", profile->curr_uid / PER_USER_RANGE, profile->key);
+    saved = override_creds(ksu_cred);
+    file = filp_open(name, O_PATH | O_DIRECTORY, 0);
+    revert_creds(saved);
+    if (IS_ERR(file))
+        return file;
+    inode = file_inode(file);
+    if (!inode || !S_ISDIR(inode->i_mode) || inode->i_uid.val != profile->curr_uid) {
+        fput(file);
+        return ERR_PTR(-ESTALE);
+    }
+    /* Pin the inode: even immediate inode-number reuse cannot impersonate an
+     * uninstalled app's old data directory. O_PATH confers no userspace fd. */
+    return file;
+}
+
+static bool same_install(struct perm_data *p)
+{
+    struct file *file;
+    bool same;
+    if (!p->data_identity)
+        return false;
+    file = open_app_data(&p->profile);
+    if (IS_ERR(file))
+        return false;
+    same = file_inode(file) == file_inode(p->data_identity);
+    fput(file);
+    return same;
+}
+
+static bool auth_available_rcu(struct perm_data *p)
+{
+    struct ksu_authorization_state state = {
+        .mode = READ_ONCE(p->auth.mode),
+        .once = READ_ONCE(p->auth.once),
+        .deadline_ns = READ_ONCE(p->auth.deadline_ns),
+    };
+    return !READ_ONCE(p->revoked) && p->profile.allow_su && ksu_auth_available(&state, ktime_get_boottime_ns());
+}
 
 void ksu_show_allow_list(void)
 {
@@ -121,6 +193,8 @@ static bool profile_valid(struct app_profile *profile)
     if (!profile) {
         return false;
     }
+    if (profile->curr_uid < 0)
+        return false;
 
     if (strnlen(profile->key, sizeof(profile->key)) >= sizeof(profile->key)) {
         pr_err("invalid app_profile key\n");
@@ -155,6 +229,8 @@ static bool profile_valid(struct app_profile *profile)
 static void release_perm_data(struct kref *ref)
 {
     struct perm_data *p = container_of(ref, struct perm_data, ref);
+    if (p->data_identity)
+        fput(p->data_identity);
     kfree_rcu(p, rcu);
 }
 
@@ -163,7 +239,7 @@ static void put_perm_data(struct perm_data *data)
     kref_put(&data->ref, release_perm_data);
 }
 
-int ksu_set_app_profile(struct app_profile *profile)
+static int set_profile(struct app_profile *profile, struct ksu_auth_profile_cmd *cmd, bool restoring)
 {
     struct perm_data *p, *np;
     int result = 0;
@@ -197,7 +273,17 @@ int ksu_set_app_profile(struct app_profile *profile)
                 pr_warn("ksu_set_app_profile: key changed: uid=%d orig=%s new=%s\n", profile->curr_uid, p->profile.key,
                         profile->key);
             }
-            // found it, just override it all!
+            /* Revocation may stop future admissions immediately even while
+             * an already-admitted exec is in progress. Other changes wait. */
+            if (p->in_flight && profile->allow_su) {
+                result = -EBUSY;
+                goto out_unlock;
+            }
+            if (cmd && !restoring && cmd->generation != p->generation) {
+                result = -EAGAIN;
+                goto out_unlock;
+            }
+            // Preserve runtime quota/deadline when merely editing a profile.
             np = (struct perm_data *)kzalloc(sizeof(struct perm_data), GFP_KERNEL);
             if (!np) {
                 result = -ENOMEM;
@@ -205,9 +291,10 @@ int ksu_set_app_profile(struct app_profile *profile)
             }
             kref_init(&np->ref);
             memcpy(&np->profile, profile, sizeof(*profile));
-            hlist_replace_rcu(&p->list, &np->list);
-            put_perm_data(p);
-            goto out;
+            np->auth = p->auth;
+            if (p->data_identity)
+                np->data_identity = get_file(p->data_identity);
+            goto publish;
         }
     }
 
@@ -227,6 +314,74 @@ int ksu_set_app_profile(struct app_profile *profile)
 
     kref_init(&np->ref);
     memcpy(&np->profile, profile, sizeof(*profile));
+    if (cmd && !restoring && cmd->generation) {
+        result = -EAGAIN;
+        goto free_new;
+    }
+    p = NULL;
+publish:
+    if (cmd) {
+        if (cmd->mode > KSU_AUTH_TIMED || cmd->operation > KSU_AUTH_GRANT || cmd->reserved) {
+            result = -EINVAL;
+            goto free_new;
+        }
+        if (restoring) {
+            np->auth.mode = cmd->mode;
+            np->auth.duration_seconds = cmd->duration_seconds;
+            ksu_auth_invalidate(&np->auth);
+        } else if (cmd->operation == KSU_AUTH_GRANT) {
+            if (!profile->allow_su ||
+                !ksu_auth_grant(&np->auth, cmd->mode, cmd->duration_seconds, ktime_get_boottime_ns())) {
+                result = -EINVAL;
+                goto free_new;
+            }
+            if (cmd->mode != KSU_AUTH_PERMANENT) {
+                struct file *identity;
+                if (is_uid_manager(profile->curr_uid)) {
+                    result = -EINVAL;
+                    goto free_new;
+                }
+                identity = open_app_data(profile);
+                if (IS_ERR(identity)) {
+                    result = PTR_ERR(identity);
+                    goto free_new;
+                }
+                if (np->data_identity)
+                    fput(np->data_identity);
+                np->data_identity = identity;
+            }
+        } else if (cmd->mode != np->auth.mode) {
+            result = -EINVAL;
+            goto free_new;
+        }
+    }
+    if (p && strcmp(profile->key, p->profile.key)) {
+        /* A metadata edit must never transfer a temporary grant to another
+         * package sharing/reusing the UID. Require an explicit new grant. */
+        if (!cmd || cmd->operation != KSU_AUTH_GRANT)
+            ksu_auth_invalidate(&np->auth);
+    }
+    if (!profile->allow_su)
+        ksu_auth_invalidate(&np->auth);
+    if ((!profile->allow_su || np->auth.mode == KSU_AUTH_PERMANENT) && np->data_identity) {
+        fput(np->data_identity);
+        np->data_identity = NULL;
+    }
+    np->generation = ++authorization_generation;
+    /* Write the candidate BEFORE publishing it. An acknowledged temporary
+     * grant can never reboot into the previous permanent on-disk grant. */
+    if (cmd && !restoring) {
+        result = write_allowlist_locked(np);
+        if (result)
+            goto free_new;
+    }
+    if (p) {
+        if (!profile->allow_su)
+            WRITE_ONCE(p->revoked, true);
+        hlist_replace_rcu(&p->list, &np->list);
+        put_perm_data(p);
+        goto out;
+    }
     if (profile->allow_su) {
         pr_info("set root profile, key: %s, uid: %d, gid: %d, context: %s\n", profile->key, profile->curr_uid,
                 profile->rp_config.profile.gid, profile->rp_config.profile.selinux_domain);
@@ -249,9 +404,125 @@ out:
 out_unlock:
     mutex_unlock(&allowlist_mutex);
     return result;
+free_new:
+    if (np->data_identity)
+        fput(np->data_identity);
+    kfree(np);
+    goto out_unlock;
 }
 
-bool __ksu_is_allow_uid(uid_t uid)
+int ksu_set_app_profile(struct app_profile *profile)
+{
+    return set_profile(profile, NULL, false);
+}
+
+int ksu_set_auth_profile(struct ksu_auth_profile_cmd *cmd)
+{
+    return set_profile(&cmd->profile, cmd, false);
+}
+
+int ksu_get_auth_profile(struct ksu_auth_profile_cmd *cmd)
+{
+    struct perm_data *p;
+    u64 now;
+    int ret = -ENOENT;
+
+    mutex_lock(&allowlist_mutex);
+    hash_for_each_possible (allow_list, p, list, cmd->profile.curr_uid) {
+        if (p->profile.curr_uid != cmd->profile.curr_uid)
+            continue;
+        /* Authorization is UID-wide, including sharedUserId packages. Return
+         * the saved package anchor and generation even if the caller selected
+         * another package. Only explicit GRANT may bind a new anchor. */
+        cmd->profile = p->profile;
+        cmd->mode = p->auth.mode;
+        cmd->operation = KSU_AUTH_KEEP;
+        cmd->generation = p->generation;
+        cmd->duration_seconds = p->auth.duration_seconds;
+        cmd->remaining_seconds = 0;
+        cmd->reserved = 0;
+        now = ktime_get_boottime_ns();
+        cmd->state = auth_available_rcu(p) ? KSU_AUTH_ACTIVE : KSU_AUTH_INACTIVE;
+        if (p->auth.mode != KSU_AUTH_PERMANENT && cmd->state == KSU_AUTH_ACTIVE && !same_install(p)) {
+            ksu_auth_invalidate(&p->auth);
+            cmd->state = KSU_AUTH_INACTIVE;
+            p->generation = ++authorization_generation;
+            cmd->generation = p->generation;
+        }
+        if (p->auth.mode == KSU_AUTH_ONCE && p->auth.once == 2)
+            cmd->state = KSU_AUTH_BUSY;
+        if (cmd->state == KSU_AUTH_ACTIVE && p->auth.mode == KSU_AUTH_TIMED && p->auth.deadline_ns > now)
+            cmd->remaining_seconds = (p->auth.deadline_ns - now + 999999999ULL) / 1000000000ULL;
+        ret = 0;
+        break;
+    }
+    mutex_unlock(&allowlist_mutex);
+    return ret;
+}
+
+int ksu_authorization_begin(uid_t uid, bool su_exec, struct ksu_auth_lease *lease)
+{
+    struct perm_data *p;
+    struct root_profile *root;
+    int ret = -EPERM;
+
+    memset(lease, 0, sizeof(*lease));
+    mutex_lock(&allowlist_mutex);
+    if ((uid == 0 && is_ksu_domain()) || is_uid_manager(uid) || (allow_shell && uid == SHELL_UID))
+        goto bypass;
+    if (forbid_system_uid(uid))
+        goto out;
+    hash_for_each_possible (allow_list, p, list, uid) {
+        if (p->profile.curr_uid != uid)
+            continue;
+        if (!auth_available_rcu(p))
+            goto out;
+        if (p->auth.mode != KSU_AUTH_PERMANENT && !same_install(p)) {
+            ksu_auth_invalidate(&p->auth);
+            p->generation = ++authorization_generation;
+            goto out;
+        }
+        if (!ksu_auth_reserve(&p->auth, ktime_get_boottime_ns(), su_exec))
+            goto out;
+        root = ksu_get_root_profile(uid);
+        lease->profile = *root;
+        ksu_put_root_profile(root);
+        kref_get(&p->ref);
+        ++p->in_flight;
+        lease->entry = p;
+        lease->temporary = p->auth.mode != KSU_AUTH_PERMANENT;
+        ret = 0;
+        goto out;
+    }
+    goto out;
+bypass:
+    root = ksu_get_root_profile(uid);
+    lease->profile = *root;
+    ksu_put_root_profile(root);
+    ret = 0;
+out:
+    mutex_unlock(&allowlist_mutex);
+    return ret;
+}
+
+void ksu_authorization_finish(struct ksu_auth_lease *lease, bool success)
+{
+    struct perm_data *p = lease->entry;
+    if (!p)
+        return;
+    mutex_lock(&allowlist_mutex);
+    if (!p->revoked) {
+        ksu_auth_finish(&p->auth, success);
+        if (p->auth.mode == KSU_AUTH_ONCE)
+            p->generation = ++authorization_generation;
+    }
+    --p->in_flight;
+    mutex_unlock(&allowlist_mutex);
+    put_perm_data(p);
+    lease->entry = NULL;
+}
+
+static bool has_allow_uid(uid_t uid, bool configured)
 {
     struct perm_data *p;
 
@@ -271,7 +542,7 @@ bool __ksu_is_allow_uid(uid_t uid)
 
     rcu_read_lock();
     hash_for_each_possible_rcu (allow_list, p, list, uid) {
-        if (uid == p->profile.curr_uid && p->profile.allow_su) {
+        if (uid == p->profile.curr_uid && (configured ? p->profile.allow_su : auth_available_rcu(p))) {
             rcu_read_unlock();
             return true;
         }
@@ -279,6 +550,18 @@ bool __ksu_is_allow_uid(uid_t uid)
     rcu_read_unlock();
 
     return false;
+}
+
+bool ksu_has_root_profile(uid_t uid)
+{
+    if (unlikely(uid == 0))
+        return is_ksu_domain();
+    return has_allow_uid(uid, true);
+}
+
+bool __ksu_is_allow_uid(uid_t uid)
+{
+    return has_allow_uid(uid, false);
 }
 
 bool __ksu_is_allow_uid_for_current(uid_t uid)
@@ -299,7 +582,7 @@ bool ksu_uid_should_umount(uid_t uid)
         return false;
     }
 #ifdef CONFIG_KSU_DISABLE_POLICY
-    return !__ksu_is_allow_uid(uid);
+    return !has_allow_uid(uid, true);
 #else
     rcu_read_lock();
     profile = ksu_get_app_profile(uid);
@@ -389,7 +672,7 @@ bool ksu_get_allow_list(int *array, u16 length, u16 *out_length, u16 *out_total,
     rcu_read_lock();
     hash_for_each_rcu (allow_list, iter, p, list) {
         // pr_info("get_allow_list uid: %d allow: %d\n", p->uid, p->allow);
-        if (p->profile.allow_su == allow && !is_uid_manager(p->profile.curr_uid)) {
+        if (auth_available_rcu(p) == allow && !is_uid_manager(p->profile.curr_uid)) {
             if (j < length) {
                 array[j++] = p->profile.curr_uid;
             }
@@ -408,45 +691,79 @@ bool ksu_get_allow_list(int *array, u16 length, u16 *out_length, u16 *out_total,
 }
 
 // TODO: move to kernel thread or work queue
-static void do_persistent_allow_list(struct callback_head *_cb)
+/* Caller holds allowlist_mutex across open, write and fsync. Async legacy
+ * saves and synchronous authorization transactions cannot truncate each other.
+ * A short/corrupt record is never loaded as a v4 permanent grant.
+ */
+static int write_allowlist_locked(struct perm_data *replacement)
 {
     u32 magic = FILE_MAGIC;
     u32 version = FILE_FORMAT_VERSION;
     struct perm_data *p = NULL;
     loff_t off = 0;
     int i;
+    int ret = 0;
+    bool replaced = false;
 
     const struct cred *saved = override_creds(ksu_cred);
     struct file *fp = filp_open(KERNEL_SU_ALLOWLIST, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (IS_ERR(fp)) {
         pr_err("save_allow_list create file failed: %ld\n", PTR_ERR(fp));
+        ret = PTR_ERR(fp);
         goto out;
     }
 
     // store magic and version
     if (kernel_write(fp, &magic, sizeof(magic), &off) != sizeof(magic)) {
         pr_err("save_allow_list write magic failed.\n");
+        ret = -EIO;
         goto close_file;
     }
 
     if (kernel_write(fp, &version, sizeof(version), &off) != sizeof(version)) {
         pr_err("save_allow_list write version failed.\n");
+        ret = -EIO;
         goto close_file;
     }
 
-    mutex_lock(&allowlist_mutex);
     hash_for_each (allow_list, i, p, list) {
-        pr_info("save allow list, name: %s uid :%d, allow: %d\n", p->profile.key, p->profile.curr_uid,
-                p->profile.allow_su);
-
-        kernel_write(fp, &p->profile, sizeof(p->profile), &off);
+        struct perm_data *entry = p;
+        if (replacement && p->profile.curr_uid == replacement->profile.curr_uid) {
+            entry = replacement;
+            replaced = true;
+        }
+        if (kernel_write(fp, &entry->profile, sizeof(entry->profile), &off) != sizeof(entry->profile) ||
+            kernel_write(fp, &entry->auth.mode, sizeof(entry->auth.mode), &off) != sizeof(entry->auth.mode) ||
+            kernel_write(fp, &entry->auth.duration_seconds, sizeof(entry->auth.duration_seconds), &off) !=
+                sizeof(entry->auth.duration_seconds)) {
+            ret = -EIO;
+            goto close_file;
+        }
     }
-    mutex_unlock(&allowlist_mutex);
+    if (replacement && !replaced &&
+        (kernel_write(fp, &replacement->profile, sizeof(replacement->profile), &off) != sizeof(replacement->profile) ||
+         kernel_write(fp, &replacement->auth.mode, sizeof(replacement->auth.mode), &off) !=
+             sizeof(replacement->auth.mode) ||
+         kernel_write(fp, &replacement->auth.duration_seconds, sizeof(replacement->auth.duration_seconds), &off) !=
+             sizeof(replacement->auth.duration_seconds))) {
+        ret = -EIO;
+        goto close_file;
+    }
+    ret = vfs_fsync(fp, 0);
 
 close_file:
     filp_close(fp, 0);
 out:
     revert_creds(saved);
+    return ret;
+}
+
+static void do_persistent_allow_list(struct callback_head *_cb)
+{
+    mutex_lock(&allowlist_mutex);
+    if (write_allowlist_locked(NULL))
+        pr_err("failed to persist allowlist\n");
+    mutex_unlock(&allowlist_mutex);
     kfree(_cb);
 }
 
@@ -536,7 +853,7 @@ void ksu_load_allow_list()
         goto exit;
     }
 
-    if (version < 2 || version > KSU_APP_PROFILE_VER) {
+    if (version < 2 || version > FILE_FORMAT_VERSION) {
         pr_err("invalid allowlist version: %d\n", version);
         goto exit;
     }
@@ -544,27 +861,36 @@ void ksu_load_allow_list()
     pr_info("allowlist version: %d\n", version);
 
     static const size_t kAppProfileSizePreV4 = 776;
-    app_profile_size = version < KSU_APP_PROFILE_VER ? kAppProfileSizePreV4 : sizeof(struct app_profile);
+    app_profile_size = version < 4 ? kAppProfileSizePreV4 : sizeof(struct app_profile);
 
     while (true) {
-        struct app_profile profile;
+        struct ksu_auth_profile_cmd cmd = {};
+        struct app_profile *profile = &cmd.profile;
 
-        ret = kernel_read(fp, &profile, app_profile_size, &off);
+        ret = kernel_read(fp, profile, app_profile_size, &off);
 
         if (ret != app_profile_size) {
             if (ret != 0)
                 pr_info("load_allow_list read err: %zd\n", ret);
             break;
         }
+        if (version >= 5 &&
+            (kernel_read(fp, &cmd.mode, sizeof(cmd.mode), &off) != sizeof(cmd.mode) || cmd.mode > KSU_AUTH_TIMED ||
+             kernel_read(fp, &cmd.duration_seconds, sizeof(cmd.duration_seconds), &off) !=
+                 sizeof(cmd.duration_seconds) ||
+             cmd.duration_seconds > KSU_AUTH_MAX_SECONDS)) {
+            pr_err("invalid authorization record\n");
+            break;
+        }
 
-        migrate_profile(version, &profile);
+        migrate_profile(version, profile);
 
-        pr_info("load_allow_uid, name: %s, uid: %d, allow: %d\n", profile.key, profile.curr_uid, profile.allow_su);
-        ksu_set_app_profile(&profile);
+        pr_info("load_allow_uid, name: %s, uid: %d, allow: %d\n", profile->key, profile->curr_uid, profile->allow_su);
+        set_profile(&cmd.profile, &cmd, true);
     }
     ksu_show_allow_list();
     filp_close(fp, 0);
-    if (version < KSU_APP_PROFILE_VER)
+    if (version < FILE_FORMAT_VERSION)
         ksu_persistent_allow_list();
     return;
 
@@ -595,6 +921,7 @@ void ksu_prune_allowlist(bool (*is_uid_valid)(uid_t, char *, void *), void *data
             modified = true;
             pr_info("prune uid: %d, package: %s\n", uid, package);
             hlist_del_rcu(&np->list);
+            WRITE_ONCE(np->revoked, true);
             put_perm_data(np);
             --allow_list_count;
         }

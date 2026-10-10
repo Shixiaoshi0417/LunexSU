@@ -142,6 +142,7 @@ android {
     ndkVersion = androidCompileNdkVersion
 
     defaultConfig {
+        testInstrumentationRunner = "me.weishu.kernelsu.AuthorizationTestRunner"
         minSdk = androidMinSdkVersion
         targetSdk = androidTargetSdkVersion
         versionCode = managerVersionCode

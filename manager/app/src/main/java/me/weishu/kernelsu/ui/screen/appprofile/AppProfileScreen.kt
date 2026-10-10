@@ -15,6 +15,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
@@ -71,6 +77,17 @@ fun AppProfileScreen(uid: Int) {
     var profile by rememberSaveable(uid, packageName) {
         mutableStateOf(initialProfile)
     }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(uid, packageName, lifecycleOwner) {
+        if (primaryAppInfo.special || Natives.kernelUAPIVersion < 6) return@LaunchedEffect
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                delay(1000)
+                val fresh = withContext(Dispatchers.IO) { Natives.getAppProfile(packageName, uid) }
+                profile = fresh.copy(rules = profile.rules)
+            }
+        }
+    }
 
     val failToUpdateAppProfile = stringResource(R.string.failed_to_update_app_profile).format(primaryAppInfo.label)
     val failToUpdateSepolicy = stringResource(R.string.failed_to_update_sepolicy).format(primaryAppInfo.label)
@@ -109,10 +126,18 @@ fun AppProfileScreen(uid: Int) {
         },
         onProfileChange = { updatedProfile ->
             scope.launch {
-                val profileToSave = if (primaryAppInfo.special) {
+                var profileToSave = if (primaryAppInfo.special) {
                     updatedProfile.copy(allowSu = false)
                 } else {
                     updatedProfile
+                }
+                // Re-enabling a revoked temporary grant is an explicit rearm.
+                // Ordinary edits to an expired grant preserve its deadline.
+                if (!profile.allowSu && profileToSave.allowSu) {
+                    profileToSave = profileToSave.copy(authorizationOperation = 1)
+                }
+                if (profileToSave.authorizationOperation == 1) {
+                    profileToSave = profileToSave.copy(name = packageName)
                 }
                 if (profileToSave.allowSu) {
                     if (uid < 2000 && uid != 1000) {
@@ -128,13 +153,12 @@ fun AppProfileScreen(uid: Int) {
                         return@launch
                     }
                 }
-                if (!Natives.setAppProfile(profileToSave)) {
+                if (!withContext(Dispatchers.IO) { Natives.setAppProfile(profileToSave) }) {
                     showMessage(failToUpdateAppProfile)
+                    profile = withContext(Dispatchers.IO) { Natives.getAppProfile(packageName, uid) }.copy(rules = profile.rules)
                 } else {
-                    profile = profileToSave
-                    if (uiMode == UiMode.Material) {
-                        viewModel.loadAppList()
-                    }
+                    profile = withContext(Dispatchers.IO) { Natives.getAppProfile(packageName, uid) }.copy(rules = profileToSave.rules)
+                    viewModel.loadAppList()
                 }
             }
         },

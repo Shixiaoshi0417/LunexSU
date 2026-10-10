@@ -69,6 +69,7 @@ import me.weishu.kernelsu.ui.component.material.SnackBarHost
 import me.weishu.kernelsu.ui.component.material.TopBarBackButton
 import me.weishu.kernelsu.ui.component.material.expressiveTopAppBarColors
 import me.weishu.kernelsu.ui.component.profile.AppProfileConfig
+import me.weishu.kernelsu.ui.component.profile.AuthorizationConfig
 import me.weishu.kernelsu.ui.component.profile.RootProfileConfig
 import me.weishu.kernelsu.ui.component.profile.TemplateConfig
 import me.weishu.kernelsu.ui.component.statustag.StatusTag
@@ -232,8 +233,10 @@ private fun AppProfileInner(
                     SegmentedSwitchItem(
                         icon = Icons.Filled.Security,
                         title = stringResource(id = R.string.superuser),
-                        checked = isRootGranted,
-                        onCheckedChange = { onProfileChange(profile.copy(allowSu = it)) },
+                        checked = isRootGranted && (profile.authorizationMode == 0 || profile.authorizationState == 1),
+                        onCheckedChange = {
+                            onProfileChange(profile.copy(allowSu = it, authorizationOperation = if (it) 1 else 0))
+                        },
                     )
                 }
                 add {
@@ -246,6 +249,7 @@ private fun AppProfileInner(
             }
         )
 
+        if (!isSpecialApp) AuthorizationConfig(profile, onProfileChange)
         Crossfade(targetState = isRootGranted, label = "") { current ->
             Column(
                 modifier = Modifier.padding(bottom = 6.dp + 48.dp + 6.dp /* SnackBar height */)

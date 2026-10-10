@@ -303,4 +303,19 @@
     <string name="nav_rail_collapse">收起导航栏</string>
     <string name="settings_navigation_badge">导航栏角标</string>
     <string name="settings_navigation_badge_summary">在导航栏显示已授权应用和已启用模块数量</string>
+    <string name="authorization_mode">Root 授权有效期</string>
+    <string name="authorization_permanent">永久</string>
+    <string name="authorization_once">本次</string>
+    <string name="authorization_timed">限时</string>
+    <string name="authorization_remaining">剩余有效期：%1$d 秒</string>
+    <string name="authorization_minutes">%1$d 分钟</string>
+    <string name="authorization_custom_minutes">自定义分钟数（1–525600）</string>
+    <string name="authorization_grant">授权 / 应用</string>
+    <string name="authorization_renew">从现在起续期</string>
+    <string name="authorization_revoke">提前撤销</string>
+    <string name="authorization_revoked">未授权</string>
+    <string name="authorization_inactive">已到期或已消耗，请重新授权</string>
+    <string name="authorization_busy">正在启动 su 进程</string>
+    <string name="authorization_boot_scope">本次和限时授权重启后失效，已启动的 Root 进程继续运行。共享 UID 的 App 共用此授权。</string>
+    <string name="authorization_permanent_only">当前内核或系统 UID 仅支持永久授权。</string>
 </resources>
