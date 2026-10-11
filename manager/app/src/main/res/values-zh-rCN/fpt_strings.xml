@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fpt_import">导入 FolkSU 主题（.fpt）</string>
+    <string name="fpt_summary">从主题包应用配色、字体和图片背景</string>
+    <string name="fpt_reset">恢复默认主题</string>
+    <string name="fpt_reset_message">将配色、字体、首页布局和导入的背景恢复为默认值？</string>
+    <string name="fpt_apply">应用</string>
+    <string name="fpt_applied">主题已应用</string>
+    <string name="fpt_failed">无法应用主题，请检查主题格式、资源及可用存储空间。</string>
+    <string name="fpt_unnamed">未命名主题</string>
+    <string name="fpt_details">名称：%1$s\n作者：%2$s\n版本：%3$s\n资源：%4$d</string>
+    <string name="fpt_unsupported">以下选项或资源尚未支持或需要适配。仅应用兼容部分，其他设置保持原样：</string>
+    <string name="fpt_more">…以及另外 %1$d 项</string>
+</resources>

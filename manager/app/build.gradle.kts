@@ -245,6 +245,7 @@ dependencies {
     implementation(libs.protobuf.kotlin.lite)
 
     testImplementation(libs.junit)
+    testImplementation(libs.json)
 }
 
 kotlin {

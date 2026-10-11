@@ -152,6 +152,28 @@ fun ColorPaletteScreenMaterial(
             verticalArrangement = Arrangement.spacedBy(13.dp)
         ) {
             item {
+                SegmentedColumn(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    content = listOf(
+                        {
+                            SegmentedListItem(
+                                onClick = { if (!actions.themeImportBusy) actions.onImportTheme() },
+                                headlineContent = { Text(stringResource(R.string.fpt_import)) },
+                                supportingContent = { Text(stringResource(R.string.fpt_summary)) },
+                                leadingContent = { Icon(Icons.Rounded.Wallpaper, null) },
+                            )
+                        },
+                        {
+                            SegmentedListItem(
+                                onClick = { if (!actions.themeImportBusy) actions.onResetTheme() },
+                                headlineContent = { Text(stringResource(R.string.fpt_reset)) },
+                                leadingContent = { Icon(Icons.Rounded.RestartAlt, null) },
+                            )
+                        },
+                    ),
+                )
+            }
+            item {
                 ThemePreviewCard(
                     seedColor = when {
                         uiState.useDynamicColor -> Color.Unspecified

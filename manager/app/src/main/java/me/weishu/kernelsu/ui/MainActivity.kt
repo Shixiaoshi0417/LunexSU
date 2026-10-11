@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.systemBars
@@ -40,6 +41,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Density
@@ -90,6 +93,9 @@ import me.weishu.kernelsu.ui.screen.superuser.SuperUserPager
 import me.weishu.kernelsu.ui.screen.template.AppProfileTemplateScreen
 import me.weishu.kernelsu.ui.screen.templateeditor.TemplateEditorScreen
 import me.weishu.kernelsu.ui.theme.KernelSUTheme
+import me.weishu.kernelsu.ui.theme.pack.LocalThemePackBackground
+import me.weishu.kernelsu.ui.theme.pack.ThemePackState
+import me.weishu.kernelsu.ui.theme.pack.ThemePackWallpaper
 import me.weishu.kernelsu.ui.theme.LocalColorMode
 import me.weishu.kernelsu.ui.theme.LocalEnableBlur
 import me.weishu.kernelsu.ui.theme.LocalEnableFloatingBottomBar
@@ -130,6 +136,7 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         splashStartedAt = SystemClock.uptimeMillis()
         super.onCreate(savedInstanceState)
+        ThemePackState.reload(this)
         splashScreen.setKeepOnScreenCondition {
             !contentReady || SystemClock.uptimeMillis() - splashStartedAt < splashAnimationDurationMs
         }
@@ -178,6 +185,7 @@ class MainActivity : ComponentActivity() {
                 LocalEnableNavigationBadge provides uiState.enableNavigationBadge,
                 LocalModuleDescriptionMaxLines provides uiState.moduleDescriptionMaxLines,
                 LocalUiMode provides uiMode,
+                LocalThemePackBackground provides ThemePackState.hasBackground,
                 LocalHomeLayoutOptions provides uiState.homeLayout,
             ) {
                 KernelSUTheme(appSettings = appSettings, uiMode = uiMode) {
@@ -250,12 +258,15 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    when (uiMode) {
-                        UiMode.Material -> androidx.compose.material3.Scaffold(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainer
-                        ) { navDisplay() }
+                    Box(Modifier.fillMaxSize().clipToBounds()) {
+                        ThemePackWallpaper(isCurrentPage = navigator.current() !is Route.Main)
+                        when (uiMode) {
+                            UiMode.Material -> androidx.compose.material3.Scaffold(
+                                containerColor = if (LocalThemePackBackground.current) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer
+                            ) { navDisplay() }
 
-                        UiMode.Miuix -> Scaffold { navDisplay() }
+                            UiMode.Miuix -> Scaffold { navDisplay() }
+                        }
                     }
                     SideEffect { contentReady = true }
                 }
@@ -418,17 +429,20 @@ fun MainScreen(
                     ),
                 ) { page ->
                     val isCurrentPage = page == settledPage
-                    when (page) {
-                        0 -> if (contentReady || isCurrentPage) HomePager(
-                            navigator = navController,
-                            bottomInnerPadding = bottomInnerPadding,
-                            isCurrentPage = isCurrentPage,
-                            superuserCount = superuserCount,
-                            moduleEnabledCount = moduleEnabledCount,
-                        )
-                        1 -> if (contentReady || isCurrentPage) SuperUserPager(navController, bottomInnerPadding, isCurrentPage)
-                        2 -> if (contentReady || isCurrentPage) ModulePager(bottomInnerPadding, isCurrentPage)
-                        3 -> if (contentReady || isCurrentPage) SettingPager(navController, bottomInnerPadding, isCurrentPage)
+                    Box(Modifier.fillMaxSize().clipToBounds()) {
+                        ThemePackWallpaper(page, isCurrentPage)
+                        when (page) {
+                            0 -> if (contentReady || isCurrentPage) HomePager(
+                                navigator = navController,
+                                bottomInnerPadding = bottomInnerPadding,
+                                isCurrentPage = isCurrentPage,
+                                superuserCount = superuserCount,
+                                moduleEnabledCount = moduleEnabledCount,
+                            )
+                            1 -> if (contentReady || isCurrentPage) SuperUserPager(navController, bottomInnerPadding, isCurrentPage)
+                            2 -> if (contentReady || isCurrentPage) ModulePager(bottomInnerPadding, isCurrentPage)
+                            3 -> if (contentReady || isCurrentPage) SettingPager(navController, bottomInnerPadding, isCurrentPage)
+                        }
                     }
                 }
             }
@@ -441,7 +455,7 @@ fun MainScreen(
 
             when (uiMode) {
                 UiMode.Material -> androidx.compose.material3.Scaffold(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    containerColor = if (LocalThemePackBackground.current) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer
                 ) {
                     Row {
                         SideRail(navigationBadge)
@@ -485,7 +499,7 @@ fun MainScreen(
             when (uiMode) {
                 UiMode.Material -> androidx.compose.material3.Scaffold(
                     bottomBar = bottomBar,
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    containerColor = if (LocalThemePackBackground.current) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer
                 ) { innerPadding ->
                     pagerContent(innerPadding.calculateBottomPadding())
                 }

@@ -15,6 +15,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowInsetsControllerCompat
 import me.weishu.kernelsu.ui.webui.MonetColorsProvider
+import me.weishu.kernelsu.ui.theme.pack.LocalThemePackBackground
+import me.weishu.kernelsu.ui.theme.pack.ThemePackState
 
 // The default dark ripple alpha is nearly invisible on near-black surfaces, so boost it for a clear
 // press feedback at night. Light mode keeps Compose's default. (From FolkSU, GPL-3.0.)
@@ -59,7 +61,20 @@ fun MaterialKernelSUTheme(
         }
     }
 
-    val animatedColorScheme = colorScheme.animateAsState()
+    val wallpaperScheme = if (LocalThemePackBackground.current) {
+        val opacity = ThemePackState.active?.plan?.background?.opacity ?: 0.6f
+        colorScheme.copy(
+            background = Color.Transparent, surface = Color.Transparent,
+            surfaceContainer = colorScheme.surfaceContainer.copy(alpha = opacity),
+            surfaceContainerLowest = colorScheme.surfaceContainerLowest.copy(alpha = opacity),
+            surfaceContainerLow = colorScheme.surfaceContainerLow.copy(alpha = opacity),
+            surfaceContainerHigh = colorScheme.surfaceContainerHigh.copy(alpha = opacity),
+            surfaceContainerHighest = colorScheme.surfaceContainerHighest.copy(alpha = opacity),
+            surfaceBright = colorScheme.surfaceBright.copy(alpha = opacity),
+            surfaceVariant = colorScheme.surfaceVariant.copy(alpha = opacity),
+        )
+    } else colorScheme
+    val animatedColorScheme = wallpaperScheme.animateAsState()
     val fontFamily = rememberAppFontFamily()
 
     MaterialExpressiveTheme(

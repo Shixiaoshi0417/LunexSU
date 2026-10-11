@@ -20,6 +20,14 @@ class AuthorizationTestRunner : Instrumentation() {
     override fun onStart() {
         val result = Bundle()
         try {
+            if (arguments.getString("suite") == "theme") {
+                finish(Activity.RESULT_OK, ThemePackDeviceTests.run(this))
+                return
+            }
+            if (arguments.getString("suite") == "theme_fixture") {
+                finish(Activity.RESULT_OK, ThemePackDeviceTests.createUiFixture(targetContext, arguments.getString("ui", "material")))
+                return
+            }
             check(Natives.isManager && Natives.kernelUAPIVersion == 6) {
                 "Recognized LunexSU Manager and UAPI 6 Core required"
             }

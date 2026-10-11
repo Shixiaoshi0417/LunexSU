@@ -60,8 +60,10 @@ verify Root operation on an arbitrary installed kernel. See
 [PR #2](https://github.com/Shixiaoshi0417/LunexSU/pull/2) for current CI results.
 
 Both artifacts are generated files, excluded from Git. Build tools/caches are
-isolated in ignored `target/` and WSL temporary directories; no device was
-flashed and no app was installed.
+isolated in ignored `target/` and WSL build directories. Those earlier checks did
+not flash a device or install an app. The subsequent
+[FPT/brand follow-up](lunexsu-fpt-import.md#validation) installed debug/test APKs
+only on the dedicated Android Studio test emulator and recorded its UI/runtime checks.
 
 Device execution, reboot/time-change and injected kernel I/O failures
 require a disposable device running the matching Core and Manager; APK compilation

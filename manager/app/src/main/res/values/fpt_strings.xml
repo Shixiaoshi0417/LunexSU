@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fpt_import">Import FolkSU theme (.fpt)</string>
+    <string name="fpt_summary">Apply a theme package with colors, fonts and image backgrounds</string>
+    <string name="fpt_reset">Restore default theme</string>
+    <string name="fpt_reset_message">Reset colors, font, home layout and imported backgrounds to their defaults?</string>
+    <string name="fpt_apply">Apply</string>
+    <string name="fpt_applied">Theme applied</string>
+    <string name="fpt_failed">Cannot apply theme. Check the package format, resources and available storage.</string>
+    <string name="fpt_unnamed">Unnamed theme</string>
+    <string name="fpt_details">Name: %1$s\nAuthor: %2$s\nVersion: %3$s\nResources: %4$d</string>
+    <string name="fpt_unsupported">The following options/resources are unsupported or adapted. Only compatible parts will apply; other settings stay unchanged:</string>
+    <string name="fpt_more">… and %1$d more items</string>
+</resources>

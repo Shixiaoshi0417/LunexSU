@@ -156,6 +156,19 @@ fun ColorPaletteScreenMiuix(
                 overscrollEffect = null,
             ) {
                 item {
+                    Card(Modifier.fillMaxWidth().padding(top = 12.dp)) {
+                        ArrowPreference(
+                            title = stringResource(R.string.fpt_import),
+                            summary = stringResource(R.string.fpt_summary),
+                            onClick = { if (!actions.themeImportBusy) actions.onImportTheme() },
+                        )
+                        ArrowPreference(
+                            title = stringResource(R.string.fpt_reset),
+                            onClick = { if (!actions.themeImportBusy) actions.onResetTheme() },
+                        )
+                    }
+                }
+                item {
                     Spacer(modifier = Modifier.height(32.dp))
                     ThemePreviewCardMiuix(
                         keyColor = uiState.keyColor,

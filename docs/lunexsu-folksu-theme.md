@@ -47,8 +47,9 @@ Migration: the old `color_mode = 6` (dark AMOLED) is rewritten once to
 
 ## Not ported
 
-* FolkSU's wallpaper/background-image system, per-card photo surfaces and theme store
-  (FPT packs) — a separate subsystem with its own storage, import and network code.
+* FolkSU's original per-card photo surfaces and online theme store remain separate
+  systems. LunexSU now adapts its FPT reader and settings mapping with a shared
+  importer and global/per-page image backgrounds; see [FPT import](lunexsu-fpt-import.md).
 * Music/vibration media settings, custom navigation-bar icons and liquid-glass bar tuning.
 * The bundled "Xiaolai" font (`APP_DEFAULT` mode): LunexSU keeps the system font as the
   default instead of shipping a large CJK font with its own branding.

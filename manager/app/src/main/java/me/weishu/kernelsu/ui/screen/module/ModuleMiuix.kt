@@ -78,7 +78,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.FixedScale
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
@@ -613,9 +613,10 @@ private fun ModuleShortcutDialog(
                                 .background(Color.White)
                         )
                         Image(
-                            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                            painter = painterResource(id = R.drawable.lunexsu_logo),
                             contentDescription = null,
-                            contentScale = FixedScale(1.5f)
+                            modifier = Modifier.size(100.dp),
+                            contentScale = ContentScale.Fit
                         )
                     }
                 }

@@ -97,6 +97,15 @@ object FontConfig {
         return imports.begin()
     }
 
+    /** A theme publishes its font selection in the same preference batch as its palette. */
+    internal fun reloadFromPreferences(context: Context) {
+        imports.change {
+            loaded = false
+            invalidateFontCache()
+            ensureLoaded(context)
+        }
+    }
+
     /**
      * Copies the picked file into private storage and switches to it. The file is rejected unless
      * the platform can parse it as a font, so an arbitrary document cannot be "applied".
@@ -123,7 +132,7 @@ object FontConfig {
                     fontMode = FontMode.CUSTOM
                     invalidateFontCache()
                     save(context)
-                    oldFilename?.let { File(context.filesDir, it).delete() }
+                    oldFilename?.let { deleteStandaloneFont(context, it) }
                 }
             }
             if (!applied) destFile.delete()
@@ -140,7 +149,7 @@ object FontConfig {
     fun restoreDefault(context: Context) {
         ensureLoaded(context)
         imports.change {
-            customFontFilename?.let { File(context.filesDir, it).delete() }
+            customFontFilename?.let { deleteStandaloneFont(context, it) }
             customFontFilename = null
             fontMode = FontMode.SYSTEM_DEFAULT
             invalidateFontCache()
@@ -152,6 +161,13 @@ object FontConfig {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
             putString(KEY_FONT_MODE, fontMode.name)
             putString(KEY_CUSTOM_FONT_FILE, customFontFilename)
+        }
+    }
+
+    private fun deleteStandaloneFont(context: Context, filename: String) {
+        // Pack assets remain available to its immutable configuration until pack GC removes them.
+        if (filename.startsWith(FILE_PREFIX) && '/' !in filename && '\\' !in filename) {
+            File(context.filesDir, filename).delete()
         }
     }
 

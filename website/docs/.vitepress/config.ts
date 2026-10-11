@@ -4,9 +4,10 @@ import { readdir, writeFile } from 'fs/promises'
 import { resolve } from 'path'
 
 export default defineConfig( {
-    title: 'KernelSU',
+    title: 'LunexSU',
     locales: locales.locales,
     head: [
+        ['link', { rel: 'icon', href: '/favicon.ico' }],
         ['script', {
             async: 'async',
             src: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8356785667482909',

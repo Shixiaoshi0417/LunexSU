@@ -25,6 +25,7 @@ fun ColorPaletteScreen() {
     val activity = LocalActivity.current
     val viewModel = viewModel<SettingsViewModel>()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val themePack = rememberThemePackActions(viewModel::refresh)
     val currentPaletteStyle = try {
         PaletteStyle.valueOf(uiState.colorStyle)
     } catch (_: Exception) {
@@ -72,6 +73,9 @@ fun ColorPaletteScreen() {
         onSetStatsTopLayout = viewModel::setStatsTopLayout,
         onSetHomeHideWorkingMode = viewModel::setHomeHideWorkingMode,
         onOpenFont = dropUnlessResumed { navigator.push(Route.Font) },
+        onImportTheme = themePack.onImport,
+        onResetTheme = themePack.onReset,
+        themeImportBusy = themePack.busy,
     )
 
     when (LocalUiMode.current) {

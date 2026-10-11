@@ -14,6 +14,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.core.view.WindowInsetsControllerCompat
 import com.materialkolor.dynamiccolor.ColorSpec
 import me.weishu.kernelsu.ui.webui.MonetColorsProvider
+import me.weishu.kernelsu.ui.theme.pack.LocalThemePackBackground
+import me.weishu.kernelsu.ui.theme.pack.ThemePackState
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.LocalContentColor
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -105,7 +107,17 @@ fun MiuixKernelSUTheme(
                     isAppearanceLightNavigationBars = !darkTheme
                 }
             }
-            if (amoledMode) {
+            if (LocalThemePackBackground.current) {
+                val opacity = ThemePackState.active?.plan?.background?.opacity ?: 0.6f
+                MiuixTheme(
+                    colors = MiuixTheme.colorScheme.copy(
+                        background = Color.Transparent, surface = Color.Transparent,
+                        surfaceContainer = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = opacity),
+                        surfaceVariant = MiuixTheme.colorScheme.surfaceVariant.copy(alpha = opacity),
+                    ),
+                    textStyles = textStyles,
+                ) { MiuixThemeContent(content) }
+            } else if (amoledMode) {
                 // MIUIX has no AMOLED palette of its own: only the page canvas turns black, the
                 // cards keep their container color so they stay distinguishable from the page.
                 MiuixTheme(
