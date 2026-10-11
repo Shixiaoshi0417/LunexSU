@@ -325,5 +325,8 @@ int get_pkg_from_apk_dir_path(char *pkg, const char *path)
 
 bool is_manager_apk(char *path)
 {
+    // check_block() rejects certificates above CERT_MAX_LENGTH, so a larger expected
+    // certificate would compile but never recognize the manager.
+    _Static_assert(EXPECTED_SIZE <= CERT_MAX_LENGTH, "KSU_EXPECTED_SIZE exceeds CERT_MAX_LENGTH (1024)");
     return check_v2_signature(path, EXPECTED_SIZE, EXPECTED_HASH);
 }

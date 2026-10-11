@@ -89,6 +89,10 @@ jobs:
 
           # Calculate size in hex
           SIZE_DEC=$(stat -c%s pr-cert.der)
+          if [ "$SIZE_DEC" -gt 1024 ]; then
+            echo "::error::PR certificate is $SIZE_DEC bytes; Core accepts at most 1024"
+            exit 1
+          fi
           SIZE_HEX=$(printf '0x%04x' "$SIZE_DEC")
           echo "expected_size=$SIZE_HEX" >> $GITHUB_OUTPUT
 
@@ -119,6 +123,12 @@ jobs:
             -storepass "$PROD_KEYSTORE_PASSWORD" \
             -file production-cert.der
           SIZE_DEC=$(stat -c%s production-cert.der)
+          # Core's apk_sign.c reads at most 1024 certificate bytes; a larger
+          # certificate builds fine but can never be recognized as the manager.
+          if [ "$SIZE_DEC" -gt 1024 ]; then
+            echo "::error::Release certificate is $SIZE_DEC bytes; Core accepts at most 1024 (use RSA 2048 or EC)"
+            exit 1
+          fi
           SIZE_HEX=$(printf '0x%04x' "$SIZE_DEC")
           HASH=$(sha256sum production-cert.der | awk '{print $1}')
           echo "expected_size=$SIZE_HEX" >> "$GITHUB_OUTPUT"
