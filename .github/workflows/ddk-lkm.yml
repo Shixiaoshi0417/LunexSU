@@ -39,6 +39,16 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+
+    - name: Prepare version metadata
+      run: |
+        set -eu
+        git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        test "$(git -C "$GITHUB_WORKSPACE" rev-parse --is-shallow-repository)" = false
+        git -C "$GITHUB_WORKSPACE" rev-parse HEAD
+        git -C "$GITHUB_WORKSPACE" rev-list --count HEAD
 
     - name: Build LunexSU LKM
       env:
@@ -46,8 +56,6 @@ jobs:
         EXPECTED_SIZE: ${{ inputs.expected_size }}
         EXPECTED_HASH: ${{ inputs.expected_hash }}
       run: |
-        git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
         cd kernel
 
         echo "=== Building kernelsu.ko for KMI: ${{ inputs.kmi }} ==="
@@ -81,6 +89,7 @@ jobs:
         ls -la "$OUT_DIR/$OUTPUT_NAME"
         echo "Size: $(du -h "$OUT_DIR/$OUTPUT_NAME" | cut -f1)"
         llvm-strip -d "$OUT_DIR/$OUTPUT_NAME"
+        bash "$GITHUB_WORKSPACE/.github/scripts/check-lkm-version.sh" "$OUT_DIR/$OUTPUT_NAME"
         echo "Size after stripping: $(du -h "$OUT_DIR/$OUTPUT_NAME" | cut -f1)"
 
     - name: Upload LunexSU LKM artifact
@@ -165,6 +174,7 @@ jobs:
         ls -la "$OUT_DIR/$OUTPUT_NAME"
         echo "Size: $(du -h "$OUT_DIR/$OUTPUT_NAME" | cut -f1)"
         llvm-strip -d "$OUT_DIR/$OUTPUT_NAME"
+        bash "$GITHUB_WORKSPACE/.github/scripts/check-lkm-version.sh" "$OUT_DIR/$OUTPUT_NAME"
         echo "Size after stripping: $(du -h "$OUT_DIR/$OUTPUT_NAME" | cut -f1)"
         
     - name: Upload x64 kernelsu.ko artifact

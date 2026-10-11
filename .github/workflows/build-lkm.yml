@@ -19,7 +19,15 @@ on:
         type: string
   workflow_dispatch:
 jobs:
+  test-build-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Test Core version metadata
+        run: python3 tests/build_version/run_tests.py
+
   build-lkm:
+    needs: test-build-version
     strategy:
       matrix:
         kmi:
