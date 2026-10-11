@@ -18,16 +18,16 @@ export default defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/tiann/KernelSU' }
+      { icon: 'github', link: 'https://github.com/Shixiaoshi0417/LunexSU' }
     ],
 
     footer: {
         message: 'Phát hành dưới giấy phép GPL3.',
-        copyright: 'Bản Quyền © 2022-nay KernelSU developers.'
+        copyright: 'Bản Quyền © 2022-nay LunexSU developers. / LunexSU contributors.'
     },
 
     editLink: {
-        pattern: 'https://github.com/tiann/KernelSU/edit/main/website/docs/:path',
+        pattern: 'https://github.com/Shixiaoshi0417/LunexSU/edit/main/website/docs/:path',
         text: 'Chỉnh sửa trang này trên GitHub'
     }
   }
@@ -44,7 +44,7 @@ function sidebarGuide() {
     {
         text: 'Hướng Dẫn',
         items: [
-          { text: 'KernelSU là gì?', link: '/vi_VN/guide/what-is-kernelsu' },
+          { text: 'LunexSU là gì?', link: '/vi_VN/guide/what-is-kernelsu' },
           { text: 'Cách cài đặt', link: '/vi_VN/guide/installation' },
           { text: 'Cách để build?', link: '/vi_VN/guide/how-to-build' },
           { text: 'Tích hợp vào thiết bị không sử dụng GKI', link: '/vi_VN/guide/how-to-integrate-for-non-gki'},

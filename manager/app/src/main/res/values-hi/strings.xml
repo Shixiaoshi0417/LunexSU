@@ -8,7 +8,7 @@
     <string name="profile_umount_modules">मॉड्यूल्स अनमाउंट करें</string>
     <string name="send_log">लॉग भेजे</string>
     <string name="selinux_status_disabled">डिसेबल्ड (बंद)</string>
-    <string name="home_support_title">हमें प्रोत्साहन दें</string>
+    <string name="home_support_title">Contribute to LunexSU</string>
     <string name="profile_namespace_inherited">Inherited</string>
     <string name="module_magisk_conflict">मॉड्यूल बंद कर दिए गए हैं क्योंकि यह मैजिक के साथ टकरा रहे है!</string>
     <string name="module_changelog">क्या बदलाव हुए है</string>
@@ -39,7 +39,7 @@
     <string name="reboot_recovery">रिकवरी में रिबूट करें</string>
     <string name="reboot_userspace">सॉफ्ट रिबूट</string>
     <string name="profile_name">प्रोफाइल का नाम</string>
-    <string name="home_support_content">KernelSU मुफ़्त और ओपन सोर्स और हमेशा रहेगा। हालाँकि आप दान देकर हमें दिखा सकते हैं कि आप संरक्षण करते हैं।</string>
+    <string name="home_support_content">Contribute to LunexSU, report issues or improve its documentation.</string>
     <string name="uninstall">अनइंस्टॉल करें</string>
     <string name="profile_namespace">Namspace माउंट करें</string>
     <string name="module_install">इंस्टाल करें</string>
@@ -73,7 +73,7 @@
     <string name="home_kernel">कर्नल</string>
     <string name="home_not_installed">इंस्टाल नहीं हुआ</string>
     <string name="failed_to_update_app_profile">%s के लिए ऐप प्रोफ़ाइल अपडेट करने में विफल</string>
-    <string name="home_learn_kernelsu_url">https://kernelsu.org/guide/what-is-kernelsu.html</string>
+    <string name="home_learn_kernelsu_url">https://github.com/Shixiaoshi0417/LunexSU#readme</string>
     <string name="failed_to_update_sepolicy">%s के लिए SELinux नियमों को अपटेड करने में विफल</string>
     <string name="reboot_bootloader">बुटलोडर में रिबूट करें</string>
     <string name="about_source_code"><![CDATA[%1$s<br/>%2$s]]></string>

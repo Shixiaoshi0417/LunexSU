@@ -43,10 +43,10 @@
     <string name="module_author">Autor</string>
     <string name="module_magisk_conflict">Module su isključene jer je u sukobu sa Magisk-om!</string>
     <string name="home_learn_kernelsu">Naučite LunexSU</string>
-    <string name="home_learn_kernelsu_url">https://kernelsu.org/guide/what-is-kernelsu.html</string>
+    <string name="home_learn_kernelsu_url">https://github.com/Shixiaoshi0417/LunexSU#readme</string>
     <string name="home_click_to_learn_kernelsu">Naučite kako da instalirate LunexSU i da koristite module.</string>
-    <string name="home_support_title">Podržite Nas</string>
-    <string name="home_support_content">KernelSU je i uvijek će biti besplatan i otvorenog koda. Međutim, možete nam pokazati da vam je stalo donacijom.</string>
+    <string name="home_support_title">Contribute to LunexSU</string>
+    <string name="home_support_content">Contribute to LunexSU, report issues or improve its documentation.</string>
     <string name="about_source_code"><![CDATA[%1$s<br/>%2$s]]></string>
     <string name="profile_default">Zadano</string>
     <string name="profile_template">Šablon</string>

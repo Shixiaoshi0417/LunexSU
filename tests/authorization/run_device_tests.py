@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--adb", default="adb")
 parser.add_argument("--serial")
 parser.add_argument("--user", type=int, default=0, help="already-created Android user ID")
-parser.add_argument("--manager", default="me.weishu.kernelsu")
+parser.add_argument("--manager", default="com.shixiaoshi0417.lunexsu")
 parser.add_argument("--fixture", required=True)
 parser.add_argument("--probe", help="exec_probe path accessible to run-as")
 args = parser.parse_args()
@@ -31,7 +31,7 @@ def control(action, mode=1, seconds=300):
     call = subprocess.run(adb + ["shell", "am", "instrument", "-w", "--user", str(args.user),
         "-e", "fixture", args.fixture, "-e", "action", action,
         "-e", "mode", str(mode), "-e", "seconds", str(seconds),
-        args.manager + ".test/me.weishu.kernelsu.AuthorizationTestRunner"],
+        args.manager + ".test/com.shixiaoshi0417.lunexsu.AuthorizationTestRunner"],
         text=True, capture_output=True, timeout=60)
     output = call.stdout + call.stderr
     if call.returncode or "INSTRUMENTATION_CODE: -1" not in output or "error=" in output:
@@ -57,7 +57,11 @@ try:
     assert not su(), "denied fixture unexpectedly has Root"
     control("keep_grant")
     assert not su(), "KEEP created a new authorization"
+    control("grant", mode=0)
+    assert control("inspect")[1] == "0", "Permanent precondition failed"
+    control("reject_identity")
     control("grant", mode=1)
+    assert control("inspect")[1:3] == ("1", "1"), "Permanent-to-Once did not save/read back"
     with ThreadPoolExecutor(max_workers=32) as pool:
         successes = sum(pool.map(su, range(32)))
     assert successes == 1, f"Once admitted {successes} successful Root processes"

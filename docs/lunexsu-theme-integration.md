@@ -51,9 +51,9 @@ without duplicate names. Code commit `c49ac85a` passed:
 | GitHub checks, including eight Android GKI versions and multi-platform ksud | All 27 reported checks passed |
 | CI APK repack with arm64-v8a, x86_64 and riscv64 ksud | Passed |
 
-The local release uses the existing `me.weishu.kernelsu` application ID and the
+The local release uses the existing `com.shixiaoshi0417.lunexsu` application ID and the
 build's debug-signing fallback, with arm64 ksud. The downloaded CI test APK uses
-`LunexSU PR` / `me.weishu.kernelsu.pr` and contains all three ksud architectures
+`LunexSU PR` / `com.shixiaoshi0417.lunexsu.pr` and contains all three ksud architectures
 and the CI-built modules. Its temporary certificate matches that CI's Core
 builds. A device needs the matching Core/UAPI/signature; compilation does not
 verify Root operation on an arbitrary installed kernel. See

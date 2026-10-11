@@ -30,6 +30,7 @@
 #include "infra/su_mount_ns.h"
 #include "policy/authorization_state.h"
 #include "policy/authorization_persistence.h"
+#include "policy/authorization_path.h"
 
 #define FILE_MAGIC 0x7f4b5355 // ' KSU', u32
 #define FILE_FORMAT_VERSION 5 // v4 profile followed by authorization mode
@@ -97,6 +98,8 @@ static struct file *open_app_data(struct app_profile *profile)
     struct file *file;
     struct inode *inode;
     const struct cred *saved;
+    struct path root;
+    int ret;
     char name[KSU_MAX_PACKAGE_NAME + 48];
     const char *c;
 
@@ -110,9 +113,13 @@ static struct file *open_app_data(struct app_profile *profile)
     if (strstr(profile->key, "..") || profile->key[0] == '.')
         return ERR_PTR(-EINVAL);
     snprintf(name, sizeof(name), "/data/user/%u/%s", profile->curr_uid / PER_USER_RANGE, profile->key);
+    ret = ksu_auth_init_root(&root);
+    if (ret)
+        return ERR_PTR(ret);
     saved = override_creds(ksu_cred);
-    file = filp_open(name, O_PATH | O_DIRECTORY, 0);
+    file = ksu_auth_open_root(&root, name, O_PATH | O_DIRECTORY | O_NOFOLLOW, 0);
     revert_creds(saved);
+    path_put(&root);
     if (IS_ERR(file))
         return file;
     inode = file_inode(file);
@@ -750,7 +757,7 @@ static int prepare_allowlist_store(void *ctx)
     struct file *guard;
     int ret;
 
-    guard = filp_open(KERNEL_SU_ALLOWLIST_PENDING, O_WRONLY | O_CREAT | O_NOFOLLOW, 0600);
+    guard = ksu_auth_open_root(&store->directory->f_path, ".allowlist.pending", O_WRONLY | O_CREAT | O_NOFOLLOW, 0600);
     if (IS_ERR(guard))
         return PTR_ERR(guard);
     ret = -EINVAL;
@@ -781,7 +788,8 @@ static int write_allowlist_snapshot(void *ctx)
     ret = unlink_allowlist_name(store, ".allowlist.tmp");
     if (ret)
         return ret;
-    fp = filp_open(KERNEL_SU_ALLOWLIST_TMP, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0600);
+    fp =
+        ksu_auth_open_root(&store->directory->f_path, ".allowlist.tmp", O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0600);
     if (IS_ERR(fp)) {
         return PTR_ERR(fp);
     }
@@ -924,10 +932,16 @@ static int write_allowlist_locked(struct perm_data *replacement)
         .cleanup = cleanup_allowlist_store,
     };
     struct allowlist_store store = { .replacement = replacement };
-    const struct cred *saved = override_creds(ksu_cred);
+    const struct cred *saved;
+    struct path root;
     int ret;
 
-    store.directory = filp_open(KERNEL_SU_ALLOWLIST_DIR, O_RDONLY | O_DIRECTORY | O_NOFOLLOW, 0);
+    ret = ksu_auth_init_root(&root);
+    if (ret)
+        return ret;
+    saved = override_creds(ksu_cred);
+    store.directory = ksu_auth_open_root(&root, KERNEL_SU_ALLOWLIST_DIR, O_RDONLY | O_DIRECTORY | O_NOFOLLOW, 0);
+    path_put(&root);
     if (IS_ERR(store.directory)) {
         ret = PTR_ERR(store.directory);
     } else {

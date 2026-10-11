@@ -16,6 +16,9 @@ LunexSU 基于 [KernelSU](https://github.com/tiann/KernelSU)，在现有超级�
 
 [下载发布版本](https://github.com/Shixiaoshi0417/LunexSU/releases) · [构建记录](https://github.com/Shixiaoshi0417/LunexSU/actions) · [问题反馈](https://github.com/Shixiaoshi0417/LunexSU/issues)
 
+
+正式 Manager 包名为 `com.shixiaoshi0417.lunexsu`，PR 构建为 `com.shixiaoshi0417.lunexsu.pr`。新包名独立安装，原 Manager 私有设置不会自动迁移；Core 必须使用相同包名及匹配签名。模块接口和授权持久化路径继续兼容上游。详见[品牌迁移记录](docs/lunexsu-brand-migration.md)。
+
 ## 特性
 
 - 基于内核的 `su` 和权限管理，沿用 KernelSU 的超级用户预管理方式。
@@ -148,7 +151,7 @@ cp ../target/aarch64-linux-android/release/ksud app/src/main/jniLibs/arm64-v8a/l
 
 ## 安全性
 
-有关报告安全漏洞的信息，请参阅 [SECURITY.md](SECURITY.md)。该文件保留上游 KernelSU 的报告政策；LunexSU 新增代码相关问题请明确标注所用分支和版本。
+有关报告安全漏洞的信息，请参阅 [SECURITY.md](SECURITY.md)。该文件说明本项目的报告入口；LunexSU 新增代码相关问题请明确标注所用分支和版本。
 
 ## 许可证
 

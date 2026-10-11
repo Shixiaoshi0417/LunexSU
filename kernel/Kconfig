@@ -1,7 +1,7 @@
-menu "KernelSU"
+menu "LunexSU"
 
 config KSU
-	tristate "KernelSU function support"
+	tristate "LunexSU function support"
 	depends on KPROBES && EXT4_FS
 	default y
 	help
@@ -12,14 +12,14 @@ config KSU
 	  module will be called kernelsu.
 
 config KSU_DEBUG
-	bool "KernelSU debug mode"
+	bool "LunexSU debug mode"
 	depends on KSU
 	default n
 	help
-	  Enable KernelSU debug mode.
+	  Enable LunexSU debug mode.
 
 config KSU_DISABLE_MANAGER
-	bool "Disable KernelSU manager integration"
+	bool "Disable LunexSU manager integration"
 	depends on KSU
 	default n
 	help
@@ -27,7 +27,7 @@ config KSU_DISABLE_MANAGER
 	  Root will be used in place of manager-only functionality.
 
 config KSU_DISABLE_POLICY
-	bool "Disable KernelSU policy profiles"
+	bool "Disable LunexSU policy profiles"
 	depends on KSU
 	default n
 	help

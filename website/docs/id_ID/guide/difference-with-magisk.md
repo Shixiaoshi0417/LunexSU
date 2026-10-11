@@ -1,6 +1,8 @@
 # Perbedaan dengan Magisk
 
-Meskipun ada banyak kesamaan antara modul KernelSU dan modul Magisk, pasti ada beberapa perbedaan karena mekanisme implementasinya yang sangat berbeda. Jika Anda ingin modul Anda berjalan di Magisk dan KernelSU, Anda harus memahami perbedaan ini.
+> Adapted from the upstream [KernelSU](https://github.com/tiann/KernelSU) guides. See the [LunexSU README](https://github.com/Shixiaoshi0417/LunexSU#readme) for package identity, authorization expiry and migration details.
+
+Meskipun ada banyak kesamaan antara modul LunexSU dan modul Magisk, pasti ada beberapa perbedaan karena mekanisme implementasinya yang sangat berbeda. Jika Anda ingin modul Anda berjalan di Magisk dan LunexSU, Anda harus memahami perbedaan ini.
 
 ## Kesamaan
 
@@ -15,12 +17,12 @@ Meskipun ada banyak kesamaan antara modul KernelSU dan modul Magisk, pasti ada b
 
 ## Perbedaan
 
-Sebelum memahami perbedaannya, Anda perlu mengetahui cara membedakan apakah modul Anda berjalan di KernelSU atau Magisk. Anda dapat menggunakan variabel lingkungan `KSU` untuk membedakannya di semua tempat di mana Anda dapat menjalankan skrip modul (`customize.sh`, `post-fs-data.sh`, `service.sh`). Di KernelSU, variabel lingkungan ini akan disetel ke `true`.
+Sebelum memahami perbedaannya, Anda perlu mengetahui cara membedakan apakah modul Anda berjalan di LunexSU atau Magisk. Anda dapat menggunakan variabel lingkungan `KSU` untuk membedakannya di semua tempat di mana Anda dapat menjalankan skrip modul (`customize.sh`, `post-fs-data.sh`, `service.sh`). Di LunexSU, variabel lingkungan ini akan disetel ke `true`.
 
 Berikut beberapa perbedaannya:
 
-- Modul KernelSU tidak dapat diinstal dalam mode Pemulihan.
-- Modul KernelSU tidak memiliki dukungan bawaan untuk Zygisk (tetapi Anda dapat menggunakan modul Zygisk melalui [ZygiskNext](https://github.com/Dr-TSNG/ZygiskNext).
-- Metode untuk mengganti atau menghapus file dalam modul KernelSU sama sekali berbeda dari Magisk. KernelSU tidak mendukung metode `.replace`. Sebagai gantinya, Anda perlu membuat file dengan nama yang sama dengan `mknod filename c 0 0` untuk menghapus file terkait.
-- Direktori untuk BusyBox berbeda. BusyBox bawaan di KernelSU terletak di `/data/adb/ksu/bin/busybox`, sedangkan di Magisk terletak di `/data/adb/magisk/busybox`. **Perhatikan bahwa ini adalah perilaku internal KernelSU dan dapat berubah di masa mendatang!**
-- KernelSU tidak mendukung file `.replace`; namun, KernelSU mendukung variabel `REMOVE` dan `REPLACE` untuk menghapus atau mengganti file dan folder.
+- Modul LunexSU tidak dapat diinstal dalam mode Pemulihan.
+- Modul LunexSU tidak memiliki dukungan bawaan untuk Zygisk (tetapi Anda dapat menggunakan modul Zygisk melalui [ZygiskNext](https://github.com/Dr-TSNG/ZygiskNext).
+- Metode untuk mengganti atau menghapus file dalam modul LunexSU sama sekali berbeda dari Magisk. LunexSU tidak mendukung metode `.replace`. Sebagai gantinya, Anda perlu membuat file dengan nama yang sama dengan `mknod filename c 0 0` untuk menghapus file terkait.
+- Direktori untuk BusyBox berbeda. BusyBox bawaan di LunexSU terletak di `/data/adb/ksu/bin/busybox`, sedangkan di Magisk terletak di `/data/adb/magisk/busybox`. **Perhatikan bahwa ini adalah perilaku internal LunexSU dan dapat berubah di masa mendatang!**
+- LunexSU tidak mendukung file `.replace`; namun, LunexSU mendukung variabel `REMOVE` dan `REPLACE` untuk menghapus atau mengganti file dan folder.

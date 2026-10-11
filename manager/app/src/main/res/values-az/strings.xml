@@ -42,13 +42,13 @@
     <string name="reboot_to_apply">Qüvvəyə minməsi üçün yenidən başlat</string>
     <string name="module_magisk_conflict">Modular deaktiv edilir,çünki o Magisk-in modulları ilə toqquşur!</string>
     <string name="home_learn_kernelsu">LunexSU-yu öyrən</string>
-    <string name="home_learn_kernelsu_url">https://kernelsu.org/guide/what-is-kernelsu.html</string>
-    <string name="home_support_title">Bizi dəstəkləyin</string>
+    <string name="home_learn_kernelsu_url">https://github.com/Shixiaoshi0417/LunexSU#readme</string>
+    <string name="home_support_title">Contribute to LunexSU</string>
     <string name="home_click_to_learn_kernelsu">LunexSU-yu necə quraşdırılacağını və modulların necə istifadə ediləcəyini öyrən</string>
     <string name="profile_template">Şablon</string>
     <string name="profile_default">Defolt</string>
     <string name="profile_custom">Özəl</string>
-    <string name="home_support_content">KernelSU pulsuz və açıq mənbəlidir,həmişə belə olacaqdır. Bununla belə, ianə etməklə bizə qayğı göstərdiyinizi göstərə bilərsiniz.</string>
+    <string name="home_support_content">Contribute to LunexSU, report issues or improve its documentation.</string>
     <string name="about_source_code"><![CDATA[%1$s<br/>%2$s]]></string>
     <string name="profile_name">Profil adı</string>
     <string name="profile_capabilities">Bacarıqlar</string>

@@ -11,6 +11,7 @@ on:
       - '.github/workflows/ksud-extra.yml'
       - '.github/workflows/ksuinit.yml'
       - '.github/scripts/setup-rust-build.sh'
+      - '.github/scripts/check-bundled-assets.py'
       - '.github/riscv64-cargo.toml'
       - 'repack_apk.py'
       - 'manager/**'
@@ -28,6 +29,7 @@ on:
       - '.github/workflows/ksud-extra.yml'
       - '.github/workflows/ksuinit.yml'
       - '.github/scripts/setup-rust-build.sh'
+      - '.github/scripts/check-bundled-assets.py'
       - '.github/riscv64-cargo.toml'
       - 'repack_apk.py'
       - 'manager/**'
@@ -36,17 +38,21 @@ on:
       - 'Cargo.lock'
       - 'Cargo.toml'
   workflow_call:
+  workflow_dispatch:
 
 jobs:
   generate-key:
     runs-on: ubuntu-latest
     outputs:
-      expected_size: ${{ steps.extract.outputs.expected_size }}
-      expected_hash: ${{ steps.extract.outputs.expected_hash }}
+      expected_size: ${{ steps.extract.outputs.expected_size || steps.extract_prod.outputs.expected_size }}
+      expected_hash: ${{ steps.extract.outputs.expected_hash || steps.extract_prod.outputs.expected_hash }}
       keystore: ${{ steps.gen.outputs.keystore }}
       keystore_password: ${{ steps.gen.outputs.keystore_password }}
       key_password: ${{ steps.gen.outputs.key_password }}
     steps:
+      - name: Checkout source code
+        uses: actions/checkout@v7
+
       - name: Generate temporary keystore
         if: github.event_name == 'pull_request'
         id: gen
@@ -92,6 +98,31 @@ jobs:
 
           echo "Certificate size: $SIZE_HEX ($SIZE_DEC bytes)"
           echo "Certificate hash: $HASH"
+
+      - name: Extract production certificate hash and size
+        if: github.event_name != 'pull_request'
+        id: extract_prod
+        env:
+          PROD_KEYSTORE: ${{ secrets.KEYSTORE }}
+          PROD_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          PROD_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          # Bind Core to the same certificate used by Repack and resign.
+          # Missing credentials must fail rather than use the upstream signer.
+          test -n "$PROD_KEYSTORE"
+          test -n "$PROD_KEYSTORE_PASSWORD"
+          test -n "$PROD_KEY_ALIAS"
+          printf '%s' "$PROD_KEYSTORE" | base64 -d > production-key.jks
+          keytool -exportcert \
+            -alias "$PROD_KEY_ALIAS" \
+            -keystore production-key.jks \
+            -storepass "$PROD_KEYSTORE_PASSWORD" \
+            -file production-cert.der
+          SIZE_DEC=$(stat -c%s production-cert.der)
+          SIZE_HEX=$(printf '0x%04x' "$SIZE_DEC")
+          HASH=$(sha256sum production-cert.der | awk '{print $1}')
+          echo "expected_size=$SIZE_HEX" >> "$GITHUB_OUTPUT"
+          echo "expected_hash=$HASH" >> "$GITHUB_OUTPUT"
 
   build-lkm:
     needs: generate-key
@@ -155,17 +186,24 @@ jobs:
           fetch-depth: 0
 
       - name: Write key
-        if: ${{ ( github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' )) || github.ref_type == 'tag' }}
+        if: github.event_name != 'pull_request'
+        env:
+          PROD_KEYSTORE: ${{ secrets.KEYSTORE }}
+          PROD_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          PROD_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          PROD_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          if [ ! -z "${{ secrets.KEYSTORE }}" ]; then
-            {
-              echo KEYSTORE_PASSWORD='${{ secrets.KEYSTORE_PASSWORD }}'
-              echo KEY_ALIAS='${{ secrets.KEY_ALIAS }}'
-              echo KEY_PASSWORD='${{ secrets.KEY_PASSWORD }}'
-              echo KEYSTORE_FILE='key.jks'
-            } >> gradle.properties
-            echo "${{ secrets.KEYSTORE }}" | base64 -d > key.jks
-          fi
+          test -n "$PROD_KEYSTORE"
+          test -n "$PROD_KEYSTORE_PASSWORD"
+          test -n "$PROD_KEY_ALIAS"
+          test -n "$PROD_KEY_PASSWORD"
+          {
+            printf 'KEYSTORE_PASSWORD=%s\n' "$PROD_KEYSTORE_PASSWORD"
+            printf 'KEY_ALIAS=%s\n' "$PROD_KEY_ALIAS"
+            printf 'KEY_PASSWORD=%s\n' "$PROD_KEY_PASSWORD"
+            printf 'KEYSTORE_FILE=key.jks\n'
+          } >> gradle.properties
+          printf '%s' "$PROD_KEYSTORE" | base64 -d > key.jks
 
       - name: Write PR key
         if: github.event_name == 'pull_request'
@@ -200,7 +238,6 @@ jobs:
           fi
 
       - name: Upload build artifact
-        if: ${{ github.event_name == 'pull_request' || (github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) || github.ref_type == 'tag' }}
         uses: actions/upload-artifact@v7
         with:
           name: manager-gradle
@@ -208,7 +245,7 @@ jobs:
 
       - name: Upload mappings
         uses: actions/upload-artifact@v7
-        if: ${{ ( github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' )) || github.ref_type == 'tag' }}
+        if: github.event_name != 'pull_request'
         with:
           name: "mappings"
           path: "manager/app/build/outputs/mapping/release/"
@@ -278,7 +315,6 @@ jobs:
           cp -f "$RISCV64_KSUD" target/riscv64-linux-android/release/ksud
 
       - name: Prepare signing inputs
-        if: ${{ github.event_name == 'pull_request' || (github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) || github.ref_type == 'tag' }}
         env:
           PR_KEYSTORE: ${{ needs.generate-key.outputs.keystore }}
           PR_KEYSTORE_PASSWORD: ${{ needs.generate-key.outputs.keystore_password }}
@@ -296,6 +332,9 @@ jobs:
             echo "SIGN_KEY_PASSWORD=$PR_KEY_PASSWORD" >> $GITHUB_ENV
           else
             test -n "$PROD_KEYSTORE"
+            test -n "$PROD_KEY_ALIAS"
+            test -n "$PROD_KEYSTORE_PASSWORD"
+            test -n "$PROD_KEY_PASSWORD"
             echo "$PROD_KEYSTORE" | base64 -d > key.jks
             echo "SIGN_KEYSTORE_FILE=key.jks" >> $GITHUB_ENV
             echo "SIGN_KEY_ALIAS=$PROD_KEY_ALIAS" >> $GITHUB_ENV
@@ -304,7 +343,6 @@ jobs:
           fi
 
       - name: Repack and resign
-        if: ${{ github.event_name == 'pull_request' || (github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) || github.ref_type == 'tag' }}
         run: |
           python3 repack_apk.py repack \
             -b release \
@@ -316,10 +354,26 @@ jobs:
             -A "$SIGN_KEY_ALIAS" \
             -P "$SIGN_KEYSTORE_PASSWORD" \
             -S "$SIGN_KEY_PASSWORD" \
+            --require-kmi arm64-v8a:android12-5.10 \
+            --require-kmi x86_64:android12-5.10 \
             --strip
 
+      - name: Verify APK signature matches Core
+        env:
+          EXPECTED_CERT_HASH: ${{ needs.generate-key.outputs.expected_hash }}
+        run: |
+          APKSIGNER=$(find "${ANDROID_HOME:?}/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+          test -n "$APKSIGNER"
+          test -n "$EXPECTED_CERT_HASH"
+          for APK in dist/*.apk; do
+            SIGNATURE_INFO=$("$APKSIGNER" verify --print-certs "$APK")
+            # SDK 37 uses scheme labels (e.g. V3.0 Signer) instead of Signer #1.
+            # Require every reported signing certificate to match Core.
+            ACTUAL_HASH=$(printf '%s\n' "$SIGNATURE_INFO" | awk '/ certificate SHA-256 digest:/ { print $NF }' | sort -u)
+            test "$ACTUAL_HASH" = "$EXPECTED_CERT_HASH"
+          done
+
       - name: Upload build artifact
-        if: ${{ github.event_name == 'pull_request' || (github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) || github.ref_type == 'tag' }}
         uses: actions/upload-artifact@v7
         with:
           name: manager

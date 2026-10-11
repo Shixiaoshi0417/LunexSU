@@ -157,8 +157,8 @@ def find_android_tool(tool_base_name: str) -> Optional[Path]:
     return candidates[0][1]
 
 
-def run_cmd(args: List[str], fail_msg: str) -> None:
-    proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+def run_cmd(args: List[str], fail_msg: str, env: Optional[Dict[str, str]] = None) -> None:
+    proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
     if proc.returncode != 0:
         output = proc.stdout.strip()
         raise RuntimeError(f"{fail_msg}\nCommand: {' '.join(args)}\n{output}")
@@ -308,6 +308,18 @@ def validate_signing_config(signing: Dict[str, str]) -> None:
         raise FileNotFoundError(f"Keystore not found: {signing['keystore_path']}")
 
 
+def assert_bundled_kmis(apk_path: Path, required: List[str]) -> None:
+    """Check the RustEmbed module names in the final daemon for each requested ABI."""
+    with ZipFile(apk_path, "r") as apk:
+        for requirement in required:
+            arch, separator, kmi = requirement.partition(":")
+            if not separator or not re.fullmatch(r"android\d+-\d+\.\d+", kmi):
+                raise ValueError(f"Expected ABI:KMI, got {requirement!r}")
+            daemon = apk.read(f"lib/{arch}/libksud.so")
+            if f"{kmi}_kernelsu.ko".encode("ascii") not in daemon:
+                raise RuntimeError(f"Missing bundled LKM in {arch} ksud: {kmi}")
+
+
 def do_repack(args: argparse.Namespace) -> int:
     ws_root = workspace_root()
     config_path = Path(args.config).resolve() if args.config else ws_root / "repack-config.json"
@@ -373,6 +385,7 @@ def do_repack(args: argparse.Namespace) -> int:
     try:
         repack_apk(apk, unsigned_path, arch_filters, ksud_by_arch, strip_tool)
         assert_required_libs(unsigned_path, arch_filters)
+        assert_bundled_kmis(unsigned_path, args.require_kmi)
 
         zipalign = find_android_tool("zipalign")
         if zipalign is None:
@@ -406,14 +419,16 @@ def do_repack(args: argparse.Namespace) -> int:
                 "--ks-key-alias",
                 signing["key_alias"],
                 "--ks-pass",
-                f"pass:{signing['keystore_pass']}",
+                "env:LUNEXSU_SIGN_STORE_PASSWORD",
                 "--key-pass",
-                f"pass:{signing['key_pass']}",
+                "env:LUNEXSU_SIGN_KEY_PASSWORD",
                 "--out",
                 str(signed_path),
                 str(aligned_path),
             ],
             "apksigner failed",
+            env=dict(os.environ, LUNEXSU_SIGN_STORE_PASSWORD=signing["keystore_pass"],
+                     LUNEXSU_SIGN_KEY_PASSWORD=signing["key_pass"]),
         )
     finally:
         # Remove intermediate files regardless of success/failure.
@@ -454,6 +469,7 @@ def build_parser() -> argparse.ArgumentParser:
     repack.add_argument("-P", "--keystore-pass", help="Keystore password override")
     repack.add_argument("-S", "--key-pass", help="Private key password override")
     repack.add_argument("-n", "--output-name", help="Base name for output APK files (default: input APK stem)")
+    repack.add_argument("--require-kmi", action="append", default=[], help="Require an embedded LKM name in ABI:KMI format; repeat for release targets")
     strip_group = repack.add_mutually_exclusive_group()
     strip_group.add_argument(
         "--strip",

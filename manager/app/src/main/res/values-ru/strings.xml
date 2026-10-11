@@ -46,8 +46,8 @@
     <string name="home_learn_kernelsu">Узнайте о LunexSU</string>
     <string name="home_learn_kernelsu_url">https://kernelsu.org/ru_RU/guide/what-is-kernelsu.html</string>
     <string name="home_click_to_learn_kernelsu">Узнайте, как установить LunexSU и использовать модули.</string>
-    <string name="home_support_title">Поддержите нас</string>
-    <string name="home_support_content">KernelSU был и всегда будет бесплатным и открытым проектом. Однако Вы всегда можете поддержать нас, отправив небольшое пожертвование.</string>
+    <string name="home_support_title">Contribute to LunexSU</string>
+    <string name="home_support_content">Contribute to LunexSU, report issues or improve its documentation.</string>
     <string name="about_source_code"><![CDATA[%1$s<br/>%2$s]]></string>
     <string name="profile" translatable="false">App Profile</string>
     <!--Don't translate this string!-->

@@ -1,4 +1,4 @@
-# KernelSU Agent Guide
+# LunexSU Agent Guide
 
 ## Agent Quick Start
 
@@ -10,7 +10,7 @@
 
 ## Project Overview
 
-KernelSU is a kernel-based root solution for Android with a kernel module, Rust userspace daemons, a Kotlin Manager app, and docs/web assets.
+LunexSU is a kernel-based root solution for Android, based on KernelSU, with a kernel module, Rust userspace daemons, a Kotlin Manager app, and docs/web assets.
 
 ## Repository Structure
 
@@ -28,9 +28,9 @@ KernelSU is a kernel-based root solution for Android with a kernel module, Rust 
 ## Core Concepts
 
 - **supercall**: Kernel-side IOCTL interface exposed by the `[ksu_driver]` anon-inode and installed via the reboot kprobe hook in `kernel/supercalls.c`. It maps commands like allowlist/app-profile management, feature toggles, and sepolicy changes. Rust userspace reaches it through `userspace/ksud/src/ksucalls.rs` (scans or installs the FD, wraps IOCTLs), while the Manager JNI bridge mirrors the same IOCTLs in `manager/app/src/main/cpp/ksu.cc`.
-- **module**: A flashable ZIP unpacked by `userspace/ksud/src/module.rs` into `/data/adb/modules/` (`userspace/ksud/src/defs.rs`), with lifecycle scripts (`post-fs-data.sh`, `service.sh`, etc.) executed by ksud init events (`userspace/ksud/src/init_event.rs`). The Android Manager surfaces module state from ksud in `manager/app/src/main/java/me/weishu/kernelsu/ui/viewmodel/ModuleViewModel.kt`.
-- **metamodule**: A special module marked by `metamodule=1` in `module.prop` (see `userspace/meta-overlayfs/metamodule/module.prop`). ksud enforces a single active metamodule, creates `/data/adb/metamodule -> /data/adb/modules/<id>` symlink, and delegates mounting/meta install hooks via `userspace/ksud/src/metamodule.rs`; metamodule scripts run before regular modules in `userspace/ksud/src/init_event.rs`. The Manager UI highlights metamodules and warns on uninstall (`manager/app/src/main/java/me/weishu/kernelsu/ui/screen/Module.kt`).
-- **app profile**: Per-app policy struct defined in `kernel/app_profile.h` and validated/persisted in `kernel/allowlist.c` to control root grants and non-root behavior (e.g., cumulative umount policy). supercall IOCTLs `KSU_IOCTL_GET/SET_APP_PROFILE` live in `kernel/supercalls.c` and are consumed by ksud/Manager via the JNI bridge (`manager/app/src/main/cpp/ksu.cc`) and Kotlin model `Natives.Profile` (`manager/app/src/main/java/me/weishu/kernelsu/Natives.kt`).
+- **module**: A flashable ZIP unpacked by `userspace/ksud/src/module.rs` into `/data/adb/modules/` (`userspace/ksud/src/defs.rs`), with lifecycle scripts (`post-fs-data.sh`, `service.sh`, etc.) executed by ksud init events (`userspace/ksud/src/init_event.rs`). The Android Manager surfaces module state from ksud in `manager/app/src/main/java/com/shixiaoshi0417/lunexsu/ui/viewmodel/ModuleViewModel.kt`.
+- **metamodule**: A special module marked by `metamodule=1` in `module.prop` (see `userspace/meta-overlayfs/metamodule/module.prop`). ksud enforces a single active metamodule, creates `/data/adb/metamodule -> /data/adb/modules/<id>` symlink, and delegates mounting/meta install hooks via `userspace/ksud/src/metamodule.rs`; metamodule scripts run before regular modules in `userspace/ksud/src/init_event.rs`. The Manager UI highlights metamodules and warns on uninstall (`manager/app/src/main/java/com/shixiaoshi0417/lunexsu/ui/screen/Module.kt`).
+- **app profile**: Per-app policy struct defined in `kernel/app_profile.h` and validated/persisted in `kernel/allowlist.c` to control root grants and non-root behavior (e.g., cumulative umount policy). supercall IOCTLs `KSU_IOCTL_GET/SET_APP_PROFILE` live in `kernel/supercalls.c` and are consumed by ksud/Manager via the JNI bridge (`manager/app/src/main/cpp/ksu.cc`) and Kotlin model `Natives.Profile` (`manager/app/src/main/java/com/shixiaoshi0417/lunexsu/Natives.kt`).
 - **sucompat**: Exec/FS compatibility layer that reroutes `/system/bin/su` to ksud for allowed UIDs, keeping legacy “call su to root” flows working. The hooks live in `kernel/sucompat.c` and are registered by the syscall hook manager; feature toggle `KSU_FEATURE_SU_COMPAT` is exposed through supercalls and surfaced to the Manager via `manager/app/src/main/cpp/ksu.cc` (`is_su_enabled` / `set_su_enabled`).
 - **allowlist**: Kernel-managed list of UIDs permitted for root, persisted at `/data/adb/ksu/.allowlist` with default root/non-root profiles. Core logic is in `kernel/allowlist.c` (bitmap storage, persistence, default profile caching) and is initialized from `kernel/ksu.c`; supercall handlers in `kernel/supercalls.c` expose getters, deny-list checks, and “should umount modules” decisions. Manager reads and edits it through the JNI calls in `manager/app/src/main/cpp/ksu.cc` and Kotlin `Natives` façade.
 

@@ -80,10 +80,10 @@
     <string name="reboot_to_apply">Reboot to take effect</string>
     <string name="module_magisk_conflict">Modules are unavailable due to a conflict with Magisk!</string>
     <string name="home_learn_kernelsu">Learn LunexSU</string>
-    <string name="home_learn_kernelsu_url">https://kernelsu.org/guide/what-is-kernelsu.html</string>
+    <string name="home_learn_kernelsu_url">https://github.com/Shixiaoshi0417/LunexSU#readme</string>
     <string name="home_click_to_learn_kernelsu">Learn how to install LunexSU and use modules.</string>
-    <string name="home_support_title">Support Us</string>
-    <string name="home_support_content">LunexSU is based on the free and open-source KernelSU. This link supports its upstream author.</string>
+    <string name="home_support_title">Contribute to LunexSU</string>
+    <string name="home_support_content">Contribute to LunexSU, report issues or improve its documentation.</string>
     <string name="home_gki_warning">Starting from v3.0.0, the GKI work mode will be used only in testing environments. We do not recommend it for daily use, and image files will no longer be provided.</string>
     <string name="about_source_code"><![CDATA[%1$s<br/>%2$s]]></string>
     <string name="profile" translatable="false">App Profile</string>
@@ -374,4 +374,11 @@
     <string name="authorization_busy">A su process is starting</string>
     <string name="authorization_boot_scope">Once and Timed expire on reboot. Existing Root processes remain running. Shared UID apps share this grant.</string>
     <string name="authorization_permanent_only">This kernel or system UID only supports Permanent authorization.</string>
+    <string name="authorization_saved">Authorization saved and reloaded</string>
+    <string name="authorization_read_failed">Unable to read authorization (error %1$d). Refresh before editing.</string>
+    <string name="authorization_invalid_duration">Enter 1 to 525600 minutes.</string>
+    <string name="install_loading_kmis">Loading bundled LKM versions…</string>
+    <string name="install_load_kmis_failed">Unable to read the bundled LKM list. Cancel and try again.</string>
+    <string name="install_no_bundled_lkm">This build has no bundled LKM. Use a complete Manager build, or cancel and select a matching local LKM file.</string>
+    <string name="install_no_matching_lkm">This build has no bundled LKM for this device. Use a complete build or a matching local LKM.</string>
 </resources>

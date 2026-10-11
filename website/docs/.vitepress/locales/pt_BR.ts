@@ -18,16 +18,16 @@ export default defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/tiann/KernelSU' }
+      { icon: 'github', link: 'https://github.com/Shixiaoshi0417/LunexSU' }
     ],
 
     footer: {
         message: 'Lançado sob a Licença GPL3',
-        copyright: 'Copyright © 2022-presente Desenvolvedores do KernelSU.'
+        copyright: 'Copyright © 2022-presente Desenvolvedores do KernelSU. / LunexSU contributors.'
     },
 
     editLink: {
-        pattern: 'https://github.com/tiann/KernelSU/edit/main/website/docs/:path',
+        pattern: 'https://github.com/Shixiaoshi0417/LunexSU/edit/main/website/docs/:path',
         text: 'Edite esta página no GitHub'
     }
   }
@@ -44,7 +44,7 @@ function sidebarGuide() {
     {
         text: 'Guia',
         items: [
-          { text: 'O que é KernelSU?', link: '/pt_BR/guide/what-is-kernelsu' },
+          { text: 'O que é LunexSU?', link: '/pt_BR/guide/what-is-kernelsu' },
           { text: 'Diferenças com Magisk', link: '/pt_BR/guide/difference-with-magisk' },
           { text: 'Instalação', link: '/pt_BR/guide/installation' },
           { text: 'Como compilar', link: '/pt_BR/guide/how-to-build' },

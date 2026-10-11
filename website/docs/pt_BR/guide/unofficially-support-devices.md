@@ -1,16 +1,18 @@
 # Dispositivos com suporte não oficial
 
+> Adapted from the upstream [KernelSU](https://github.com/tiann/KernelSU) guides. See the [LunexSU README](https://github.com/Shixiaoshi0417/LunexSU#readme) for package identity, authorization expiry and migration details.
+
 ::: warning AVISO
 Este documento é apenas para referência de arquivo e não é mais mantido.
-Desde o KernelSU v1.0, abandonamos o suporte oficial para dispositivos não-GKI.
+Desde o LunexSU v1.0, abandonamos o suporte oficial para dispositivos não-GKI.
 :::
 
 ::: warning AVISO
-Nesta página, existem kernels para dispositivos não-GKI que suportam o KernelSU mantidos por outros desenvolvedores.
+Nesta página, existem kernels para dispositivos não-GKI que suportam o LunexSU mantidos por outros desenvolvedores.
 :::
 
 ::: warning AVISO
-Esta página é destinada apenas para ajudá-lo a encontrar o código-fonte correspondente ao seu dispositivo. **NÃO** significa que o código-fonte foi revisado pelos desenvolvedores do KernelSU. Você deve usá-lo por sua própria conta e risco.
+Esta página é destinada apenas para ajudá-lo a encontrar o código-fonte correspondente ao seu dispositivo. **NÃO** significa que o código-fonte foi revisado pelos desenvolvedores do LunexSU. Você deve usá-lo por sua própria conta e risco.
 :::
 
 <script setup>

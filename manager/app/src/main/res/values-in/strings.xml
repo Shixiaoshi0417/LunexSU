@@ -79,8 +79,8 @@
     <string name="home_learn_kernelsu">Pelajari LunexSU</string>
     <string name="home_learn_kernelsu_url">https://kernelsu.org/id_ID/guide/what-is-kernelsu.html</string>
     <string name="home_click_to_learn_kernelsu">Pelajari cara memasang LunexSU dan menggunakan modul</string>
-    <string name="home_support_title">Dukung Kami</string>
-    <string name="home_support_content">KernelSU gratis dan sumber terbuka, sekarang dan selamanya. Namun, Anda dapat menunjukkan kepedulian Anda kepada kami dengan memberikan donasi.</string>
+    <string name="home_support_title">Contribute to LunexSU</string>
+    <string name="home_support_content">Contribute to LunexSU, report issues or improve its documentation.</string>
     <string name="home_gki_warning">Mulai dari v3.0.0, fungsi mode GKI dibatasi untuk lingkungan pengujian. Kami tidak menyarankan untuk penggunaan harian, dan berkas image tidak akan lagi disediakan.</string>
     <string name="about_source_code"><![CDATA[%1$s<br/>%2$s]]></string>
     <string name="profile">Profil Aplikasi</string>

@@ -42,10 +42,10 @@
     <string name="reboot_to_apply">راه‌اندازی مجدد برای تاثیرگذاری</string>
     <string name="module_magisk_conflict">مازول به دلیل تعارض با مجیسک غیرفعال شده اند\'s!</string>
     <string name="home_learn_kernelsu">یادگیری کرنل اس یو</string>
-    <string name="home_learn_kernelsu_url">https://kernelsu.org/guide/what-is-kernelsu.html</string>
+    <string name="home_learn_kernelsu_url">https://github.com/Shixiaoshi0417/LunexSU#readme</string>
     <string name="home_click_to_learn_kernelsu">یاد بگیرید چگونه از کرنل اس یو و ماژول ها استفاده کنید</string>
-    <string name="home_support_title">از ما حمایت کنید</string>
-    <string name="home_support_content">KernelSU رایگان است و همیشه خواهد بود و منبع باز است. با این حال، می توانید با اهدای کمک مالی به ما نشان دهید که برایتان مهم است.</string>
+    <string name="home_support_title">Contribute to LunexSU</string>
+    <string name="home_support_content">Contribute to LunexSU, report issues or improve its documentation.</string>
     <string name="about_source_code"><![CDATA[%1$s<br/>%2$s]]></string>
     <string name="profile">پروفایل برنامه</string>
     <string name="profile_default">پیش‌فرض</string>

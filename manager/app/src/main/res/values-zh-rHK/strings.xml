@@ -77,8 +77,8 @@
     <string name="home_learn_kernelsu">深入了解 LunexSU</string>
     <string name="home_learn_kernelsu_url">https://kernelsu.org/zh_TW/guide/what-is-kernelsu.html</string>
     <string name="home_click_to_learn_kernelsu">了解如何安裝 LunexSU 及使用模組</string>
-    <string name="home_support_title">支持開發</string>
-    <string name="home_support_content">KernelSU 承諾永久免費且開源，歡迎捐款支持</string>
+    <string name="home_support_title">参与 LunexSU</string>
+    <string name="home_support_content">参与 LunexSU 开发、反馈问题或改进文档。</string>
     <string name="home_gki_warning">由 v3.0.0 起 GKI 模式僅限測試環境使用，不建議日常長期使用且不再提供鏡像檔</string>
     <string name="about_source_code"><![CDATA[%1$s<br/>%2$s]]></string>
     <string name="profile_default">預設</string>
@@ -299,4 +299,8 @@
     <string name="module_shortcut_scheme_copied">已複製 URL scheme</string>
     <string name="settings_navigation_badge">底部欄標記</string>
     <string name="settings_navigation_badge_summary">在底部欄顯示已授權 App 及已啟用模組數量</string>
+    <string name="install_loading_kmis">正在讀取內嵌 LKM 版本…</string>
+    <string name="install_load_kmis_failed">無法讀取內嵌 LKM 清單，請取消後重試。</string>
+    <string name="install_no_bundled_lkm">此構建沒有內嵌 LKM。請使用完整管理器構建，或取消後選擇相符的本機 LKM 檔案。</string>
+    <string name="install_no_matching_lkm">此構建沒有適合此裝置的內嵌 LKM，請使用完整構建或相符的本機 LKM。</string>
 </resources>

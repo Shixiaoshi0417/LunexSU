@@ -1,33 +1,35 @@
-# Bagaimana Caranya untuk mengintegrasikan KernelSU ke kernel non GKI?
+# Bagaimana Caranya untuk mengintegrasikan LunexSU ke kernel non GKI?
+
+> Adapted from the upstream [KernelSU](https://github.com/tiann/KernelSU) guides. See the [LunexSU README](https://github.com/Shixiaoshi0417/LunexSU#readme) for package identity, authorization expiry and migration details.
 
 ::: warning
 Dokumen ini hanya untuk referensi arsip dan tidak lagi diperbarui.
-Sejak KernelSU v1.0, kami telah menghentikan dukungan resmi untuk perangkat non-GKI.
+Sejak LunexSU v1.0, kami telah menghentikan dukungan resmi untuk perangkat non-GKI.
 :::
 
-KernelSU dapat diintegrasikan ke kernel non GKI, dan saat ini sudah di-backport ke 4.14, dan juga dapat dijalankan pada kernel di bawah 4.14.
+LunexSU dapat diintegrasikan ke kernel non GKI, dan saat ini sudah di-backport ke 4.14, dan juga dapat dijalankan pada kernel di bawah 4.14.
 
-Karena fragmentasi kernel non GKI, kami tidak memiliki cara yang seragam untuk membangunnya, sehingga kami tidak dapat menyediakan gambar boot non GKI. Tetapi Anda dapat membangun kernel sendiri dengan KernelSU yang terintegrasi.
+Karena fragmentasi kernel non GKI, kami tidak memiliki cara yang seragam untuk membangunnya, sehingga kami tidak dapat menyediakan gambar boot non GKI. Tetapi Anda dapat membangun kernel sendiri dengan LunexSU yang terintegrasi.
 
-Pertama, Anda harus dapat membangun kernel yang dapat di-boot dari kode sumber kernel, jika kernel tersebut tidak open source, maka akan sulit untuk menjalankan KernelSU untuk perangkat Anda.
+Pertama, Anda harus dapat membangun kernel yang dapat di-boot dari kode sumber kernel, jika kernel tersebut tidak open source, maka akan sulit untuk menjalankan LunexSU untuk perangkat Anda.
 
-Jika Anda dapat membuat kernel yang dapat di-booting, ada dua cara untuk mengintegrasikan KernelSU ke kode sumber kernel:
+Jika Anda dapat membuat kernel yang dapat di-booting, ada dua cara untuk mengintegrasikan LunexSU ke kode sumber kernel:
 
 1. Secara otomatis dengan `kprobe`
 2. Secara manual
 
 ## Integrasikan dengan kprobe
 
-KernelSU menggunakan kprobe untuk melakukan hook kernel, jika *kprobe* berjalan dengan baik pada kernel Anda, maka disarankan untuk menggunakan cara ini.
+LunexSU menggunakan kprobe untuk melakukan hook kernel, jika *kprobe* berjalan dengan baik pada kernel Anda, maka disarankan untuk menggunakan cara ini.
 
-Pertama, tambahkan KernelSU ke dalam berkas kernel source tree:
+Pertama, tambahkan LunexSU ke dalam berkas kernel source tree:
 
 ```sh
-curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
+curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -s v0.9.5
 ```
 
 :::info
-[KernelSU 1.0 dan versi yang lebih baru tidak lagi mendukung kernel non-GKI](https://github.com/tiann/KernelSU/issues/1705). Versi terakhir yang didukung adalah `v0.9.5`, pastikan untuk menggunakan versi yang benar.
+[LunexSU 1.0 dan versi yang lebih baru tidak lagi mendukung kernel non-GKI](https://github.com/tiann/KernelSU/issues/1705). Versi terakhir yang didukung adalah `v0.9.5`, pastikan untuk menggunakan versi yang benar.
 :::
 
 Kemudian, Anda harus memeriksa apakah *kprobe* diaktifkan dalam konfigurasi kernel Anda, jika tidak, tambahkan konfigurasi ini ke dalamnya:
@@ -38,23 +40,23 @@ CONFIG_HAVE_KPROBES=y
 CONFIG_KPROBE_EVENTS=y
 ```
 
-Dan build kernel Anda lagi, KernelSU seharusnya bekerja dengan baik.
+Dan build kernel Anda lagi, LunexSU seharusnya bekerja dengan baik.
 
 Jika Anda menemukan bahwa KPROBES masih belum diaktifkan, Anda dapat mencoba mengaktifkan `CONFIG_MODULES`. (Jika masih belum berlaku, gunakan `make menuconfig` untuk mencari ketergantungan KPROBES yang lain)
 
-etapi jika Anda mengalami boot loop saat mengintegrasikan KernelSU, itu mungkin *kprobe rusak di kernel Anda*, Anda harus memperbaiki bug kprobe atau menggunakan cara kedua.
+etapi jika Anda mengalami boot loop saat mengintegrasikan LunexSU, itu mungkin *kprobe rusak di kernel Anda*, Anda harus memperbaiki bug kprobe atau menggunakan cara kedua.
 
 ## Memodifikasi sumber kernel secara manual
 
 Jika kprobe tidak dapat bekerja pada kernel Anda (mungkin karena bug di upstream atau kernel di bawah 4.8), maka Anda dapat mencoba cara ini:
 
-Pertama, tambahkan KernelSU ke dalam direktori kernel source tree:
+Pertama, tambahkan LunexSU ke dalam direktori kernel source tree:
 
 ```sh
-curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
+curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -s v0.9.5
 ```
 
-Kemudian, tambahkan panggilan KernelSU ke source kernel, berikut ini adalah patch yang dapat dirujuk:
+Kemudian, tambahkan panggilan LunexSU ke source kernel, berikut ini adalah patch yang dapat dirujuk:
 
 ```diff
 diff --git a/fs/exec.c b/fs/exec.c
@@ -221,7 +223,7 @@ index 2ff887661237..e758d7db7663 100644
  		return -EINVAL;
 ```
 
-Untuk mengaktifkan KernelSU yang dibangun dalam SafeMode, Anda juga harus memodifikasi `input_handle_event` di `drivers/input/input.c`:
+Untuk mengaktifkan LunexSU yang dibangun dalam SafeMode, Anda juga harus memodifikasi `input_handle_event` di `drivers/input/input.c`:
 
 :::tip
 Fitur ini sangat direkomendasikan, serta sangat membantu untuk memulihkan pada saat bootloop!
@@ -251,7 +253,7 @@ index 45306f9ef247..815091ebfca4 100755
  		add_input_randomness(type, code, value);
 ```
 
-Terakhir, edit `KernelSU/kernel/ksu.c` dan beri komentar pada `enable_sucompat()` lalu build kernel Anda lagi, KernelSU akan bekerja dengan baik.
+Terakhir, edit `LunexSU/kernel/ksu.c` dan beri komentar pada `enable_sucompat()` lalu build kernel Anda lagi, LunexSU akan bekerja dengan baik.
 
 ### How to backport path_umount
 
@@ -302,4 +304,4 @@ Anda dapat membuat fitur "Umount modules" berfungsi pada kernel pra-GKI dengan m
   * This is important for filesystems which use unnamed block devices.
 ```
 
-Terakhir, build kembali kernel Anda, dan KernelSU akan berfungsi dengan benar.
+Terakhir, build kembali kernel Anda, dan LunexSU akan berfungsi dengan benar.

@@ -40,7 +40,7 @@ pub fn run(package_name: &String, kmi: Option<String>, allow_shell: bool) -> Res
     info!("late-load command triggered!");
     dump_process_info("late-load start");
 
-    // 1. Check if KernelSU is already loaded
+    // 1. Check if LunexSU is already loaded
     if ksuinit::has_kernelsu() {
         info!("LunexSU already loaded, skip loading ko");
     } else {
@@ -141,7 +141,7 @@ pub fn run(package_name: &String, kmi: Option<String>, allow_shell: bool) -> Res
         .args([
             "start",
             "-n",
-            &format!("{package_name}/me.weishu.kernelsu.ui.MainActivity"),
+            &format!("{package_name}/com.shixiaoshi0417.lunexsu.ui.MainActivity"),
         ])
         .status();
 

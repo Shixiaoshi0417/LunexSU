@@ -1,5 +1,8 @@
 # Authorization tests
 
+See [SAVE_FIX.md](SAVE_FIX.md) for the save-path repair, ABI checks, shared
+Material/MIUIX regression suite, and its real-device validation boundary.
+
 Host: `python3 tests/authorization/run_host_tests.py` (Linux GCC + pthread).
 It compiles the real policy header, not a Python/Rust reimplementation.
 It also compiles the production persistence transaction driver and exercises

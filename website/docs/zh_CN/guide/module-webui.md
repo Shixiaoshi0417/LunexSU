@@ -1,8 +1,10 @@
 # 模块 WebUI
 
-KernelSU 的模块除了执行启动脚本和修改系统文件之外，还支持显示 UI 界面和与用户交互。
+> 本文档改编自 [KernelSU](https://github.com/tiann/KernelSU) 上游指南。LunexSU 的包名、授权有效期与品牌迁移说明见[项目 README](https://github.com/Shixiaoshi0417/LunexSU#readme)。
 
-你可以通过任何 Web 技术编写 HTML + CSS + JavaScript 页面，KernelSU 的管理器将通过 WebView 显示这些页面。此外，KernelSU 还提供了一些用于与系统交互的 JavaScript API，例如执行 shell 命令。
+LunexSU 的模块除了执行启动脚本和修改系统文件之外，还支持显示 UI 界面和与用户交互。
+
+你可以通过任何 Web 技术编写 HTML + CSS + JavaScript 页面，LunexSU 的管理器将通过 WebView 显示这些页面。此外，LunexSU 还提供了一些用于与系统交互的 JavaScript API，例如执行 shell 命令。
 
 ## WebUI 根目录
 
@@ -17,16 +19,16 @@ Web 资源文件应放置在模块根目录的 `webroot` 子目录中，并且�
 ````
 
 :::warning
-安装模块时，KernelSU 会自动设置 `webroot` 目录的权限和 SELinux context，如果您不知道自己在做什么，请不要自行设置该目录的权限！
+安装模块时，LunexSU 会自动设置 `webroot` 目录的权限和 SELinux context，如果您不知道自己在做什么，请不要自行设置该目录的权限！
 :::
 
 如果您的页面包含 CSS 和 JavaScript，您也需要将其放入此目录中。
 
 ## JavaScript API
 
-如果只是一个显示页面，那它和普通网页没有什么区别。更重要的是，KernelSU 提供了一系列的系统 API，可以让您实现模块特有的功能。
+如果只是一个显示页面，那它和普通网页没有什么区别。更重要的是，LunexSU 提供了一系列的系统 API，可以让您实现模块特有的功能。
 
-KernelSU 提供了一个 JavaScript 库并[在 npm 上发布](https://www.npmjs.com/package/kernelsu)，您可以在网页的 JavaScript 代码中使用它。
+LunexSU 提供了一个 JavaScript 库并[在 npm 上发布](https://www.npmjs.com/package/kernelsu)，您可以在网页的 JavaScript 代码中使用它。
 
 例如，您可以执行 shell 命令来获取特定配置或修改属性：
 
@@ -40,7 +42,7 @@ const { errno, stdout } = await exec("getprop ro.product.model");
 
 [API 文档](https://www.npmjs.com/package/kernelsu)
 
-如果您发现现有的 API 不能满足您的需求或者使用不方便，欢迎[在这里](https://github.com/tiann/KernelSU/issues)给我们提出建议！
+如果您发现现有的 API 不能满足您的需求或者使用不方便，欢迎[在这里](https://github.com/Shixiaoshi0417/LunexSU/issues)给我们提出建议！
 
 ## 一些技巧
 

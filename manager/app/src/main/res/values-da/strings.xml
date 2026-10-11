@@ -28,7 +28,7 @@
     <string name="safe_mode">Sikker tilstand</string>
     <string name="reboot_to_apply">Genstart for at tage effekt</string>
     <string name="home_learn_kernelsu">Lær LunexSU</string>
-    <string name="home_learn_kernelsu_url">https://kernelsu.org/guide/what-is-kernelsu.html</string>
+    <string name="home_learn_kernelsu_url">https://github.com/Shixiaoshi0417/LunexSU#readme</string>
     <string name="home_click_to_learn_kernelsu">Lær hvordan man installerer LunexSU og moduler.</string>
     <string name="about_source_code"><![CDATA[%1$s<br/>%2$s]]></string>
     <string name="profile_default">Standard</string>
@@ -63,8 +63,8 @@
     <string name="module_version">Version</string>
     <string name="show_system_apps">Vis system-apps</string>
     <string name="module_magisk_conflict">Moduler er utilgængelige på grund af en konflikt med Magisk!</string>
-    <string name="home_support_title">Støt Os</string>
-    <string name="home_support_content">KernelSU er, og vil altid være, gratis og åben kildekode. Du kan dog vise os, at du holder af os, ved at give en donation.</string>
+    <string name="home_support_title">Contribute to LunexSU</string>
+    <string name="home_support_content">Contribute to LunexSU, report issues or improve its documentation.</string>
     <string name="profile_custom">Brugerdefineret</string>
     <string name="profile_name">Profilnavn</string>
     <string name="profile_namespace_individual">Individuel</string>

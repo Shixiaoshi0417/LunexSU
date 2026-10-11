@@ -42,10 +42,10 @@
     <string name="reboot_to_apply">Uruchom ponownie, aby zastosować zmiany</string>
     <string name="module_magisk_conflict">Moduły są niedostępne z powodu konfliktu z Magiskiem!</string>
     <string name="home_learn_kernelsu">Poznaj LunexSU</string>
-    <string name="home_learn_kernelsu_url">https://kernelsu.org/guide/what-is-kernelsu.html</string>
+    <string name="home_learn_kernelsu_url">https://github.com/Shixiaoshi0417/LunexSU#readme</string>
     <string name="home_click_to_learn_kernelsu">Dowiedz się jak zainstalować LunexSU i jak korzystać z modułów.</string>
-    <string name="home_support_title">Wesprzyj nas</string>
-    <string name="home_support_content">KernelSU jest i zawsze będzie darmowy oraz otwarty. Niemniej jednak możesz nam pokazać, że Ci zależy, wysyłając darowiznę.</string>
+    <string name="home_support_title">Contribute to LunexSU</string>
+    <string name="home_support_content">Contribute to LunexSU, report issues or improve its documentation.</string>
     <string name="about_source_code"><![CDATA[%1$s<br/>%2$s]]></string>
     <string name="profile" translatable="false">Profil aplikacji</string>
     <string name="profile_default">Domyślny</string>

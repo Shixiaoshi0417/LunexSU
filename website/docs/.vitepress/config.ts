@@ -5,17 +5,13 @@ import { resolve } from 'path'
 
 export default defineConfig( {
     title: 'LunexSU',
+    base: process.env.LUNEXSU_SITE_BASE || '/LunexSU/',
     locales: locales.locales,
     head: [
         ['link', { rel: 'icon', href: '/favicon.ico' }],
-        ['script', {
-            async: 'async',
-            src: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8356785667482909',
-            crossorigin: 'anonymous',
-        }],
     ],
     sitemap: {
-        hostname: 'https://kernelsu.org'
+        hostname: process.env.LUNEXSU_SITE_URL || 'https://shixiaoshi0417.github.io/LunexSU/'
     },
     buildEnd: async (config: SiteConfig) => {
         const templateDir = resolve(config.outDir, 'templates');

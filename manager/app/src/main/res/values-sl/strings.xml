@@ -25,7 +25,7 @@
     <string name="module_author">Avtor</string>
     <string name="send_log">Prijavite dnevnik</string>
     <string name="home_learn_kernelsu">Naučite se LunexSU</string>
-    <string name="home_learn_kernelsu_url">https://kernelsu.org/guide/what-is-kernelsu.html</string>
+    <string name="home_learn_kernelsu_url">https://github.com/Shixiaoshi0417/LunexSU#readme</string>
     <string name="home_click_to_learn_kernelsu">Naučite se, kako namestiti LunexSU in uporabiti module</string>
     <string name="about_source_code"><![CDATA[%1$s<br/>%2$s]]></string>
     <string name="profile_default">Privzeto</string>
@@ -58,12 +58,12 @@
     <string name="reboot_to_apply">Za uveljavitev je potreben ponovni zagon</string>
     <string name="show_system_apps">Prikaz sistemskih aplikacij</string>
     <string name="module_magisk_conflict">Moduli so onemogočeni, ker so v konfliktu z Magiskovimi!</string>
-    <string name="home_support_title">Podprite nas</string>
+    <string name="home_support_title">Contribute to LunexSU</string>
     <string name="profile_custom">Po meri</string>
     <string name="profile_name">Ime profila</string>
     <string name="profile_groups">Skupine</string>
     <string name="profile_selinux_context">SELinux kontekst</string>
-    <string name="home_support_content">KernelSU je, in bo vedno brezplačen in odprtokoden. Kljub temu, nam lahko z donacijo pokažete, da vam je mar.</string>
+    <string name="home_support_content">Contribute to LunexSU, report issues or improve its documentation.</string>
     <string name="failed_to_update_app_profile">Napaka pri posodobitvi aplikacijskega profila za %s</string>
     <string name="home_lkm_update_available">Na voljo je novejša različica vgrajenega LKM. Tapnite za posodobitev.</string>
     <string name="home_lkm_custom">Po meri</string>

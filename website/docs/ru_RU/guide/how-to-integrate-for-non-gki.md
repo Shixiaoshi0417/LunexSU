@@ -1,29 +1,31 @@
-# Как интегрировать KernelSU для не GKI ядер? {#introduction}
+# Как интегрировать LunexSU для не GKI ядер? {#introduction}
+
+> Adapted from the upstream [KernelSU](https://github.com/tiann/KernelSU) guides. See the [LunexSU README](https://github.com/Shixiaoshi0417/LunexSU#readme) for package identity, authorization expiry and migration details.
 
 ::: warning
 Этот документ предназначен только для архивных ссылок и больше не обновляется.
-Начиная с KernelSU v1.0, мы отказались от официальной поддержки устройств не-GKI.
+Начиная с LunexSU v1.0, мы отказались от официальной поддержки устройств не-GKI.
 :::
 
-KernelSU может быть интегрирован в ядра, отличные от GKI, и был перенесен на версии 4.14 и ниже.
+LunexSU может быть интегрирован в ядра, отличные от GKI, и был перенесен на версии 4.14 и ниже.
 
-В связи с фрагментацией ядер, отличных от GKI, у нас нет единого способа их сборки, поэтому мы не можем предоставить загрузочные образы, отличные от GKI. Однако вы можете собрать ядро самостоятельно с помощью интегрированной программы KernelSU.
+В связи с фрагментацией ядер, отличных от GKI, у нас нет единого способа их сборки, поэтому мы не можем предоставить загрузочные образы, отличные от GKI. Однако вы можете собрать ядро самостоятельно с помощью интегрированной программы LunexSU.
 
-Во-первых, вы должны уметь собирать загрузочное ядро из исходных текстов ядра. Если ядро не является открытым, то запустить KernelSU для вашего устройства будет затруднительно.
+Во-первых, вы должны уметь собирать загрузочное ядро из исходных текстов ядра. Если ядро не является открытым, то запустить LunexSU для вашего устройства будет затруднительно.
 
-Если вы можете собрать загрузочное ядро, то существует два способа интеграции KernelSU в исходный код ядра:
+Если вы можете собрать загрузочное ядро, то существует два способа интеграции LunexSU в исходный код ядра:
 
 1. Автоматически с помощью `kprobe`
 2. Вручную
 
 ## Интеграция с kprobe {#using-kprobes}
 
-KernelSU использует kprobe для выполнения хуков ядра, если *kprobe* хорошо работает в вашем ядре, то рекомендуется использовать именно этот способ.
+LunexSU использует kprobe для выполнения хуков ядра, если *kprobe* хорошо работает в вашем ядре, то рекомендуется использовать именно этот способ.
 
-Сначала добавьте KernelSU в дерево исходных текстов ядра:
+Сначала добавьте LunexSU в дерево исходных текстов ядра:
 
 ```sh
-curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -
 ```
 
 Затем необходимо проверить, включена ли функция *kprobe* в конфигурации ядра, если нет, то добавьте в нее эти настройки:
@@ -34,15 +36,15 @@ CONFIG_HAVE_KPROBES=y
 CONFIG_KPROBE_EVENTS=y
 ```
 
-И снова соберите ядро, KernelSU должен работать нормально.
+И снова соберите ядро, LunexSU должен работать нормально.
 
 Если вы обнаружите, что KPROBES по-прежнему не активирован, попробуйте включить `CONFIG_MODULES`. (Если это все равно не даст результата, используйте `make menuconfig` для поиска других зависимостей KPROBES).
 
-Если же при интеграции KernelSU возникает зацикливание загрузки, то, возможно, в вашем ядре *kprobe неисправен*, следует исправить ошибку kprobe или воспользоваться вторым способом.
+Если же при интеграции LunexSU возникает зацикливание загрузки, то, возможно, в вашем ядре *kprobe неисправен*, следует исправить ошибку kprobe или воспользоваться вторым способом.
 
 :::tip Как проверить, не сломан ли kprobe？
 
-закомментируйте `ksu_sucompat_init()` и `ksu_ksud_init()` в файле `KernelSU/kernel/ksu.c`, если устройство загружается нормально, то может быть нарушена работа kprobe.
+закомментируйте `ksu_sucompat_init()` и `ksu_ksud_init()` в файле `LunexSU/kernel/ksu.c`, если устройство загружается нормально, то может быть нарушена работа kprobe.
 :::
 
 ## Ручная модификация исходного кода ядра {#modify-kernel-source-code}
@@ -54,22 +56,22 @@ CONFIG_KPROBE_EVENTS=y
 - Последний тэг(стабильный)
 
 ```sh
-curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -
 ```
 
 - Основная ветвь(разработка)
 
 ```sh
-curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
+curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -s main
 ```
 
 - Выбранный тэг(Например, версия v0.5.2)
 
 ```sh
-curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.5.2
+curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -s v0.5.2
 ```
 
-Затем добавьте вызовы KernelSU в исходный код ядра, вот патч, на который можно сослаться:
+Затем добавьте вызовы LunexSU в исходный код ядра, вот патч, на который можно сослаться:
 
 ```diff
 diff --git a/fs/exec.c b/fs/exec.c
@@ -236,7 +238,7 @@ index 2ff887661237..e758d7db7663 100644
  		return -EINVAL;
 ```
 
-Чтобы включить встроенный в KernelSU безопасный режим, необходимо также изменить `input_handle_event` в файле `drivers/input/input.c`:
+Чтобы включить встроенный в LunexSU безопасный режим, необходимо также изменить `input_handle_event` в файле `drivers/input/input.c`:
 
 :::tip
 Настоятельно рекомендуется включить эту функцию, она очень помогает предотвратить циклическую загрузку!
@@ -266,7 +268,7 @@ index 45306f9ef247..815091ebfca4 100755
  		add_input_randomness(type, code, value);
 ```
 
-Наконец, снова соберите ядро, KernelSU должен работать хорошо.
+Наконец, снова соберите ядро, LunexSU должен работать хорошо.
 
 ### How to backport path_umount
 
@@ -317,4 +319,4 @@ You can make the "Umount modules" feature work on pre-GKI kernels by manually ba
   * This is important for filesystems which use unnamed block devices.
 ```
 
-Finally, build your kernel again, and KernelSU should work correctly.
+Finally, build your kernel again, and LunexSU should work correctly.

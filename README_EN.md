@@ -16,6 +16,9 @@ LunexSU is based on [KernelSU](https://github.com/tiann/KernelSU). It adds autho
 
 [Releases](https://github.com/Shixiaoshi0417/LunexSU/releases) · [Builds](https://github.com/Shixiaoshi0417/LunexSU/actions) · [Issues](https://github.com/Shixiaoshi0417/LunexSU/issues)
 
+
+The Manager package is `com.shixiaoshi0417.lunexsu` (`.pr` for PR builds). It installs independently; the previous Manager private settings are not automatically imported. Core must use the same package and matching signature. Module interfaces and persisted authorization paths remain compatible. See the [brand migration record](docs/lunexsu-brand-migration.md).
+
 ## Features
 
 - Kernel-based `su` and Root access management, retaining KernelSU's superuser pre-management model.
@@ -148,7 +151,7 @@ Kernel interface changes require matching ksud and Manager JNI updates. See [AGE
 
 ## Security
 
-See [SECURITY.md](SECURITY.md) for vulnerability reporting. This file retains upstream KernelSU's reporting policy. Identify the branch and version when reporting issues involving LunexSU additions.
+See [SECURITY.md](SECURITY.md) for vulnerability reporting. It describes this project's reporting channels. Identify the branch and version when reporting issues involving LunexSU additions.
 
 ## License
 

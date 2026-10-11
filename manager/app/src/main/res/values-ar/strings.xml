@@ -42,10 +42,10 @@
     <string name="reboot_to_apply">إعادة التشغيل لتطبيق التغييرات</string>
     <string name="module_magisk_conflict">الوحدات غير متاحة بسبب تعارضها مع Magisk!</string>
     <string name="home_learn_kernelsu">تعلم LunexSU</string>
-    <string name="home_learn_kernelsu_url">https://kernelsu.org/guide/what-is-kernelsu.html</string>
+    <string name="home_learn_kernelsu_url">https://github.com/Shixiaoshi0417/LunexSU#readme</string>
     <string name="home_click_to_learn_kernelsu">تعرف على كيفية تثبيت LunexSU واستخدام الإضافات</string>
-    <string name="home_support_title">إدعمنا</string>
-    <string name="home_support_content">KernelSU سيظل دائماً مجانياً ومفتوح المصدر. مع ذلك، يمكنك متى ما استطعت أن تظهر لنا أنك تهتم بالتبرع.</string>
+    <string name="home_support_title">Contribute to LunexSU</string>
+    <string name="home_support_content">Contribute to LunexSU, report issues or improve its documentation.</string>
     <string name="about_source_code"><![CDATA[%1$s<br/>%2$s]]></string>
     <string name="profile_capabilities">القدرات</string>
     <string name="module_update">تحديث</string>

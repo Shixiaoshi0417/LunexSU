@@ -99,7 +99,7 @@ emulator or device after building and installing the debug Manager/test APKs:
 
 ```sh
 adb -s <emulator-serial> shell am instrument -w -e suite theme \
-  me.weishu.kernelsu.test/me.weishu.kernelsu.AuthorizationTestRunner
+  com.shixiaoshi0417.lunexsu.test/com.shixiaoshi0417.lunexsu.AuthorizationTestRunner
 ```
 
 This theme suite does not require KernelSU Core. The runner's original Root suite
@@ -109,9 +109,9 @@ For UI reproduction on a disposable emulator with debug/test APKs installed:
 
 ```sh
 adb -s <emulator-serial> shell am instrument -w -e suite theme_fixture -e ui material \
-  me.weishu.kernelsu.test/me.weishu.kernelsu.AuthorizationTestRunner
+  com.shixiaoshi0417.lunexsu.test/com.shixiaoshi0417.lunexsu.AuthorizationTestRunner
 # Copy the reported cache fixture using adb exec-out run-as, then push it to Downloads.
-adb -s <emulator-serial> shell am start -n me.weishu.kernelsu/.ui.ThemeTestActivity
+adb -s <emulator-serial> shell am start -n com.shixiaoshi0417.lunexsu/.ui.ThemeTestActivity
 # Use ui=miuix for the second UI; force-stop before changing the host's initial page.
 ```
 

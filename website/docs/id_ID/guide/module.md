@@ -1,42 +1,44 @@
 # Panduan module
 
-KernelSU menyediakan mekanisme modul yang mencapai efek memodifikasi direktori sistem dengan tetap menjaga integritas partisi sistem. Mekanisme ini umumnya dikenal sebagai "tanpa sistem".
+> Adapted from the upstream [KernelSU](https://github.com/tiann/KernelSU) guides. See the [LunexSU README](https://github.com/Shixiaoshi0417/LunexSU#readme) for package identity, authorization expiry and migration details.
 
-Mekanisme modul KernelSU hampir sama dengan Magisk. Jika Anda terbiasa dengan pengembangan modul Magisk, mengembangkan modul KernelSU sangat mirip. Anda dapat melewati pengenalan modul di bawah ini dan hanya perlu membaca [difference-with-magisk](difference-with-magisk.md).
+LunexSU menyediakan mekanisme modul yang mencapai efek memodifikasi direktori sistem dengan tetap menjaga integritas partisi sistem. Mekanisme ini umumnya dikenal sebagai "tanpa sistem".
+
+Mekanisme modul LunexSU hampir sama dengan Magisk. Jika Anda terbiasa dengan pengembangan modul Magisk, mengembangkan modul LunexSU sangat mirip. Anda dapat melewati pengenalan modul di bawah ini dan hanya perlu membaca [difference-with-magisk](difference-with-magisk.md).
 
 ::: warning METAMODULE HANYA DIPERLUKAN UNTUK MODIFIKASI FILE SISTEM
-KernelSU menggunakan arsitektur [metamodule](metamodule.md) untuk me-mount direktori `system`. **Hanya jika modul Anda perlu memodifikasi file `/system`** (melalui direktori `system`) Anda perlu menginstal metamodule (seperti [meta-overlayfs](https://github.com/tiann/KernelSU/releases)). Fitur modul lainnya seperti skrip, aturan sepolicy, dan system.prop bekerja tanpa metamodule.
+LunexSU menggunakan arsitektur [metamodule](metamodule.md) untuk me-mount direktori `system`. **Hanya jika modul Anda perlu memodifikasi file `/system`** (melalui direktori `system`) Anda perlu menginstal metamodule (seperti [meta-overlayfs](https://github.com/Shixiaoshi0417/LunexSU/releases)). Fitur modul lainnya seperti skrip, aturan sepolicy, dan system.prop bekerja tanpa metamodule.
 :::
 
 ## WebUI
 
-Modul KernelSU mendukung tampilan antarmuka dan interaksi dengan pengguna. Lihat [WebUI documentation](module-webui.md) untuk detailnya.
+Modul LunexSU mendukung tampilan antarmuka dan interaksi dengan pengguna. Lihat [WebUI documentation](module-webui.md) untuk detailnya.
 
 ## Konfigurasi Modul
 
-KernelSU menyediakan sistem konfigurasi bawaan yang memungkinkan modul menyimpan pengaturan key-value persisten atau sementara. Untuk detail lebih lanjut, lihat [dokumentasi Konfigurasi Modul](module-config.md).
+LunexSU menyediakan sistem konfigurasi bawaan yang memungkinkan modul menyimpan pengaturan key-value persisten atau sementara. Untuk detail lebih lanjut, lihat [dokumentasi Konfigurasi Modul](module-config.md).
 
 ## Busybox
 
-KernelSU dikirimkan dengan fitur biner BusyBox yang lengkap (termasuk dukungan penuh SELinux). Eksekusi terletak di `/data/adb/ksu/bin/busybox`. BusyBox KernelSU mendukung "Mode Shell Standalone Shell" yang dapat dialihkan waktu proses. Apa yang dimaksud dengan mode mandiri ini adalah bahwa ketika dijalankan di shell `ash` dari BusyBox, setiap perintah akan langsung menggunakan applet di dalam BusyBox, terlepas dari apa yang ditetapkan sebagai `PATH`. Misalnya, perintah seperti `ls`, `rm`, `chmod` **TIDAK** akan menggunakan apa yang ada di `PATH` (dalam kasus Android secara default akan menjadi `/system/bin/ls`, ` /system/bin/rm`, dan `/system/bin/chmod` masing-masing), tetapi akan langsung memanggil applet BusyBox internal. Ini memastikan bahwa skrip selalu berjalan di lingkungan yang dapat diprediksi dan selalu memiliki rangkaian perintah lengkap, apa pun versi Android yang menjalankannya. Untuk memaksa perintah _not_ menggunakan BusyBox, Anda harus memanggil yang dapat dieksekusi dengan path lengkap.
+LunexSU dikirimkan dengan fitur biner BusyBox yang lengkap (termasuk dukungan penuh SELinux). Eksekusi terletak di `/data/adb/ksu/bin/busybox`. BusyBox LunexSU mendukung "Mode Shell Standalone Shell" yang dapat dialihkan waktu proses. Apa yang dimaksud dengan mode mandiri ini adalah bahwa ketika dijalankan di shell `ash` dari BusyBox, setiap perintah akan langsung menggunakan applet di dalam BusyBox, terlepas dari apa yang ditetapkan sebagai `PATH`. Misalnya, perintah seperti `ls`, `rm`, `chmod` **TIDAK** akan menggunakan apa yang ada di `PATH` (dalam kasus Android secara default akan menjadi `/system/bin/ls`, ` /system/bin/rm`, dan `/system/bin/chmod` masing-masing), tetapi akan langsung memanggil applet BusyBox internal. Ini memastikan bahwa skrip selalu berjalan di lingkungan yang dapat diprediksi dan selalu memiliki rangkaian perintah lengkap, apa pun versi Android yang menjalankannya. Untuk memaksa perintah _not_ menggunakan BusyBox, Anda harus memanggil yang dapat dieksekusi dengan path lengkap.
 
-Setiap skrip shell tunggal yang berjalan dalam konteks KernelSU akan dieksekusi di shell `ash` BusyBox dengan mode mandiri diaktifkan. Untuk apa yang relevan dengan pengembang pihak ke-3, ini termasuk semua skrip boot dan skrip instalasi modul.
+Setiap skrip shell tunggal yang berjalan dalam konteks LunexSU akan dieksekusi di shell `ash` BusyBox dengan mode mandiri diaktifkan. Untuk apa yang relevan dengan pengembang pihak ke-3, ini termasuk semua skrip boot dan skrip instalasi modul.
 
-Bagi yang ingin menggunakan fitur “Standalone Mode” ini di luar KernelSU, ada 2 cara untuk mengaktifkannya:
+Bagi yang ingin menggunakan fitur “Standalone Mode” ini di luar LunexSU, ada 2 cara untuk mengaktifkannya:
 
 1. Tetapkan variabel lingkungan `ASH_STANDALONE` ke `1`<br>Contoh: `ASH_STANDALONE=1 /data/adb/ksu/bin/busybox sh <script>`
 2. Beralih dengan opsi baris perintah:<br>`/data/adb/ksu/bin/busybox sh -o mandiri <script>`
 
-Untuk memastikan semua shell `sh` selanjutnya dijalankan juga dalam mode mandiri, opsi 1 adalah metode yang lebih disukai (dan inilah yang digunakan secara internal oleh KernelSU dan manajer KernelSU) karena variabel lingkungan diwariskan ke proses anak.
+Untuk memastikan semua shell `sh` selanjutnya dijalankan juga dalam mode mandiri, opsi 1 adalah metode yang lebih disukai (dan inilah yang digunakan secara internal oleh LunexSU dan manajer LunexSU) karena variabel lingkungan diwariskan ke proses anak.
 
 ::: perbedaan tip dengan Magisk
 
-BusyBox KernelSU sekarang menggunakan file biner yang dikompilasi langsung dari proyek Magisk. **Berkat Magisk!** Oleh karena itu, Anda tidak perlu khawatir tentang masalah kompatibilitas antara skrip BusyBox di Magisk dan KernelSU karena keduanya persis sama!
+BusyBox LunexSU sekarang menggunakan file biner yang dikompilasi langsung dari proyek Magisk. **Berkat Magisk!** Oleh karena itu, Anda tidak perlu khawatir tentang masalah kompatibilitas antara skrip BusyBox di Magisk dan LunexSU karena keduanya persis sama!
 :::
 
-## KernelSU module
+## LunexSU module
 
-Modul KernelSU adalah folder yang ditempatkan di `/data/adb/modules` dengan struktur di bawah ini:
+Modul LunexSU adalah folder yang ditempatkan di `/data/adb/modules` dengan struktur di bawah ini:
 
 ```txt
 /data/adb/modules
@@ -58,7 +60,7 @@ Modul KernelSU adalah folder yang ditempatkan di `/data/adb/modules` dengan stru
 │   │
 │   │      *** Status Flags ***
 │   │
-│   ├── skip_mount          <--- If exists, KernelSU will NOT mount your system folder
+│   ├── skip_mount          <--- If exists, LunexSU will NOT mount your system folder
 │   ├── disable             <--- If exists, the module will be disabled
 │   ├── remove              <--- If exists, the module will be removed next reboot
 │   │
@@ -66,7 +68,7 @@ Modul KernelSU adalah folder yang ditempatkan di `/data/adb/modules` dengan stru
 │   │
 │   ├── post-fs-data.sh     <--- This script will be executed in post-fs-data
 │   ├── service.sh          <--- This script will be executed in late_start service
-|   ├── uninstall.sh        <--- This script will be executed when KernelSU removes your module
+|   ├── uninstall.sh        <--- This script will be executed when LunexSU removes your module
 │   ├── system.prop         <--- Properties in this file will be loaded as system properties by resetprop
 │   ├── sepolicy.rule       <--- Additional custom sepolicy rules
 │   ├── initrc/             <--- File .rc di direktori ini akan disuntikkan ke init.rc saat boot
@@ -92,12 +94,12 @@ Modul KernelSU adalah folder yang ditempatkan di `/data/adb/modules` dengan stru
 ```
 
 ::: perbedaan tip dengan Magisk
-KernelSU tidak memiliki dukungan bawaan untuk Zygisk, jadi tidak ada konten terkait Zygisk dalam modul. Namun, Anda dapat menggunakan [ZygiskNext](https://github.com/Dr-TSNG/ZygiskNext) untuk mendukung modul Zygisk. Dalam hal ini, konten modul Zygisk identik dengan yang didukung oleh Magisk.
+LunexSU tidak memiliki dukungan bawaan untuk Zygisk, jadi tidak ada konten terkait Zygisk dalam modul. Namun, Anda dapat menggunakan [ZygiskNext](https://github.com/Dr-TSNG/ZygiskNext) untuk mendukung modul Zygisk. Dalam hal ini, konten modul Zygisk identik dengan yang didukung oleh Magisk.
 :::
 
 ### module.prop
 
-module.prop adalah file konfigurasi untuk sebuah modul. Di KernelSU, jika modul tidak berisi file ini, maka tidak akan dikenali sebagai modul. Format file ini adalah sebagai berikut:
+module.prop adalah file konfigurasi untuk sebuah modul. Di LunexSU, jika modul tidak berisi file ini, maka tidak akan dikenali sebagai modul. Format file ini adalah sebagai berikut:
 
 ```txt
 id=<string>
@@ -133,7 +135,7 @@ Harap baca bagian [Boot Scripts](#boot-scripts) untuk memahami perbedaan antara 
 Di semua skrip modul Anda, harap gunakan `MODDIR=${0%/*}` untuk mendapatkan jalur direktori dasar modul Anda; lakukan **TIDAK** hardcode jalur modul Anda dalam skrip.
 
 ::: perbedaan tip dengan Magisk
-Anda dapat menggunakan variabel lingkungan KSU untuk menentukan apakah skrip berjalan di KernelSU atau Magisk. Jika berjalan di KernelSU, nilai ini akan disetel ke true.
+Anda dapat menggunakan variabel lingkungan KSU untuk menentukan apakah skrip berjalan di LunexSU atau Magisk. Jika berjalan di LunexSU, nilai ini akan disetel ke true.
 :::
 
 ### `system` directory
@@ -149,7 +151,7 @@ Direktori `system` hanya di-mount jika Anda telah menginstal metamodule yang men
 
 Jika Anda ingin menghapus file atau folder di direktori sistem asli, Anda perlu membuat file dengan nama yang sama dengan file/folder di direktori modul menggunakan `mknod filename c 0 0`. Dengan cara ini, sistem overlayfs akan secara otomatis "memutihkan" file ini seolah-olah telah dihapus (partisi / sistem sebenarnya tidak diubah).
 
-Anda juga dapat mendeklarasikan variabel bernama `REMOVE` yang berisi daftar direktori di `customize.sh` untuk menjalankan operasi penghapusan, dan KernelSU akan secara otomatis mengeksekusi `mknod <TARGET> c 0 0` di direktori modul yang sesuai. Misalnya:
+Anda juga dapat mendeklarasikan variabel bernama `REMOVE` yang berisi daftar direktori di `customize.sh` untuk menjalankan operasi penghapusan, dan LunexSU akan secara otomatis mengeksekusi `mknod <TARGET> c 0 0` di direktori modul yang sesuai. Misalnya:
 
 ``` sh
 HAPUS = "
@@ -162,7 +164,7 @@ Daftar di atas akan mengeksekusi `mknod $MODPATH/system/app/YouTuBe c 0 0` dan `
 
 Jika Anda ingin mengganti direktori di sistem, Anda perlu membuat direktori dengan jalur yang sama di direktori modul Anda, lalu atur atribut `setfattr -n trusted.overlay.opaque -v y <TARGET>` untuk direktori ini. Dengan cara ini, sistem overlayfs akan secara otomatis mengganti direktori terkait di sistem (tanpa mengubah partisi /sistem).
 
-Anda dapat mendeklarasikan variabel bernama `REPLACE` di file `customize.sh` Anda, yang menyertakan daftar direktori yang akan diganti, dan KernelSU akan secara otomatis melakukan operasi yang sesuai di direktori modul Anda. Misalnya:
+Anda dapat mendeklarasikan variabel bernama `REPLACE` di file `customize.sh` Anda, yang menyertakan daftar direktori yang akan diganti, dan LunexSU akan secara otomatis melakukan operasi yang sesuai di direktori modul Anda. Misalnya:
 
 REPLACE="
 /system/app/YouTube
@@ -173,7 +175,7 @@ Daftar ini akan secara otomatis membuat direktori `$MODPATH/system/app/YouTube` 
 
 ::: perbedaan tip dengan Magisk
 
-KernelSU menggunakan arsitektur [metamodule](metamodule.md) di mana mounting didelegasikan ke metamodule yang dapat dipasang. Metamodule `meta-overlayfs` resmi menggunakan OverlayFS kernel untuk modifikasi systemless, sedangkan Magisk menggunakan magic mount (bind mount) yang dibangun langsung ke dalam intinya. Keduanya mencapai tujuan yang sama: memodifikasi file `/system` tanpa memodifikasi partisi `/system` secara fisik. Pendekatan KernelSU memberikan lebih banyak fleksibilitas dan mengurangi permukaan deteksi.
+LunexSU menggunakan arsitektur [metamodule](metamodule.md) di mana mounting didelegasikan ke metamodule yang dapat dipasang. Metamodule `meta-overlayfs` resmi menggunakan OverlayFS kernel untuk modifikasi systemless, sedangkan Magisk menggunakan magic mount (bind mount) yang dibangun langsung ke dalam intinya. Keduanya mencapai tujuan yang sama: memodifikasi file `/system` tanpa memodifikasi partisi `/system` secara fisik. Pendekatan LunexSU memberikan lebih banyak fleksibilitas dan mengurangi permukaan deteksi.
 :::
 
 Jika Anda tertarik dengan overlayfs, disarankan untuk membaca [dokumentasi overlayfs](https://docs.kernel.org/filesystems/overlayfs.html) Kernel Linux.
@@ -188,9 +190,9 @@ Jika modul Anda memerlukan beberapa tambalan sepolicy tambahan, harap tambahkan 
 
 ### Injeksi initrc {#initrc-injection}
 
-KernelSU menyediakan mekanisme untuk menyuntikkan arahan Android Init RC kustom ke dalam `init.rc` sistem. Hal ini memungkinkan modul untuk mendaftarkan layanan Android kustom, mengatur pemicu properti, atau melakukan tindakan bahasa Init lainnya tanpa memodifikasi partisi sistem.
+LunexSU menyediakan mekanisme untuk menyuntikkan arahan Android Init RC kustom ke dalam `init.rc` sistem. Hal ini memungkinkan modul untuk mendaftarkan layanan Android kustom, mengatur pemicu properti, atau melakukan tindakan bahasa Init lainnya tanpa memodifikasi partisi sistem.
 
-Selama boot, modul kernel KernelSU mencegat panggilan sistem `read()` dan `fstat()`. Saat proses init Android membaca `/system/etc/init/hw/init.rc`, KernelSU secara transparan menambahkan konten RC kustom ke bagian akhir file. Proses init menguraikan arahan yang disuntikkan ini sama seperti konten init.rc asli.
+Selama boot, modul kernel LunexSU mencegat panggilan sistem `read()` dan `fstat()`. Saat proses init Android membaca `/system/etc/init/hw/init.rc`, LunexSU secara transparan menambahkan konten RC kustom ke bagian akhir file. Proses init menguraikan arahan yang disuntikkan ini sama seperti konten init.rc asli.
 
 Di sisi userspace, ksud menggabungkan semua file `.rc` dari modul yang diaktifkan menjadi satu file `modules.rc`, yang disimpan di partisi `/metadata`. File ini secara otomatis dibuat ulang setiap kali status modul berubah (diinstal, diaktifkan, dinonaktifkan, dihapus, dll.).
 
@@ -262,7 +264,7 @@ ksud initrc refresh
 
 ## Pemasangan module
 
-Penginstal modul KernelSU adalah modul KernelSU yang dikemas dalam file zip yang dapat di-flash di aplikasi pengelola KernelSU. Pemasang modul KernelSU yang paling sederhana hanyalah modul KernelSU yang dikemas sebagai file zip.
+Penginstal modul LunexSU adalah modul LunexSU yang dikemas dalam file zip yang dapat di-flash di aplikasi pengelola LunexSU. Pemasang modul LunexSU yang paling sederhana hanyalah modul LunexSU yang dikemas sebagai file zip.
 
 ```txt
 module.zip
@@ -275,7 +277,7 @@ module.zip
 ```
 
 :::peringatan
-Modul KernelSU TIDAK didukung untuk diinstal dalam pemulihan kustom!!
+Modul LunexSU TIDAK didukung untuk diinstal dalam pemulihan kustom!!
 :::
 
 ### Kostumisasi
@@ -284,27 +286,27 @@ Jika Anda perlu menyesuaikan proses penginstalan modul, secara opsional Anda dap
 
 Jika Anda ingin sepenuhnya mengontrol dan menyesuaikan proses penginstalan, nyatakan `SKIPUNZIP=1` di `customize.sh` untuk melewati semua langkah penginstalan default. Dengan melakukannya, `customize.sh` Anda akan bertanggung jawab untuk menginstal semuanya dengan sendirinya.
 
-Skrip `customize.sh` berjalan di shell BusyBox `ash` KernelSU dengan "Mode Mandiri" diaktifkan. Variabel dan fungsi berikut tersedia:
+Skrip `customize.sh` berjalan di shell BusyBox `ash` LunexSU dengan "Mode Mandiri" diaktifkan. Variabel dan fungsi berikut tersedia:
 
 #### Variable
 
-- `KSU` (bool): variabel untuk menandai bahwa skrip berjalan di lingkungan KernelSU, dan nilai variabel ini akan selalu benar. Anda dapat menggunakannya untuk membedakan antara KernelSU dan Magisk.
-- `KSU_VER` (string): string versi dari KernelSU yang diinstal saat ini (mis. `v0.4.0`)
-- `KSU_VER_CODE` (int): kode versi KernelSU yang terpasang saat ini di ruang pengguna (mis. `10672`)
-- `KSU_KERNEL_VER_CODE` (int): kode versi KernelSU yang terpasang saat ini di ruang kernel (mis. `10672`)
-- `BOOTMODE` (bool): selalu `true` di KernelSU
+- `KSU` (bool): variabel untuk menandai bahwa skrip berjalan di lingkungan LunexSU, dan nilai variabel ini akan selalu benar. Anda dapat menggunakannya untuk membedakan antara LunexSU dan Magisk.
+- `KSU_VER` (string): string versi dari LunexSU yang diinstal saat ini (mis. `v0.4.0`)
+- `KSU_VER_CODE` (int): kode versi LunexSU yang terpasang saat ini di ruang pengguna (mis. `10672`)
+- `KSU_KERNEL_VER_CODE` (int): kode versi LunexSU yang terpasang saat ini di ruang kernel (mis. `10672`)
+- `BOOTMODE` (bool): selalu `true` di LunexSU
 - `MODPATH` (jalur): jalur tempat file modul Anda harus diinstal
 - `TMPDIR` (jalur): tempat di mana Anda dapat menyimpan file untuk sementara
 - `ZIPFILE` (jalur): zip instalasi modul Anda
 - `ARCH` (string): arsitektur CPU perangkat. Nilainya adalah `arm`, `arm64`, `x86`, atau `x64`
 - `IS64BIT` (bool): `true` jika `$ARCH` adalah `arm64` atau `x64`
 - `API` (int): level API (versi Android) perangkat (mis. `23` untuk Android 6.0)
-- `KSU_UAPI_VER` (int): versi UAPI ruang pengguna KernelSU (ksud) (mis. `2`). Versi ini bertambah ketika ada perubahan yang merusak kompatibilitas pada driver kernel, dan dapat digunakan oleh modul untuk memeriksa kompatibilitas.
-- `KSU_RUNTIME_MODE` (string): mode runtime KernelSU saat ini. Nilai yang mungkin adalah `built-in` (mode GKI, dikompilasi ke dalam kernel), `lkm` (dimuat sebagai modul kernel saat boot), atau `late-load` (dimuat sebagai modul kernel setelah boot).
-- `KSU_LATE_LOAD` (int?): jika KernelSU dimuat secara terlambat setelah boot, variabel ini diatur ke `1`; jika tidak, variabel ini tidak diatur.
+- `KSU_UAPI_VER` (int): versi UAPI ruang pengguna LunexSU (ksud) (mis. `2`). Versi ini bertambah ketika ada perubahan yang merusak kompatibilitas pada driver kernel, dan dapat digunakan oleh modul untuk memeriksa kompatibilitas.
+- `KSU_RUNTIME_MODE` (string): mode runtime LunexSU saat ini. Nilai yang mungkin adalah `built-in` (mode GKI, dikompilasi ke dalam kernel), `lkm` (dimuat sebagai modul kernel saat boot), atau `late-load` (dimuat sebagai modul kernel setelah boot).
+- `KSU_LATE_LOAD` (int?): jika LunexSU dimuat secara terlambat setelah boot, variabel ini diatur ke `1`; jika tidak, variabel ini tidak diatur.
 
 ::: peringatan
-Di KernelSU, MAGISK_VER_CODE selalu 25200 dan MAGISK_VER selalu v25.2. Tolong jangan gunakan kedua variabel ini untuk menentukan apakah itu berjalan di KernelSU atau tidak.
+Di LunexSU, MAGISK_VER_CODE selalu 25200 dan MAGISK_VER selalu v25.2. Tolong jangan gunakan kedua variabel ini untuk menentukan apakah itu berjalan di LunexSU atau tidak.
 :::
 
 #### Fungsi
@@ -335,7 +337,7 @@ set_perm_recursive <directory> <owner> <group> <dirpermission> <filepermission> 
 
 ## Boot scripts
 
-Di KernelSU, skrip dibagi menjadi dua jenis berdasarkan mode operasinya: mode post-fs-data dan mode layanan late_start:
+Di LunexSU, skrip dibagi menjadi dua jenis berdasarkan mode operasinya: mode post-fs-data dan mode layanan late_start:
 
 - mode pasca-fs-data
    - Tahap ini adalah BLOKIR. Proses boot dijeda sebelum eksekusi selesai, atau 10 detik telah berlalu.
@@ -347,7 +349,7 @@ Di KernelSU, skrip dibagi menjadi dua jenis berdasarkan mode operasinya: mode po
    - Tahap ini NON-BLOCKING. Skrip Anda berjalan paralel dengan proses booting lainnya.
    - **Ini adalah tahap yang disarankan untuk menjalankan sebagian besar skrip.**
 
-Di KernelSU, skrip startup dibagi menjadi dua jenis berdasarkan lokasi penyimpanannya: skrip umum dan skrip modul:
+Di LunexSU, skrip startup dibagi menjadi dua jenis berdasarkan lokasi penyimpanannya: skrip umum dan skrip modul:
 
 - Skrip Umum
    - Ditempatkan di `/data/adb/post-fs-data.d` atau `/data/adb/service.d`
@@ -359,11 +361,11 @@ Di KernelSU, skrip startup dibagi menjadi dua jenis berdasarkan lokasi penyimpan
    - Hanya dijalankan jika modul diaktifkan
    - `post-fs-data.sh` berjalan dalam mode post-fs-data, dan `service.sh` berjalan dalam mode layanan late_start.
 
-Semua skrip boot akan berjalan di shell BusyBox `ash` KernelSU dengan "Mode Mandiri" diaktifkan.
+Semua skrip boot akan berjalan di shell BusyBox `ash` LunexSU dengan "Mode Mandiri" diaktifkan.
 
 ## Mode late-load {#late-load-mode}
 
-Selain alur boot standar yang dijelaskan di atas, KernelSU mendukung **mode late-load** untuk skenario LKM (Loadable Kernel Module). Dalam mode ini, modul kernel KernelSU dimuat **setelah sistem sepenuhnya boot**, bukan selama proses init.
+Selain alur boot standar yang dijelaskan di atas, LunexSU mendukung **mode late-load** untuk skenario LKM (Loadable Kernel Module). Dalam mode ini, modul kernel LunexSU dimuat **setelah sistem sepenuhnya boot**, bukan selama proses init.
 
 ### Kapan late-load terjadi?
 

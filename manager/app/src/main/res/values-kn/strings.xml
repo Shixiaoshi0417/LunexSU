@@ -7,7 +7,7 @@
     <string name="module_uninstall_success">%s ಅನ್‌ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಲಾಗಿದೆ</string>
     <string name="profile_umount_modules">Umount ಮಾಡ್ಯೂಲ್‌ಗಳು</string>
     <string name="send_log">ಲಾಗ್ ಕಳುಹಿಸಿ</string>
-    <string name="home_support_title">ನಮ್ಮನ್ನು ಬೆಂಬಲಿಸಿ</string>
+    <string name="home_support_title">Contribute to LunexSU</string>
     <string name="profile_namespace_inherited">ಪಿತ್ರಾರ್ಜಿತ</string>
     <string name="module_magisk_conflict">ಮಾಡ್ಯೂಲ್‌ಗಳನ್ನು ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ ಏಕೆಂದರೆ ಇದು ಮ್ಯಾಜಿಸ್ಕ್‌ನೊಂದಿಗೆ ಸಂಘರ್ಷವಾಗಿದೆ!</string>
     <string name="module_changelog">ಚೇಂಜ್ಲಾಗ್</string>
@@ -33,7 +33,7 @@
     <string name="require_kernel_version_gki">ಕರ್ನಲ್ ಅನ್ನು ನವೀಕರಿಸುವ ಅಗತ್ಯವಿದೆ.</string>
     <string name="reboot_userspace">ಸಾಫ್ಟ್ ರೀಬೂಟ್</string>
     <string name="profile_name">ಪ್ರೊಫೈಲ್ ಹೆಸರು</string>
-    <string name="home_support_content">KernelSU ಉಚಿತ ಮತ್ತು ಮುಕ್ತ ಮೂಲವಾಗಿದೆ ಮತ್ತು ಯಾವಾಗಲೂ ಇರುತ್ತದೆ. ಆದಾಗ್ಯೂ ನೀವು ದೇಣಿಗೆ ನೀಡುವ ಮೂಲಕ ನೀವು ಕಾಳಜಿ ವಹಿಸುತ್ತೀರಿ ಎಂದು ನಮಗೆ ತೋರಿಸಬಹುದು.</string>
+    <string name="home_support_content">Contribute to LunexSU, report issues or improve its documentation.</string>
     <string name="uninstall">ಅನ್‌ಇನ್‌ಸ್ಟಾಲ್</string>
     <string name="profile_namespace">ಮೌಂಟ್ ನೇಮ್‌ಸ್ಪೇಸ್</string>
     <string name="profile_selinux_rules">ನಿಯಮಗಳು</string>
@@ -61,7 +61,7 @@
     <string name="module_empty">ಮಾಡ್ಯೂಲ್ ಅನ್ನು ಸ್ಥಾಪಿಸಲಾಗಿಲ್ಲ</string>
     <string name="home_kernel">ಕರ್ನಲ್</string>
     <string name="failed_to_update_app_profile">%s ಗಾಗಿ ಅಪ್ಲಿಕೇಶನ್ ಪ್ರೊಫೈಲ್ ಅನ್ನು ನವೀಕರಿಸಲು ವಿಫಲವಾಗಿದೆ</string>
-    <string name="home_learn_kernelsu_url">https://kernelsu.org/guide/what-is-kernelsu.html</string>
+    <string name="home_learn_kernelsu_url">https://github.com/Shixiaoshi0417/LunexSU#readme</string>
     <string name="about_source_code"><![CDATA[%1$s<br/>%2$s]]></string>
     <string name="home_manager_version">ಮ್ಯಾನೇಜರ್ ವರ್ಷನ್</string>
     <string name="new_version_available">ಹೊಸ ಆವೃತ್ತಿ: %s ಲಭ್ಯವಿದೆ, ಅಪ್‌ಗ್ರೇಡ್ ಮಾಡಲು ಕ್ಲಿಕ್ ಮಾಡಿ</string>

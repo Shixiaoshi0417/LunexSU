@@ -16,8 +16,8 @@
     <string name="new_version_available">Phiên bản mới %s đã có sẵn, nhấn để cập nhật!</string>
     <string name="home_learn_kernelsu">Tìm hiểu về LunexSU</string>
     <string name="home_click_to_learn_kernelsu">Tìm hiểu cách cài đặt LunexSU và sử dụng các module.</string>
-    <string name="home_support_title">Ủng hộ chúng tôi</string>
-    <string name="home_support_content">KernelSU sẽ luôn là miễn phí và mã nguồn mở. Tuy nhiên, bạn có thể cho chúng tôi thấy rằng bạn quan tâm bằng cách quyên góp!</string>
+    <string name="home_support_title">Contribute to LunexSU</string>
+    <string name="home_support_content">Contribute to LunexSU, report issues or improve its documentation.</string>
     <string name="about_source_code"><![CDATA[%1$s<br/>%2$s]]></string>
     <string name="module_magisk_conflict">Các module bị vô hiệu hoá do xung đột với Magisk!</string>
     <string name="module_uninstall_confirm">Bạn có THẬT SỰ muốn gỡ cài đặt module %s không?</string>
@@ -67,7 +67,7 @@
     <string name="show_system_apps">Hiển thị các ứng dụng hệ thống</string>
     <string name="safe_mode">Chế độ An toàn</string>
     <string name="reboot_to_apply">Khởi động lại để có hiệu lực</string>
-    <string name="home_learn_kernelsu_url">https://kernelsu.org/guide/what-is-kernelsu.html</string>
+    <string name="home_learn_kernelsu_url">https://github.com/Shixiaoshi0417/LunexSU#readme</string>
     <string name="profile_selinux_domain">Tên miền</string>
     <string name="profile_selinux_rules">Quy tắc</string>
     <string name="recently_installed">Mới vừa cài đặt</string>

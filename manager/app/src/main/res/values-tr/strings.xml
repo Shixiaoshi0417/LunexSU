@@ -42,10 +42,10 @@
     <string name="reboot_to_apply">Değişikliklerin uygulanması için cihazı yeniden başlat</string>
     <string name="module_magisk_conflict">Magisk ile çakışma nedeniyle modüller kullanılamıyor!</string>
     <string name="home_learn_kernelsu">LunexSU\'yu öğrenin</string>
-    <string name="home_learn_kernelsu_url">https://kernelsu.org/guide/what-is-kernelsu.html</string>
+    <string name="home_learn_kernelsu_url">https://github.com/Shixiaoshi0417/LunexSU#readme</string>
     <string name="home_click_to_learn_kernelsu">LunexSU\'nun nasıl kurulacağını ve modüllerin nasıl kullanılacağını öğrenin.</string>
-    <string name="home_support_title">Bizi Destekleyin</string>
-    <string name="home_support_content">KernelSU ücretsiz ve açık kaynaklı bir yazılımdır ve her zaman öyle kalacaktır. Ancak bağış yaparak bize destek olduğunuzu gösterebilirsiniz.</string>
+    <string name="home_support_title">Contribute to LunexSU</string>
+    <string name="home_support_content">Contribute to LunexSU, report issues or improve its documentation.</string>
     <string name="about_source_code"><![CDATA[%1$s<br/>%2$s]]></string>
     <string name="profile" translatable="false">Uygulama profili</string>
     <string name="profile_default">Varsayılan</string>

@@ -33,8 +33,8 @@
     <string name="module_magisk_conflict">Hindi magagamit ang mga module dahil sa isang salungatan sa Magisk!</string>
     <string name="home_learn_kernelsu">Alamin ang LunexSU</string>
     <string name="home_click_to_learn_kernelsu">Matuto kung paano i-install ang LunexSU at gumamit ng mga module</string>
-    <string name="home_support_title">Suportahan Kami</string>
-    <string name="home_support_content">Ang KernelSU ay, at palaging magiging, libre, at open source. Gayunpaman, maaari mong ipakita sa amin na nagmamalasakit ka sa pamamagitan ng pagbibigay ng donasyon.</string>
+    <string name="home_support_title">Contribute to LunexSU</string>
+    <string name="home_support_content">Contribute to LunexSU, report issues or improve its documentation.</string>
     <string name="about_source_code"><![CDATA[%1$s<br/>%2$s]]></string>
     <string name="profile_namespace">I-mount ang namespace</string>
     <string name="profile_namespace_individual">Indibidwal</string>
@@ -75,7 +75,7 @@
     <string name="module_sort_enabled_first">Pinagana muna</string>
     <string name="confirm">Kumpirmahin</string>
     <string name="safe_mode">Safe mode</string>
-    <string name="home_learn_kernelsu_url">https://kernelsu.org/guide/what-is-kernelsu.html</string>
+    <string name="home_learn_kernelsu_url">https://github.com/Shixiaoshi0417/LunexSU#readme</string>
     <string name="profile_default">Default</string>
     <string name="profile_template">Template</string>
     <string name="profile_custom">Pasadya</string>

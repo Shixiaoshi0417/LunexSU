@@ -1,29 +1,31 @@
-# 非 GKI カーネルで KernelSU を統合する方法は？
+# 非 GKI カーネルで LunexSU を統合する方法は？
+
+> Adapted from the upstream [KernelSU](https://github.com/tiann/KernelSU) guides. See the [LunexSU README](https://github.com/Shixiaoshi0417/LunexSU#readme) for package identity, authorization expiry and migration details.
 
 ::: warning
 このドキュメントはアーカイブ参照のみを目的としており、更新されなくなりました。
-KernelSU v1.0以降、非GKIデバイスの公式サポートを終了しました。
+LunexSU v1.0以降、非GKIデバイスの公式サポートを終了しました。
 :::
 
-KernelSU は非 GKI カーネルに統合することが可能であり、4.14 以下のバージョンにバックポートされました。
+LunexSU は非 GKI カーネルに統合することが可能であり、4.14 以下のバージョンにバックポートされました。
 
-非 GKI カーネルの断片化のため、統一されたビルド方法がありませんので、非 GKI ブートイメージを提供することができません。しかし、KernelSU を統合して自分自身でカーネルをビルドすることができます。
+非 GKI カーネルの断片化のため、統一されたビルド方法がありませんので、非 GKI ブートイメージを提供することができません。しかし、LunexSU を統合して自分自身でカーネルをビルドすることができます。
 
-まず、カーネルソースコードからブート可能なカーネルをビルドできる能力が必要です。もしカーネルがオープンソースでない場合、あなたのデバイスで KernelSU を実行することは困難です。
+まず、カーネルソースコードからブート可能なカーネルをビルドできる能力が必要です。もしカーネルがオープンソースでない場合、あなたのデバイスで LunexSU を実行することは困難です。
 
-ブート可能なカーネルをビルドできるなら、カーネルソースコードに KernelSU を統合する方法は二つあります：
+ブート可能なカーネルをビルドできるなら、カーネルソースコードに LunexSU を統合する方法は二つあります：
 
 1. `kprobe` で自動的に
 2. 手動で
 
 ## kprobe で統合する
 
-KernelSU は kprobe を使ってカーネルフックを行います。もし *kprobe* があなたのカーネルでうまく動作する場合、この方法を使うことを推奨します。
+LunexSU は kprobe を使ってカーネルフックを行います。もし *kprobe* があなたのカーネルでうまく動作する場合、この方法を使うことを推奨します。
 
-まず、KernelSU をカーネルソースツリーに追加してください：
+まず、LunexSU をカーネルソースツリーに追加してください：
 
 ```sh
-curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -
 ```
 
 次に、*kprobe* がカーネル設定で有効になっているか確認してください。もし有効でなければ、これらの設定を追加してください：
@@ -33,43 +35,43 @@ CONFIG_KPROBES=y
 CONFIG_HAVE_KPROBES=y
 CONFIG_KPROBE_EVENTS=y
 ```
-そしてカーネルを再度ビルドしてください。KernelSU はうまく動作するはずです。
+そしてカーネルを再度ビルドしてください。LunexSU はうまく動作するはずです。
 
 KPROBES がまだ有効化されていない場合は、CONFIG_MODULES を有効化して試みることができます。（それでも効果がない場合は、make menuconfig を使って KPROBES の他の依存関係を検索してください）
 
-しかし、KernelSU を統合した際にブートループに遭遇した場合、それは *kprobe* があなたのカーネルで破損している可能性があります。kprobe のバグを修正するか、二番目の方法を使用するべきです。
+しかし、LunexSU を統合した際にブートループに遭遇した場合、それは *kprobe* があなたのカーネルで破損している可能性があります。kprobe のバグを修正するか、二番目の方法を使用するべきです。
 
 :::tip kprobe が破損しているかどうかを確認する方法は？
 
-`KernelSU/kernel/ksu.c` にある `ksu_sucompat_init()` と `ksu_ksud_init()` をコメントアウトし、デバイスが正常にブートするか試してください。もし正常にブートするならば、kprobe が破損している可能性があります。
+`LunexSU/kernel/ksu.c` にある `ksu_sucompat_init()` と `ksu_ksud_init()` をコメントアウトし、デバイスが正常にブートするか試してください。もし正常にブートするならば、kprobe が破損している可能性があります。
 
 ## カーネルソースを手動で変更する
 
 もし kprobe があなたのカーネルで機能しない場合（上流のバグや 4.8 以下のカーネルバグが原因かもしれません）、以下の方法を試すことができます。
 
-まず、KernelSU をカーネルソースツリーに追加してください：
+まず、LunexSU をカーネルソースツリーに追加してください：
 
 ::: code-group
 ## カーネルソースを手動で変更する
 
 もし kprobe があなたのカーネルで機能しない場合（上流のバグや 4.8 以下のカーネルバグが原因かもしれません）、以下の方法を試すことができます。
 
-まず、KernelSU をカーネルソースツリーに追加してください：
+まず、LunexSU をカーネルソースツリーに追加してください：
 
 ::: code-group
 
 ```sh
-curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -
 ```
 
 [ main branch(dev)]
 ```sh
-curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
+curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -s main
 ```
 
 [Select tag(Such as v0.5.2)]
 ```sh
-curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.5.2
+curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -s v0.5.2
 ```
 
 
@@ -78,10 +80,10 @@ curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh
 いくつかのデバイスでは、あなたの defconfig が `arch/arm64/configs` にあったり、または他のケースでは `arch/arm64/configs/vendor/your_defconfig` にあることを念頭に置いてください。例えばあなたの defconfig で、`CONFIG_KSU` を y で有効に、または n で無効に設定します。あなたのパスは次のようになるでしょう：
 `arch/arm64/configs/...`
 ```
-# KernelSU
+# LunexSU
 CONFIG_KSU=y
 ```
-次に、KernelSU の呼び出しをカーネルソースに追加します。こちらは参照のためのパッチです：
+次に、LunexSU の呼び出しをカーネルソースに追加します。こちらは参照のためのパッチです：
 
 ::: code-group
 
@@ -268,7 +270,7 @@ index 2ff887661237..e758d7db7663 100644
  		return -EINVAL;
 ```
 
-KernelSU の組み込み SafeMode を有効にするには、`drivers/input/input.c` の `input_handle_event` も変更する必要があります。
+LunexSU の組み込み SafeMode を有効にするには、`drivers/input/input.c` の `input_handle_event` も変更する必要があります。
 
 :::ヒント
 この機能を有効にすることを強くお勧めします。ブートループを防ぐのに非常に役立ちます!
@@ -301,7 +303,7 @@ index 45306f9ef247..815091ebfca4 100755
  		add_input_randomness(type, code, value);
 ```
 
-最後に、カーネルを再度ビルドすると、KernelSU が正常に動作するはずです。
+最後に、カーネルを再度ビルドすると、LunexSU が正常に動作するはずです。
 
 ### How to backport path_umount
 
@@ -352,7 +354,7 @@ You can make the "Umount modules" feature work on pre-GKI kernels by manually ba
   * This is important for filesystems which use unnamed block devices.
 ```
 
-Finally, build your kernel again, and KernelSU should work correctly.
+Finally, build your kernel again, and LunexSU should work correctly.
 
 :::info 誤ってセーフ モードに入ってしまった場合は、
 手動統合を使用し、`CONFIG_KPROBES` を無効にしない場合、ユーザーは起動後に音量を下げるボタンを押してセーフ モードをトリガーする可能性があります。 したがって、手動統合を使用する場合は、`CONFIG_KPROBES` を無効にする必要があります。

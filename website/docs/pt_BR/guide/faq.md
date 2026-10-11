@@ -1,30 +1,32 @@
 # Perguntas frequentes
 
-## KernelSU oferece suporte ao meu dispositivo?
+> Adapted from the upstream [KernelSU](https://github.com/tiann/KernelSU) guides. See the [LunexSU README](https://github.com/Shixiaoshi0417/LunexSU#readme) for package identity, authorization expiry and migration details.
 
-O KernelSU suporta dispositivos rodando Android com bootloader desbloqueado. No entanto, o suporte oficial é apenas para kernels Linux GKI 5.10+ (na prática isso significa que seu dispositivo precisa ter Android 12 de fábrica para ser compatível).
+## LunexSU oferece suporte ao meu dispositivo?
 
-Você pode verificar facilmente o suporte para o seu dispositivo através do gerenciador do KernelSU, que está disponível [aqui](https://github.com/tiann/KernelSU/releases). 
+O LunexSU suporta dispositivos rodando Android com bootloader desbloqueado. No entanto, o suporte oficial é apenas para kernels Linux GKI 5.10+ (na prática isso significa que seu dispositivo precisa ter Android 12 de fábrica para ser compatível).
 
-Se o app mostrar `Não instalado`, significa que seu dispositivo é oficialmente suportado pelo KernelSU.
+Você pode verificar facilmente o suporte para o seu dispositivo através do gerenciador do LunexSU, que está disponível [aqui](https://github.com/Shixiaoshi0417/LunexSU/releases).
 
-Se o app mostrar `Sem suporte`, significa que seu dispositivo não é oficialmente suportado no momento. No entanto, você pode compilar o código-fonte do kernel e integrar o KernelSU para fazê-lo funcionar, ou usar [Dispositivos com suporte não oficial](unofficially-support-devices).
+Se o app mostrar `Não instalado`, significa que seu dispositivo é oficialmente suportado pelo LunexSU.
 
-## Para usar o KernelSU precisa desbloquear o bootloader?
+Se o app mostrar `Sem suporte`, significa que seu dispositivo não é oficialmente suportado no momento. No entanto, você pode compilar o código-fonte do kernel e integrar o LunexSU para fazê-lo funcionar, ou usar [Dispositivos com suporte não oficial](unofficially-support-devices).
+
+## Para usar o LunexSU precisa desbloquear o bootloader?
 
 Certamente, sim.
 
-## KernelSU suporta módulos?
+## LunexSU suporta módulos?
 
-Sim, a maioria dos módulos Magisk funcionam no KernelSU. No entanto, se seu módulo precisar modificar arquivos `/system`, você precisa instalar um [metamodule](metamodule.md) (como `meta-overlayfs`). Outros recursos de módulos funcionam sem um metamodule. Confira o [Guia de módulos](module.md) para mais informações.
+Sim, a maioria dos módulos Magisk funcionam no LunexSU. No entanto, se seu módulo precisar modificar arquivos `/system`, você precisa instalar um [metamodule](metamodule.md) (como `meta-overlayfs`). Outros recursos de módulos funcionam sem um metamodule. Confira o [Guia de módulos](module.md) para mais informações.
 
-## KernelSU suporta Xposed?
+## LunexSU suporta Xposed?
 
 Sim, você pode usar LSPosed (ou outro derivado moderno do Xposed) com [ZygiskNext](https://github.com/Dr-TSNG/ZygiskNext).
 
-## KernelSU suporta Zygisk?
+## LunexSU suporta Zygisk?
 
-KernelSU não tem suporte integrado ao Zygisk, mas você pode usar um módulo como [ZygiskNext](https://github.com/Dr-TSNG/ZygiskNext) para suportá-lo.
+LunexSU não tem suporte integrado ao Zygisk, mas você pode usar um módulo como [ZygiskNext](https://github.com/Dr-TSNG/ZygiskNext) para suportá-lo.
 
 ## Por que meus módulos não funcionam após uma instalação nova?
 
@@ -36,32 +38,32 @@ Se seus módulos precisam modificar arquivos `/system`, você precisa instalar u
 
 Um metamodule é um módulo especial que fornece infraestrutura para montar módulos regulares. Consulte o [Guia de Metamodule](metamodule.md) para uma explicação completa.
 
-## KernelSU é compatível com o Magisk?
+## LunexSU é compatível com o Magisk?
 
-O sistema de módulos do KernelSU está em conflito com a montagem mágica do Magisk. Se houver algum módulo ativado no KernelSU, todo o Magisk deixará de funcionar.
+O sistema de módulos do LunexSU está em conflito com a montagem mágica do Magisk. Se houver algum módulo ativado no LunexSU, todo o Magisk deixará de funcionar.
 
-No entanto, se você usar apenas o `su` do KernelSU, ele funcionará bem com o Magisk. O KernelSU modifica o `kernel`, enquanto o Magisk modifica o `ramdisk`, permitindo que ambos trabalhem juntos.
+No entanto, se você usar apenas o `su` do LunexSU, ele funcionará bem com o Magisk. O LunexSU modifica o `kernel`, enquanto o Magisk modifica o `ramdisk`, permitindo que ambos trabalhem juntos.
 
-## KernelSU substituirá o Magisk?
+## LunexSU substituirá o Magisk?
 
-Acreditamos que não, e esse não é o nosso objetivo. O Magisk é bom o suficiente para solução root do espaço do usuário e terá uma longa vida. O objetivo do KernelSU é fornecer uma interface de kernel aos usuários, não substituindo o Magisk.
+Acreditamos que não, e esse não é o nosso objetivo. O Magisk é bom o suficiente para solução root do espaço do usuário e terá uma longa vida. O objetivo do LunexSU é fornecer uma interface de kernel aos usuários, não substituindo o Magisk.
 
-## KernelSU oferece suporte a dispositivos não-GKI?
+## LunexSU oferece suporte a dispositivos não-GKI?
 
-É possível. Mas você deve baixar o código-fonte do kernel e integrar o KernelSU à árvore do código-fonte e compilar o kernel você mesmo.
+É possível. Mas você deve baixar o código-fonte do kernel e integrar o LunexSU à árvore do código-fonte e compilar o kernel você mesmo.
 
-## KernelSU oferece suporte a dispositivos abaixo do Android 12?
+## LunexSU oferece suporte a dispositivos abaixo do Android 12?
 
-É o kernel do dispositivo que afeta a compatibilidade do KernelSU e não tem nada a ver com a versão do Android. A única restrição é que os dispositivos lançados com Android 12 devem ser kernel 5.10+ (dispositivos GKI). Então:
+É o kernel do dispositivo que afeta a compatibilidade do LunexSU e não tem nada a ver com a versão do Android. A única restrição é que os dispositivos lançados com Android 12 devem ser kernel 5.10+ (dispositivos GKI). Então:
 
 1. Os dispositivos lançados com Android 12 devem ser compatíveis.
 2. Dispositivos com kernel antigo (alguns dispositivos com Android 12 também têm o kernel antigo) são compatíveis (você mesmo deve compilar o kernel).
 
-## KernelSU suporta kernel antigo?
+## LunexSU suporta kernel antigo?
 
-É possível, o KernelSU é portado para o kernel 4.14 agora. Para kernels mais antigo, você precisa portar manualmente e PRs são sempre bem-vindas!
+É possível, o LunexSU é portado para o kernel 4.14 agora. Para kernels mais antigo, você precisa portar manualmente e PRs são sempre bem-vindas!
 
-## Como integrar o KernelSU para um kernel antigo?
+## Como integrar o LunexSU para um kernel antigo?
 
 Por favor, verifique o guia [Integração para dispositivos não-GKI](how-to-integrate-for-non-gki).
 
@@ -77,6 +79,6 @@ GKI 1.0 é completamente diferente do GKI 2.0, você deve compilar o kernel sozi
 
 Não recomendamos que você modifique a partição do sistema diretamente. Por favor, verifique [Guias de módulo](module.md) para modificá-lo sem sistema. Se você insiste em fazer isso, verifique [magisk_overlayfs](https://github.com/HuskyDG/magic_overlayfs).
 
-## KernelSU pode modificar hosts? Como posso usar AdAway?
+## LunexSU pode modificar hosts? Como posso usar AdAway?
 
-Claro. Mas o KernelSU não tem suporte a hosts integrados, você pode instalar um módulo como [systemless-hosts](https://github.com/symbuzzer/systemless-hosts-KernelSU-module) para fazer isso.
+Claro. Mas o LunexSU não tem suporte a hosts integrados, você pode instalar um módulo como [systemless-hosts](https://github.com/symbuzzer/systemless-hosts-LunexSU-module) para fazer isso.

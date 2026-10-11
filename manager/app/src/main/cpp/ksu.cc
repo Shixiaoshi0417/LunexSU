@@ -173,8 +173,8 @@ int get_auth_profile(ksu_auth_profile_cmd *cmd) {
     return ksuctl(KSU_IOCTL_GET_AUTH_PROFILE, cmd);
 }
 
-bool set_auth_profile(const ksu_auth_profile_cmd *cmd) {
-    return ksuctl(KSU_IOCTL_SET_AUTH_PROFILE, cmd) == 0;
+int set_auth_profile(const ksu_auth_profile_cmd *cmd) {
+    return ksuctl(KSU_IOCTL_SET_AUTH_PROFILE, cmd) == 0 ? 0 : -errno;
 }
 
 bool set_su_enabled(bool enabled) {

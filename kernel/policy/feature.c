@@ -43,7 +43,7 @@ static int parse_feature_id(const char *name, u32 *id)
 
 // force_feature=<name|id>:<value>[,<name|id>:<value>...]
 // May be specified multiple times. Invalid entries are skipped instead of
-// failing, as a param error would prevent KernelSU from loading at all.
+// failing, as a param error would prevent LunexSU from loading at all.
 // This may run before the slab allocator is up (built-in), so don't allocate.
 static int force_feature_param_set(const char *val, const struct kernel_param *kp)
 {

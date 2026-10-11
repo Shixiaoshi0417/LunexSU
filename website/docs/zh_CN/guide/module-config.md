@@ -1,6 +1,8 @@
 # 模块配置
 
-KernelSU 提供了一个内置的配置系统,允许模块存储持久化或临时的键值设置。配置以二进制格式存储在 `/data/adb/ksu/module_configs/<module_id>/`,具有以下特性:
+> 本文档改编自 [KernelSU](https://github.com/tiann/KernelSU) 上游指南。LunexSU 的包名、授权有效期与品牌迁移说明见[项目 README](https://github.com/Shixiaoshi0417/LunexSU#readme)。
+
+LunexSU 提供了一个内置的配置系统,允许模块存储持久化或临时的键值设置。配置以二进制格式存储在 `/data/adb/ksu/module_configs/<module_id>/`,具有以下特性:
 
 ## 配置类型
 
@@ -108,7 +110,7 @@ ksud module config set override.description "在管理器中显示的自定义�
 
 ### 声明管理的功能
 
-模块可以使用 `manage.<feature>` 配置模式声明它们管理的 KernelSU 功能。支持的功能对应于 KernelSU 内部的 `FeatureId` 枚举:
+模块可以使用 `manage.<feature>` 配置模式声明它们管理的 LunexSU 功能。支持的功能对应于 LunexSU 内部的 `FeatureId` 枚举:
 
 **支持的功能:**
 - `su_compat` - SU 兼容模式
@@ -131,10 +133,10 @@ ksud module config delete manage.su_compat
 - 要停止管理某个功能,请完全删除该配置键
 
 管理的功能通过模块列表 API 以 `managedFeatures` 字段(逗号分隔的字符串)公开。这允许:
-- KernelSU 管理器检测哪些模块管理哪些 KernelSU 功能
+- LunexSU 管理器检测哪些模块管理哪些 LunexSU 功能
 - 防止多个模块尝试管理同一功能时发生冲突
-- 更好地协调模块与核心 KernelSU 功能之间的关系
+- 更好地协调模块与核心 LunexSU 功能之间的关系
 
 ::: warning 仅支持预定义功能
-仅使用上面列出的预定义功能名称(`su_compat`、`kernel_umount`)。这些对应于实际的 KernelSU 内部功能。使用其他功能名称不会导致错误,但没有任何功能作用。
+仅使用上面列出的预定义功能名称(`su_compat`、`kernel_umount`)。这些对应于实际的 LunexSU 内部功能。使用其他功能名称不会导致错误,但没有任何功能作用。
 :::

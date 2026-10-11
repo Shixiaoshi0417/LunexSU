@@ -42,10 +42,10 @@
     <string name="reboot_to_apply">Riavvia per applicare la modifica</string>
     <string name="module_magisk_conflict">I moduli sono disabilitati perché in conflitto con Magisk!</string>
     <string name="home_learn_kernelsu">Scopri LunexSU</string>
-    <string name="home_learn_kernelsu_url">https://kernelsu.org/guide/what-is-kernelsu.html</string>
+    <string name="home_learn_kernelsu_url">https://github.com/Shixiaoshi0417/LunexSU#readme</string>
     <string name="home_click_to_learn_kernelsu">Scopri come installare LunexSU e utilizzare i moduli</string>
-    <string name="home_support_title">Supportaci</string>
-    <string name="home_support_content">KernelSU è, e sempre sarà, gratuito e open source. Puoi comunque mostrarci il tuo apprezzamento facendo una donazione.</string>
+    <string name="home_support_title">Contribute to LunexSU</string>
+    <string name="home_support_content">Contribute to LunexSU, report issues or improve its documentation.</string>
     <string name="about_source_code"><![CDATA[%1$s<br/>%2$s]]></string>
     <string name="profile_name">Nome profilo</string>
     <string name="profile_namespace">Spazio dei nomi del mount</string>

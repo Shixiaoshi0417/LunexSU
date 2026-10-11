@@ -11,10 +11,11 @@
 
 #include "ksu.h"
 #include "logging.h"
+#include "authorization_compat.h"
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_me_weishu_kernelsu_Natives_getVersion(JNIEnv *env, jobject) {
+Java_com_shixiaoshi0417_lunexsu_Natives_getVersion(JNIEnv *env, jobject) {
     int version = get_version();
     if (version > 0) {
         return version;
@@ -25,19 +26,19 @@ Java_me_weishu_kernelsu_Natives_getVersion(JNIEnv *env, jobject) {
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_me_weishu_kernelsu_Natives_getKernelUAPIVersion(JNIEnv *env, jobject) {
+Java_com_shixiaoshi0417_lunexsu_Natives_getKernelUAPIVersion(JNIEnv *env, jobject) {
     return get_kernel_uapi_version();
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_me_weishu_kernelsu_Natives_getManagerUAPIVersion(JNIEnv *env, jobject) {
+Java_com_shixiaoshi0417_lunexsu_Natives_getManagerUAPIVersion(JNIEnv *env, jobject) {
     return get_manager_uapi_version();
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_me_weishu_kernelsu_Natives_getSuperuserCount(JNIEnv *env, jobject) {
+Java_com_shixiaoshi0417_lunexsu_Natives_getSuperuserCount(JNIEnv *env, jobject) {
     struct ksu_new_get_allow_list_cmd cmd = {
         .count = 0
     };
@@ -47,37 +48,37 @@ Java_me_weishu_kernelsu_Natives_getSuperuserCount(JNIEnv *env, jobject) {
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_me_weishu_kernelsu_Natives_isSafeMode(JNIEnv *env, jclass clazz) {
+Java_com_shixiaoshi0417_lunexsu_Natives_isSafeMode(JNIEnv *env, jclass clazz) {
     return is_safe_mode();
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_me_weishu_kernelsu_Natives_isLkmMode(JNIEnv *env, jclass clazz) {
+Java_com_shixiaoshi0417_lunexsu_Natives_isLkmMode(JNIEnv *env, jclass clazz) {
     return is_lkm_mode();
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_me_weishu_kernelsu_Natives_isLkmBundled(JNIEnv *env, jclass clazz) {
+Java_com_shixiaoshi0417_lunexsu_Natives_isLkmBundled(JNIEnv *env, jclass clazz) {
     return is_lkm_bundled();
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_me_weishu_kernelsu_Natives_isLateLoadMode(JNIEnv *env, jclass clazz) {
+Java_com_shixiaoshi0417_lunexsu_Natives_isLateLoadMode(JNIEnv *env, jclass clazz) {
     return is_late_load_mode();
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_me_weishu_kernelsu_Natives_isManager(JNIEnv *env, jclass clazz) {
+Java_com_shixiaoshi0417_lunexsu_Natives_isManager(JNIEnv *env, jclass clazz) {
     return is_manager();
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_me_weishu_kernelsu_Natives_isPrBuild(JNIEnv *env, jclass clazz) {
+Java_com_shixiaoshi0417_lunexsu_Natives_isPrBuild(JNIEnv *env, jclass clazz) {
     return is_pr_build();
 }
 
@@ -140,7 +141,7 @@ static void fillArrayWithList(JNIEnv *env, jobject list, int *data, int count) {
 
 extern "C"
 JNIEXPORT jobject JNICALL
-Java_me_weishu_kernelsu_Natives_getAppProfile(JNIEnv *env, jobject, jstring pkg, jint uid) {
+Java_com_shixiaoshi0417_lunexsu_Natives_getAppProfile(JNIEnv *env, jobject, jstring pkg, jint uid) {
     if (!pkg || env->GetStringLength(pkg) >= KSU_MAX_PACKAGE_NAME) {
         return nullptr;
     }
@@ -164,19 +165,34 @@ Java_me_weishu_kernelsu_Natives_getAppProfile(JNIEnv *env, jobject, jstring pkg,
 
     ksu_auth_profile_cmd auth = {};
     auth.profile = profile;
-    const bool authSupported = get_kernel_uapi_version() >= 6;
+    bool authSupported = false;
+    int readError = 0;
     bool useDefaultProfile;
-    if (authSupported) {
-        useDefaultProfile = get_auth_profile(&auth) != 0;
-        if (!useDefaultProfile)
-            profile = auth.profile;
-    } else {
+    if (get_kernel_uapi_version() >= 6) {
+        int ret = get_auth_profile(&auth);
+        int error = ret == 0 ? 0 : errno;
+        authSupported = !authorization_ioctl_unsupported(error);
+        useDefaultProfile = ret != 0;
+        if (ret == 0) {
+            if (authorization_reply_valid(auth, uid)) {
+                profile = auth.profile;
+            } else {
+                readError = -EPROTO;
+                useDefaultProfile = true;
+            }
+        } else if (authSupported && error != ENOENT) {
+            readError = -error;
+        }
+    }
+    if (!authSupported) {
         useDefaultProfile = get_app_profile(&profile) != 0;
+        if (useDefaultProfile && errno != ENOENT)
+            readError = -errno;
         // Legacy kernels only have permanent grants.
         auth.state = !useDefaultProfile && profile.allow_su ? KSU_AUTH_ACTIVE : KSU_AUTH_INACTIVE;
     }
 
-    auto cls = env->FindClass("me/weishu/kernelsu/Natives$Profile");
+    auto cls = env->FindClass("com/shixiaoshi0417/lunexsu/Natives$Profile");
     auto constructor = env->GetMethodID(cls, "<init>", "()V");
     auto obj = env->NewObject(cls, constructor);
     auto keyField = env->GetFieldID(cls, "name", "Ljava/lang/String;");
@@ -199,7 +215,9 @@ Java_me_weishu_kernelsu_Natives_getAppProfile(JNIEnv *env, jobject, jstring pkg,
 
     env->SetObjectField(obj, keyField, env->NewStringUTF(profile.key));
     env->SetIntField(obj, currentUidField, profile.curr_uid);
-    env->SetIntField(obj, env->GetFieldID(cls, "authorizationMode", "I"), auth.mode);
+    env->SetBooleanField(obj, env->GetFieldID(cls, "authorizationSupported", "Z"), authSupported);
+    env->SetIntField(obj, env->GetFieldID(cls, "authorizationReadError", "I"), readError);
+    env->SetIntField(obj, env->GetFieldID(cls, "authorizationMode", "I"), readError ? -1 : auth.mode);
     env->SetIntField(obj, env->GetFieldID(cls, "authorizationState", "I"), auth.state);
     env->SetLongField(obj, env->GetFieldID(cls, "authorizationGeneration", "J"), auth.generation);
     env->SetLongField(obj, env->GetFieldID(cls, "authorizationRemainingSeconds", "J"), auth.remaining_seconds);
@@ -261,11 +279,11 @@ Java_me_weishu_kernelsu_Natives_getAppProfile(JNIEnv *env, jobject, jstring pkg,
 }
 
 extern "C"
-JNIEXPORT jboolean JNICALL
-Java_me_weishu_kernelsu_Natives_setAppProfile(JNIEnv *env, jobject clazz, jobject profile) {
+JNIEXPORT jint JNICALL
+Java_com_shixiaoshi0417_lunexsu_Natives_setAppProfileResult(JNIEnv *env, jobject clazz, jobject profile) {
     if (!profile)
-        return false;
-    auto cls = env->FindClass("me/weishu/kernelsu/Natives$Profile");
+        return -EINVAL;
+    auto cls = env->FindClass("com/shixiaoshi0417/lunexsu/Natives$Profile");
 
     auto keyField = env->GetFieldID(cls, "name", "Ljava/lang/String;");
     auto currentUidField = env->GetFieldID(cls, "currentUid", "I");
@@ -287,19 +305,19 @@ Java_me_weishu_kernelsu_Natives_setAppProfile(JNIEnv *env, jobject clazz, jobjec
 
     auto key = env->GetObjectField(profile, keyField);
     if (!key) {
-        return false;
+        return -EINVAL;
     }
     if (env->GetStringLength((jstring) key) >= KSU_MAX_PACKAGE_NAME) {
-        return false;
+        return -EINVAL;
     }
 
     auto cpkg = env->GetStringUTFChars((jstring) key, nullptr);
     p_key_t p_key = {};
     if (!cpkg)
-        return false;
+        return -EINVAL;
     if (strlen(cpkg) >= sizeof(p_key)) {
         env->ReleaseStringUTFChars((jstring) key, cpkg);
-        return false;
+        return -EINVAL;
     }
     strcpy(p_key, cpkg);
     env->ReleaseStringUTFChars((jstring) key, cpkg);
@@ -327,10 +345,10 @@ Java_me_weishu_kernelsu_Natives_setAppProfile(JNIEnv *env, jobject clazz, jobjec
         if (templateName) {
             auto ctemplateName = env->GetStringUTFChars((jstring) templateName, nullptr);
             if (!ctemplateName)
-                return false;
+                return -EINVAL;
             if (strlen(ctemplateName) >= sizeof(p.rp_config.template_name)) {
                 env->ReleaseStringUTFChars((jstring) templateName, ctemplateName);
-                return false;
+                return -EINVAL;
             }
             strcpy(p.rp_config.template_name, ctemplateName);
             env->ReleaseStringUTFChars((jstring) templateName, ctemplateName);
@@ -342,7 +360,7 @@ Java_me_weishu_kernelsu_Natives_setAppProfile(JNIEnv *env, jobject clazz, jobjec
         int groups_count = getListSize(env, groups);
         if (groups_count > KSU_MAX_GROUPS) {
             LOGD("groups count too large: %d", groups_count);
-            return false;
+            return -EINVAL;
         }
         p.rp_config.profile.groups_count = groups_count;
         fillArrayWithList(env, groups, p.rp_config.profile.groups, groups_count);
@@ -351,10 +369,10 @@ Java_me_weishu_kernelsu_Natives_setAppProfile(JNIEnv *env, jobject clazz, jobjec
 
         auto cdomain = env->GetStringUTFChars((jstring) domain, nullptr);
         if (!cdomain)
-            return false;
+            return -EINVAL;
         if (strlen(cdomain) >= sizeof(p.rp_config.profile.selinux_domain)) {
             env->ReleaseStringUTFChars((jstring) domain, cdomain);
-            return false;
+            return -EINVAL;
         }
         strcpy(p.rp_config.profile.selinux_domain, cdomain);
         env->ReleaseStringUTFChars((jstring) domain, cdomain);
@@ -373,56 +391,68 @@ Java_me_weishu_kernelsu_Natives_setAppProfile(JNIEnv *env, jobject clazz, jobjec
     auth.operation = env->GetIntField(profile, env->GetFieldID(cls, "authorizationOperation", "I"));
     auth.duration_seconds = env->GetLongField(profile, env->GetFieldID(cls, "authorizationDurationSeconds", "J"));
     auth.generation = env->GetLongField(profile, env->GetFieldID(cls, "authorizationGeneration", "J"));
-    if (get_kernel_uapi_version() >= 6)
-        return set_auth_profile(&auth);
+    int readError = env->GetIntField(profile, env->GetFieldID(cls, "authorizationReadError", "I"));
+    if (readError)
+        return readError < 0 ? readError : -EINVAL;
+    if (get_kernel_uapi_version() >= 6) {
+        ksu_auth_profile_cmd probe = {};
+        probe.profile = p;
+        int ret = get_auth_profile(&probe);
+        int error = ret == 0 ? 0 : errno;
+        if (!authorization_ioctl_unsupported(error)) {
+            if (error && error != ENOENT)
+                return -error;
+            return set_auth_profile(&auth);
+        }
+    }
     // Never silently downgrade a requested temporary authorization.
     if (auth.mode != KSU_AUTH_PERMANENT)
-        return false;
-    return set_app_profile(&p);
+        return -EOPNOTSUPP;
+    return set_app_profile(&p) ? 0 : -errno;
 }
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_me_weishu_kernelsu_Natives_uidShouldUmount(JNIEnv *env, jobject thiz, jint uid) {
+Java_com_shixiaoshi0417_lunexsu_Natives_uidShouldUmount(JNIEnv *env, jobject thiz, jint uid) {
     return uid_should_umount(uid);
 }
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_me_weishu_kernelsu_Natives_isSuEnabled(JNIEnv *env, jobject thiz) {
+Java_com_shixiaoshi0417_lunexsu_Natives_isSuEnabled(JNIEnv *env, jobject thiz) {
     return is_su_enabled();
 }
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_me_weishu_kernelsu_Natives_setSuEnabled(JNIEnv *env, jobject thiz, jboolean enabled) {
+Java_com_shixiaoshi0417_lunexsu_Natives_setSuEnabled(JNIEnv *env, jobject thiz, jboolean enabled) {
     return set_su_enabled(enabled);
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_me_weishu_kernelsu_Natives_isKernelUmountEnabled(JNIEnv *env, jobject thiz) {
+Java_com_shixiaoshi0417_lunexsu_Natives_isKernelUmountEnabled(JNIEnv *env, jobject thiz) {
     return is_kernel_umount_enabled();
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_me_weishu_kernelsu_Natives_setKernelUmountEnabled(JNIEnv *env, jobject thiz, jboolean enabled) {
+Java_com_shixiaoshi0417_lunexsu_Natives_setKernelUmountEnabled(JNIEnv *env, jobject thiz, jboolean enabled) {
     return set_kernel_umount_enabled(enabled);
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_me_weishu_kernelsu_Natives_isSelinuxHideEnabled(JNIEnv *env, jobject thiz) {
+Java_com_shixiaoshi0417_lunexsu_Natives_isSelinuxHideEnabled(JNIEnv *env, jobject thiz) {
     return is_selinux_hide_enabled();
 }
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_me_weishu_kernelsu_Natives_setSelinuxHideEnabled(JNIEnv *env, jobject thiz, jboolean enabled) {
+Java_com_shixiaoshi0417_lunexsu_Natives_setSelinuxHideEnabled(JNIEnv *env, jobject thiz, jboolean enabled) {
     return set_selinux_hide_enabled(enabled);
 }
 
 extern "C"
 JNIEXPORT jstring JNICALL
-Java_me_weishu_kernelsu_Natives_getUserName(JNIEnv *env, jobject thiz, jint uid) {
+Java_com_shixiaoshi0417_lunexsu_Natives_getUserName(JNIEnv *env, jobject thiz, jint uid) {
     struct passwd *pw = getpwuid((uid_t) uid);
     if (pw && pw->pw_name && pw->pw_name[0] != '\0') {
         return env->NewStringUTF(pw->pw_name);
@@ -467,7 +497,7 @@ int fork_dont_care_and_exec_ksud(const char *path, const char *pkg) {
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_me_weishu_kernelsu_magica_AppZygotePreload_forkDontCareAndExecKsud(JNIEnv *env, jclass clazz,
+Java_com_shixiaoshi0417_lunexsu_magica_AppZygotePreload_forkDontCareAndExecKsud(JNIEnv *env, jclass clazz,
                                                                         jstring ksud_path, jstring pkg_name) {
     auto path = env->GetStringUTFChars(ksud_path, nullptr);
     auto pkg = env->GetStringUTFChars(pkg_name, nullptr);

@@ -1,8 +1,10 @@
-# Làm thế nào để xây dựng KernelSU?
+# Làm thế nào để xây dựng LunexSU?
+
+> Adapted from the upstream [KernelSU](https://github.com/tiann/KernelSU) guides. See the [LunexSU README](https://github.com/Shixiaoshi0417/LunexSU#readme) for package identity, authorization expiry and migration details.
 
 ::: warning
 Tài liệu này chỉ để tham khảo lưu trữ và không còn được duy trì.
-Kể từ KernelSU v3.0, chúng tôi đã ngừng hỗ trợ chính thức cho chế độ ảnh GKI để có tốc độ lặp và build nhanh hơn. Khuyến nghị sử dụng `Ylarod/ddk` để build LKM.
+Kể từ LunexSU v3.0, chúng tôi đã ngừng hỗ trợ chính thức cho chế độ ảnh GKI để có tốc độ lặp và build nhanh hơn. Khuyến nghị sử dụng `Ylarod/ddk` để build LKM.
 :::
 
 Trước tiên, bạn nên đọc tài liệu chính thức của Android để xây dựng kernel:
@@ -11,7 +13,7 @@ Trước tiên, bạn nên đọc tài liệu chính thức của Android để 
 2. [GKI Release Builds](https://source.android.com/docs/core/architecture/kernel/gki-release-builds?hl=vi)
 
 ::: warning
-Trang này dành cho thiết bị GKI, nếu bạn sử dụng kernel cũ, vui lòng tham khảo [cách tích hợp KernelSU cho kernel cũ](how-to-integrate-for-non-gki)
+Trang này dành cho thiết bị GKI, nếu bạn sử dụng kernel cũ, vui lòng tham khảo [cách tích hợp LunexSU cho kernel cũ](how-to-integrate-for-non-gki)
 :::
 
 ## Build Kernel
@@ -45,26 +47,26 @@ Bắt đầu từ Android 13, kernel được xây dựng bởi `bazel`:
 tools/bazel build --config=fast //common:kernel_aarch64_dist
 ```
 
-## Build Kernel với KernelSU
+## Build Kernel với LunexSU
 
-Nếu bạn có thể build kernel thành công thì việc xây dựng KernelSU thật dễ dàng, Chọn bất kỳ một lần chạy trong thư mục gốc nguồn Kernel:
+Nếu bạn có thể build kernel thành công thì việc xây dựng LunexSU thật dễ dàng, Chọn bất kỳ một lần chạy trong thư mục gốc nguồn Kernel:
 
 - Thẻ mới nhất (ổn định)
 
 ```sh
-curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -
 ```
 
 - nhánh chính (dev)
 
 ```sh
-curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
+curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -s main
 ```
 
 - Chọn thẻ (chẳng hạn như v0.5.2)
 
 ```sh
-curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.5.2
+curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -s v0.5.2
 ```
 
-Và sau đó build lại kernel và bạn sẽ có được image kernel với KernelSU!
+Và sau đó build lại kernel và bạn sẽ có được image kernel với LunexSU!

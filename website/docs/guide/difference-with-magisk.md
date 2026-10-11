@@ -1,6 +1,8 @@
 # Difference with Magisk
 
-Although KernelSU and Magisk modules have many similarities, there are inevitably some differences due to their completely different implementation mechanisms. If you want your module to work on both Magisk and KernelSU, it's essential to understand these differences.
+> Adapted from the upstream [KernelSU](https://github.com/tiann/KernelSU) guides. See the [LunexSU README](https://github.com/Shixiaoshi0417/LunexSU#readme) for package identity, authorization expiry and migration details.
+
+Although LunexSU and Magisk modules have many similarities, there are inevitably some differences due to their completely different implementation mechanisms. If you want your module to work on both Magisk and LunexSU, it's essential to understand these differences.
 
 ## Similarities
 
@@ -15,15 +17,15 @@ Although KernelSU and Magisk modules have many similarities, there are inevitabl
 
 ## Differences
 
-Before understanding the differences, it's important to know how to identify whether your module is running in KernelSU or Magisk. You can use the environment variable `KSU` to differentiate it in all places where you can run module scripts (`customize.sh`, `post-fs-data.sh`, `service.sh`). In KernelSU, this environment variable will be set to `true`.
+Before understanding the differences, it's important to know how to identify whether your module is running in LunexSU or Magisk. You can use the environment variable `KSU` to differentiate it in all places where you can run module scripts (`customize.sh`, `post-fs-data.sh`, `service.sh`). In LunexSU, this environment variable will be set to `true`.
 
 Here are some differences:
 
-- KernelSU modules cannot be installed in Recovery mode.
-- KernelSU modules don't have built-in support for Zygisk, but you can use Zygisk modules through [ZygiskNext](https://github.com/Dr-TSNG/ZygiskNext).
-- **Module mounting architecture**: KernelSU uses a [metamodule system](metamodule.md) where mounting is delegated to pluggable metamodules (e.g., `meta-overlayfs`), while Magisk has mounting built into its core. KernelSU requires installing a metamodule to enable module mounting.
-- The method for replacing or deleting files in KernelSU modules is completely different from Magisk. KernelSU doesn't support the `.replace` method. Instead, you need to create a same-named file with `mknod filename c 0 0` to delete the corresponding file.
-- The directories for BusyBox are different. The built-in BusyBox in KernelSU is located at `/data/adb/ksu/bin/busybox`, while in Magisk it is at `/data/adb/magisk/busybox`. **Note that this is an internal behavior of KernelSU and may change in the future!**
-- KernelSU doesn't support `.replace` files, but it supports the `REMOVE` and `REPLACE` variables to remove or replace files and folders.
-- KernelSU adds the `boot-completed` stage to run scripts after the boot process is finished.
-- KernelSU adds the `post-mount` stage to run scripts after module mounting is complete.
+- LunexSU modules cannot be installed in Recovery mode.
+- LunexSU modules don't have built-in support for Zygisk, but you can use Zygisk modules through [ZygiskNext](https://github.com/Dr-TSNG/ZygiskNext).
+- **Module mounting architecture**: LunexSU uses a [metamodule system](metamodule.md) where mounting is delegated to pluggable metamodules (e.g., `meta-overlayfs`), while Magisk has mounting built into its core. LunexSU requires installing a metamodule to enable module mounting.
+- The method for replacing or deleting files in LunexSU modules is completely different from Magisk. LunexSU doesn't support the `.replace` method. Instead, you need to create a same-named file with `mknod filename c 0 0` to delete the corresponding file.
+- The directories for BusyBox are different. The built-in BusyBox in LunexSU is located at `/data/adb/ksu/bin/busybox`, while in Magisk it is at `/data/adb/magisk/busybox`. **Note that this is an internal behavior of LunexSU and may change in the future!**
+- LunexSU doesn't support `.replace` files, but it supports the `REMOVE` and `REPLACE` variables to remove or replace files and folders.
+- LunexSU adds the `boot-completed` stage to run scripts after the boot process is finished.
+- LunexSU adds the `post-mount` stage to run scripts after module mounting is complete.
