@@ -2,10 +2,20 @@
 #ifndef __LUNEXSU_AUTHORIZATION_PERSISTENCE_H
 #define __LUNEXSU_AUTHORIZATION_PERSISTENCE_H
 
+#ifdef __KERNEL__
+#include <linux/string.h>
+#else
+#include <stdbool.h>
+#include <stddef.h>
+#include <string.h>
+#endif
+#include "uapi/app_profile.h"
+
 /* Production transaction ordering, also exercised by the host fault tests.
- * prepare persists a rejection marker and its directory before any replacement.
- * write/sync operate on a separate staging file. The loader ignores staging
- * files and refuses the live snapshot while the rejection marker exists.
+ * prepare appends the transaction's uid to a rejection marker and persists it
+ * and its directory before any replacement. write/sync operate on a separate
+ * staging file. The loader ignores staging files and, while the marker exists,
+ * restores no Root for the uids it lists.
  */
 struct ksu_auth_storage_ops {
     int (*prepare)(void *ctx);
@@ -16,9 +26,51 @@ struct ksu_auth_storage_ops {
     void (*cleanup)(void *ctx);
 };
 
-static inline bool ksu_auth_snapshot_loadable(int guard_lookup_error)
+/* Every snapshot is the committed in-memory list plus one replacement, so only
+ * the uids of unfinished transactions can hold a rejected candidate or a stale
+ * grant. Revoking exactly those keeps every other grant and profile.
+ */
+#define KSU_AUTH_GUARD_MAX_UIDS 64
+
+struct ksu_auth_guard {
+    __u32 uids[KSU_AUTH_GUARD_MAX_UIDS];
+    size_t count;
+    bool all; /* unreadable or overflowing marker: revoke Root from every record */
+};
+
+/* A torn trailing uid comes from a prepare that never completed, which happens
+ * before any staging write or rename, so it cannot have changed a record.
+ */
+static inline void ksu_auth_guard_parse(struct ksu_auth_guard *guard, const void *data, size_t len)
 {
-    return guard_lookup_error == -ENOENT;
+    size_t count = len / sizeof(__u32);
+
+    guard->all = count > KSU_AUTH_GUARD_MAX_UIDS;
+    guard->count = guard->all ? 0 : count;
+    memcpy(guard->uids, data, guard->count * sizeof(__u32));
+}
+
+static inline bool ksu_auth_guard_covers(const struct ksu_auth_guard *guard, __u32 uid)
+{
+    size_t i;
+
+    if (guard->all)
+        return true;
+    for (i = 0; i < guard->count; i++) {
+        if (guard->uids[i] == uid)
+            return true;
+    }
+    return false;
+}
+
+/* A record that must not restore Root: no grant, default non-root policy. */
+static inline void ksu_auth_strip_root(struct app_profile *profile)
+{
+    if (!profile->allow_su)
+        return;
+    profile->allow_su = false;
+    memset(&profile->rp_config, 0, sizeof(profile->rp_config));
+    profile->nrp_config.use_default = true;
 }
 
 static inline int ksu_auth_store(const struct ksu_auth_storage_ops *ops, void *ctx)

@@ -96,20 +96,24 @@ transaction. A complete snapshot is written to a newly created `.allowlist.tmp`,
 fsynced, atomically renamed to `.allowlist`, then its parent directory is fsynced.
 An old staging pathname is unlinked before exclusive creation, never truncated.
 
-Before any replacement, `.allowlist.pending` and its directory are fsynced.
-The loader refuses saved grants if this marker exists or its absence cannot
-be established. It never loads staging files. A failed transaction leaves the
-marker intact, including if rename succeeded but the directory fsync failed;
-the candidate is not published in memory and cannot grant Root after reboot.
-This conservatively denies all saved App grants on reboot after an interrupted
-transaction, even when the old snapshot itself remains intact. A later successful
-save of the current in-memory policy restores normal persistence. There is no
-automatic recovery of a possibly stale Permanent snapshot.
+Before any replacement, the transaction's UID is appended to
+`.allowlist.pending`, which is fsynced with its directory. The loader never
+loads staging files. A failed transaction leaves the marker intact, including if
+rename succeeded but the directory fsync failed; the candidate is not published
+in memory. Every snapshot is the committed in-memory policy plus one replacement,
+so only the UIDs in the marker can differ from acknowledged state. On reboot the
+loader therefore revokes Root from exactly those UIDs (their profile is reset to
+the default non-root policy) and loads every other grant and profile unchanged,
+then persists the result, which removes the marker. A marker that cannot be read
+or lists more than 64 UIDs revokes Root from every record but keeps the
+profiles. A rejected candidate or a stale Permanent record for the affected UID
+can therefore never grant Root, and one interrupted save never erases the rest
+of the allowlist.
 
 Only after the replacement and directory are durable is the marker removed.
 Marker cleanup errors are logged, not returned as a failed grant after commit;
-the new policy is published, but a retained/reappearing marker can cause reboot
-to deny saved grants. This is an availability cost rather than unintended Root.
+the new policy is published, but a retained/reappearing marker revokes the listed
+UIDs after reboot. This is an availability cost rather than unintended Root.
 
 ## Validation
 

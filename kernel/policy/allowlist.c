@@ -762,8 +762,18 @@ static int prepare_allowlist_store(void *ctx)
         return PTR_ERR(guard);
     ret = -EINVAL;
     if (S_ISREG(file_inode(guard)->i_mode) && guard->f_path.mnt == store->directory->f_path.mnt &&
-        guard->f_path.dentry->d_parent == store->directory->f_path.dentry)
-        ret = vfs_fsync(guard, 0);
+        guard->f_path.dentry->d_parent == store->directory->f_path.dentry) {
+        ret = 0;
+        if (store->replacement) {
+            /* Appended, never rewritten: an earlier failed transaction stays guarded. */
+            u32 uid = store->replacement->profile.curr_uid;
+            loff_t pos = i_size_read(file_inode(guard));
+            if (kernel_write(guard, &uid, sizeof(uid), &pos) != sizeof(uid))
+                ret = -EIO;
+        }
+        if (!ret)
+            ret = vfs_fsync(guard, 0);
+    }
     filp_close(guard, 0);
     if (ret)
         return ret;
@@ -914,7 +924,7 @@ static void cleanup_allowlist_store(void *ctx)
     if (!ret)
         ret = sync_allowlist_directory(ctx);
     if (ret)
-        pr_err("allowlist committed; guard cleanup failed (%d), reboot may deny saved grants\n", ret);
+        pr_err("allowlist committed; guard cleanup failed (%d), reboot revokes the guarded uids\n", ret);
 }
 
 /* Caller holds allowlist_mutex for the entire transaction. A durable guard
@@ -1016,6 +1026,32 @@ static void migrate_profile(u32 version, struct app_profile *profile)
     profile->version = KSU_APP_PROFILE_VER;
 }
 
+/* Returns whether an unfinished transaction left its marker. A marker that
+ * cannot be read revokes Root from every record rather than trusting any.
+ */
+static bool read_allowlist_guard(struct ksu_auth_guard *guard)
+{
+    u32 uids[KSU_AUTH_GUARD_MAX_UIDS + 1];
+    loff_t off = 0;
+    ssize_t len;
+    struct file *fp = filp_open(KERNEL_SU_ALLOWLIST_PENDING, O_RDONLY | O_NOFOLLOW, 0);
+
+    memset(guard, 0, sizeof(*guard));
+    if (IS_ERR(fp)) {
+        if (PTR_ERR(fp) == -ENOENT)
+            return false;
+        guard->all = true;
+        return true;
+    }
+    len = kernel_read(fp, uids, sizeof(uids), &off);
+    filp_close(fp, 0);
+    if (len < 0)
+        guard->all = true;
+    else
+        ksu_auth_guard_parse(guard, uids, len);
+    return true;
+}
+
 void ksu_load_allow_list()
 {
 #ifdef CONFIG_KSU_DISABLE_POLICY
@@ -1029,17 +1065,8 @@ void ksu_load_allow_list()
     u32 magic;
     u32 version;
     size_t app_profile_size;
-
-    /* Failed/interrupted transactions are never a source of Root grants,
-     * including when rename succeeded but the directory fsync failed. */
-    struct path pending;
-    ret = kern_path(KERNEL_SU_ALLOWLIST_PENDING, 0, &pending);
-    if (!ksu_auth_snapshot_loadable(ret)) {
-        if (!ret)
-            path_put(&pending);
-        pr_err("allowlist transaction pending/unreadable; refusing saved grants\n");
-        return;
-    }
+    static struct ksu_auth_guard guard;
+    bool guarded = read_allowlist_guard(&guard);
 
     // load allowlist now!
     fp = filp_open(KERNEL_SU_ALLOWLIST, O_RDONLY, 0);
@@ -1091,13 +1118,18 @@ void ksu_load_allow_list()
         }
 
         migrate_profile(version, profile);
+        if (guarded && profile->allow_su && ksu_auth_guard_covers(&guard, profile->curr_uid)) {
+            pr_warn("unfinished authorization transaction, revoking Root for uid %d\n", profile->curr_uid);
+            ksu_auth_strip_root(profile);
+        }
 
         pr_info("load_allow_uid, name: %s, uid: %d, allow: %d\n", profile->key, profile->curr_uid, profile->allow_su);
         set_profile(&cmd.profile, &cmd, true);
     }
     ksu_show_allow_list();
     filp_close(fp, 0);
-    if (version < FILE_FORMAT_VERSION)
+    // A guarded load persists its revocations, which also removes the marker.
+    if (version < FILE_FORMAT_VERSION || guarded)
         ksu_persistent_allow_list();
     return;
 
