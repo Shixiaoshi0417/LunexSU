@@ -6,6 +6,7 @@ import com.materialkolor.dynamiccolor.ColorSpec
 import com.shixiaoshi0417.lunexsu.data.model.HomeLayoutStyle
 import com.shixiaoshi0417.lunexsu.ui.UiMode
 import com.shixiaoshi0417.lunexsu.ui.theme.ColorContrast
+import com.shixiaoshi0417.lunexsu.ui.theme.ColorGenerationMode
 
 @Immutable
 data class SettingsUiState(
@@ -20,6 +21,7 @@ data class SettingsUiState(
     val amoledBlack: Boolean = false,
     val useDynamicColor: Boolean = true,
     val colorContrast: String = ColorContrast.STANDARD.name,
+    val colorGenerationMode: String = ColorGenerationMode.CUSTOM,
     val homeLayoutStyle: String = HomeLayoutStyle.DEFAULT,
     val statsTopLayout: String = HomeLayoutStyle.STATS_TOP_STATUS,
     val homeHideWorkingMode: Boolean = false,

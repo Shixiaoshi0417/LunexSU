@@ -1,29 +1,21 @@
 package com.shixiaoshi0417.lunexsu.ui.component.bottombar
 
 import com.shixiaoshi0417.lunexsu.ui.theme.miuixBarColor
-import androidx.annotation.StringRes
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Cottage
-import androidx.compose.material.icons.rounded.Extension
-import androidx.compose.material.icons.rounded.Security
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.shixiaoshi0417.lunexsu.Natives
-import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.ui.LocalMainPagerState
 import com.shixiaoshi0417.lunexsu.ui.component.FloatingBottomBar
 import com.shixiaoshi0417.lunexsu.ui.component.FloatingBottomBarItem
@@ -131,16 +123,6 @@ fun BottomBarMiuix(
             }
         }
     }
-}
-
-enum class BottomBarDestination(
-    @get:StringRes val label: Int,
-    val icon: ImageVector,
-) {
-    Home(R.string.home, Icons.Rounded.Cottage),
-    SuperUser(R.string.superuser, Icons.Rounded.Security),
-    Module(R.string.module, Icons.Rounded.Extension),
-    Setting(R.string.settings, Icons.Rounded.Settings)
 }
 
 internal fun navigationBadgeFor(

@@ -1,5 +1,12 @@
 package com.shixiaoshi0417.lunexsu.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.shixiaoshi0417.lunexsu.ui.theme.MiuixWallpaperContent
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFolkWallpaperTokens
 import android.annotation.SuppressLint
@@ -19,6 +26,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.systemBars
@@ -67,6 +75,19 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import com.shixiaoshi0417.lunexsu.Natives
 import com.shixiaoshi0417.lunexsu.ui.component.bottombar.BottomBar
+import com.shixiaoshi0417.lunexsu.ui.component.bottombar.FloatingBar
+import com.shixiaoshi0417.lunexsu.ui.component.bottombar.FloatingBarConfig
+import com.shixiaoshi0417.lunexsu.ui.component.bottombar.LocalFloatingBarReservedHeight
+import com.shixiaoshi0417.lunexsu.ui.component.bottombar.LocalFloatingBarVisible
+import com.shixiaoshi0417.lunexsu.ui.component.bottombar.LocalIsFloatingNavMode
+import com.shixiaoshi0417.lunexsu.ui.component.bottombar.NavMode
+import com.shixiaoshi0417.lunexsu.ui.component.bottombar.floatingBarReservedHeight
+import com.shixiaoshi0417.lunexsu.ui.component.bottombar.floatingBarVisible
+import com.shixiaoshi0417.lunexsu.ui.component.bottombar.isRealTimeBlurAvailable
+import com.shixiaoshi0417.lunexsu.ui.component.bottombar.navBarLiquefiable
+import com.shixiaoshi0417.lunexsu.ui.component.bottombar.rememberFloatingBarVisibilityState
+import com.shixiaoshi0417.lunexsu.ui.component.bottombar.rememberNavBarGlassLiquidState
+import com.shixiaoshi0417.lunexsu.ui.component.bottombar.rememberNavMode
 import com.shixiaoshi0417.lunexsu.ui.component.bottombar.MainPagerState
 import com.shixiaoshi0417.lunexsu.ui.component.bottombar.NavigationBadgeState
 import com.shixiaoshi0417.lunexsu.ui.component.bottombar.SideRail
@@ -406,8 +427,28 @@ fun MainScreen(
         LocalMainPagerState provides mainPagerState
     ) {
         val contentReady = rememberContentReady()
+        // Material navigation follows FinaSU's navigation mode; the floating bar is its default.
+        val navMode = rememberNavMode()
+        val floatingBarEnabled = uiMode == UiMode.Material && !useNavigationRail && navMode == NavMode.Floating
+        val floatingBarRevision by FloatingBarConfig.revision.collectAsStateWithLifecycle()
+        val floatingBarStyle = remember(floatingBarRevision) { FloatingBarConfig.style }
+        val floatingBarCompact = remember(floatingBarRevision) { FloatingBarConfig.compact }
+        val floatingBarGlassEnabled = floatingBarEnabled &&
+            remember(floatingBarRevision) { FloatingBarConfig.glass } &&
+            isRealTimeBlurAvailable()
+        val floatingLiquidState = if (floatingBarGlassEnabled) rememberNavBarGlassLiquidState() else null
+        val floatingAutoHide = remember(floatingBarRevision) { FloatingBarConfig.autoHide }
+        val floatingSwipeHide = remember(floatingBarRevision) { FloatingBarConfig.swipeHide }
+        val floatingBarVisibility = rememberFloatingBarVisibilityState(
+            enabled = floatingBarEnabled,
+            autoHide = floatingAutoHide,
+            swipeHide = floatingSwipeHide,
+        )
         val pagerContent = @Composable { bottomInnerPadding: Dp ->
-            Box(modifier = if (blurBackdrop != null) Modifier.layerBackdrop(blurBackdrop) else Modifier) {
+            Box(
+                modifier = (if (blurBackdrop != null) Modifier.layerBackdrop(blurBackdrop) else Modifier)
+                    .navBarLiquefiable(floatingLiquidState)
+            ) {
                 HorizontalPager(
                     modifier = Modifier
                         .pagerGestureOverride(
@@ -484,6 +525,39 @@ fun MainScreen(
                         ) {
                             pagerContent(navBarBottomPadding)
                         }
+                    }
+                }
+            }
+        } else if (floatingBarEnabled) {
+            val visible = floatingBarVisible(floatingBarVisibility, floatingAutoHide, floatingSwipeHide)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        if (LocalThemePackBackground.current) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer
+                    )
+                    .nestedScroll(floatingBarVisibility.connection)
+            ) {
+                val floatingBarReserved = floatingBarReservedHeight(floatingBarCompact, floatingBarStyle)
+                CompositionLocalProvider(
+                    LocalIsFloatingNavMode provides true,
+                    LocalFloatingBarVisible provides visible,
+                    LocalFloatingBarReservedHeight provides floatingBarReserved,
+                ) {
+                    pagerContent(
+                        floatingBarReserved + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                    )
+                    AnimatedVisibility(
+                        visible = visible,
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                    ) {
+                        FloatingBar(
+                            navigationBadge = navigationBadge,
+                            liquidState = floatingLiquidState,
+                            onUserInteraction = { floatingBarVisibility.onUserInteraction() },
+                        )
                     }
                 }
             }

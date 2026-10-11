@@ -31,6 +31,17 @@ module behavior, update URLs, language, package identity or the UI architecture.
 The online theme store, video/audio, per-card image surfaces and custom navigation
 icons remain separate upstream systems.
 
+A field the pack leaves out takes FinaSU's import default rather than keeping the
+previous theme's value: indigo seed with system dynamic colors on, follow-system night
+mode, MD3 2021 tonal-spot palette at standard contrast, circle home layout with the list
+stats header, working mode shown, and the `classic` color generation mode. Classic keeps
+the colors a pack was designed with: the system Monet scheme as is, FolkPatch's fixed
+light/dark table for the 20 catalog seeds, and no contrast boost on any regenerated
+scheme, so a pack cannot end up in a high-contrast regeneration it never asked for.
+Picking a palette style, spec or contrast afterwards switches to `custom`, which
+regenerates the scheme with those choices; restoring the default theme also returns to
+`custom`. In MIUIX a classic catalog seed is mapped to the table's primary color.
+
 ## Usage
 
 Open Settings -> Theme -> Import FinaSU theme (.fpt), choose a local package and
@@ -74,6 +85,19 @@ Drawables render through Compose's canvas with page clipping, so preloaded pager
 backgrounds cannot cover the current page. Expected preparation errors are returned
 inside the loading job before being handled; a bad package cannot cancel its dialog
 scope and prevent subsequent imports.
+
+## Navigation
+
+The Material UI follows FinaSU's navigation modes (Settings -> Theme -> Navigation bar
+mode): Automatic (side rail in a large window, bottom bar otherwise), Always bottom bar,
+Always side rail, and Floating bottom bar, which is the default. The floating bar comes
+in the Drawer form (the selected page expands into a labelled pill) or the Standard
+capsule, hides three seconds after the last interaction and while content scrolls down,
+and pages reserve its height so content and the module install button never sit under
+it. The optional glass effect uses the Liquid library's real-time blur on Android 13+.
+Over a pack wallpaper the docked bar and the rail are transparent with the chrome scrim,
+while the floating bar carries the Raised material. The rail is FinaSU's fixed icon-only
+rail. MIUIX keeps its own bottom bar and floating bottom bar setting.
 
 ## Import boundaries and persistence
 
@@ -149,6 +173,8 @@ adb -s <emulator-serial> shell am start -n com.shixiaoshi0417.lunexsu/.ui.ThemeT
 - `manager/.../ui/screen/colorpalette/`: shared import flow and UI entry points.
 - `manager/.../ui/theme/{FontConfig,MaterialTheme,MiuixTheme}.kt`: live theme integration.
 - `manager/.../ui/MainActivity.kt`: wallpaper composition for main pages.
+- `manager/.../ui/component/bottombar/`: navigation modes, floating bar and rail.
+- `manager/.../ui/theme/FptPalette.kt`: FolkPatch classic palette table.
 - `manager/app/src/test/.../ui/theme/pack/`: archive/schema regression tests.
 - `manager/app/src/androidTest/`: Android decoder/storage/preference regression suite.
 - `manager/app/src/debug/`: privileged ADB host for Core-less theme/About UI testing.

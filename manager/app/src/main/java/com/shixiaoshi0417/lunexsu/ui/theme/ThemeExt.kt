@@ -46,6 +46,11 @@ fun ColorScheme.withSemanticError(isDark: Boolean): ColorScheme = copy(
  *
  * [seedColor] set to [Color.Unspecified] means the system Monet palette: its primary color seeds
  * the generated scheme so the palette style and spec still apply on top of the wallpaper colors.
+ *
+ * [generationMode] follows FinaSU. [ColorGenerationMode.CLASSIC], which an imported theme pack gets
+ * unless it says otherwise, keeps the colors the pack was designed with: the system Monet scheme as
+ * is, FolkPatch's fixed table for a catalog seed, and no contrast boost on a regenerated scheme.
+ * [ColorGenerationMode.CUSTOM] regenerates every scheme from the seed with the chosen contrast.
  */
 @Composable
 fun rememberLunexSUColorScheme(
@@ -55,12 +60,23 @@ fun rememberLunexSUColorScheme(
     paletteStyle: PaletteStyle,
     colorSpec: ColorSpec.SpecVersion,
     contrastLevel: Double = 0.0,
+    generationMode: String = ColorGenerationMode.CUSTOM,
 ): ColorScheme {
     val context = LocalContext.current
+    val classic = generationMode == ColorGenerationMode.CLASSIC
+    if (classic && seedColor == Color.Unspecified) {
+        return (if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context))
+            .withSemanticError(isDark).amoledBackground(isAmoled)
+    }
+    if (classic) {
+        FptPalette.scheme(seedColor, isDark)?.let {
+            return it.withSemanticError(isDark).amoledBackground(isAmoled)
+        }
+    }
     val seed = if (seedColor == Color.Unspecified) {
         (if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)).primary
     } else {
-        seedColor
+        FptPalette.seed(seedColor, isDark)
     }
     return rememberDynamicColorScheme(
         seedColor = seed,
@@ -68,7 +84,7 @@ fun rememberLunexSUColorScheme(
         isAmoled = isAmoled,
         style = paletteStyle,
         specVersion = colorSpec.effectiveFor(paletteStyle),
-        contrastLevel = contrastLevel,
+        contrastLevel = ColorGenerationMode.contrastLevel(generationMode, contrastLevel),
     ).withSemanticError(isDark).amoledBackground(isAmoled)
 }
 

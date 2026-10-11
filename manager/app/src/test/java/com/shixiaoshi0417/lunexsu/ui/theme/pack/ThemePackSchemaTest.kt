@@ -5,15 +5,21 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ThemePackSchemaTest {
+    private companion object {
+        /** Every preference an import may write; anything else in a pack is ignored. */
+        val THEME_PREFERENCES = setOf("key_color", "color_mode", "use_dynamic_color", "miuix_monet",
+            "color_generation_mode", "color_style", "color_spec", "color_contrast", "stats_top_layout",
+            "home_layout_style", "home_hide_working_mode")
+    }
     private fun parse(text: String, vararg names: String) = ThemePackSchema.parse(JSONObject(text), names.toSet())
 
     @Test fun mapsOnlyThemeFieldsAndReportsUnsupportedConfiguration() {
-        val plan = parse("""{"customColor":"blue","homeLayoutStyle":"stats","fontMode":"system",
-            "allowSu":true,"authorizationMode":0,"ui_mode":"material","intent_token":"evil",
+        val plan = parse("""{"customColor":"blue","useSystemDynamicColor":false,"homeLayoutStyle":"stats",
+            "fontMode":"system","allowSu":true,"authorizationMode":0,"ui_mode":"material","intent_token":"evil",
             "auto_jailbreak":true,"check_update":false,"appLanguage":"en-US"}""")
         assertEquals(0xFF0061A4.toInt(), plan.settings["key_color"])
         assertEquals("stats", plan.settings["home_layout_style"])
-        assertEquals(setOf("key_color", "home_layout_style"), plan.settings.keys)
+        assertEquals(THEME_PREFERENCES, plan.settings.keys)
         assertTrue(plan.warnings.containsAll(listOf("allowSu", "authorizationMode", "ui_mode", "intent_token", "auto_jailbreak", "check_update", "appLanguage")))
     }
     @Test fun dynamicColorsRemoveOldCustomSeedAndEnableMiuixMonet() {
@@ -30,7 +36,10 @@ class ThemePackSchemaTest {
         assertTrue("statsTopLayout=cards" in unknown.warnings)
     }
     @Test fun preservesExactCustomArgb() {
-        assertEquals(-123456, parse("""{"folksu_keyColor":-123456}""").settings["key_color"])
+        val exact = """{"folksu_keyColor":-123456,"useSystemDynamicColor":false}"""
+        assertEquals(-123456, parse(exact).settings["key_color"])
+        // Without the flag the FinaSU default turns system dynamic colors on, which take precedence.
+        assertEquals(0, parse("""{"folksu_keyColor":-123456}""").settings["key_color"])
     }
     @Test fun rejectsFractionalArgb() {
         assertThrows(Exception::class.java) { parse("""{"folksu_keyColor":1.5}""") }
@@ -91,8 +100,44 @@ class ThemePackSchemaTest {
     }
     @Test fun unknownLayoutAndPaletteRetainExistingSetting() {
         val plan = parse("""{"homeLayoutStyle":"future","colorStyle":"UNKNOWN"}""")
-        assertTrue(plan.settings.isEmpty())
+        assertFalse("home_layout_style" in plan.settings)
+        assertFalse("color_style" in plan.settings)
         assertEquals(2, plan.warnings.size)
+    }
+    @Test fun missingFieldsTakeFinaSuImportDefaults() {
+        val settings = parse("{}").settings
+        assertEquals(THEME_PREFERENCES, settings.keys)
+        assertEquals("classic", settings["color_generation_mode"])
+        assertEquals(0, settings["color_mode"]) // follow system
+        assertEquals(true, settings["use_dynamic_color"])
+        assertEquals(0, settings["key_color"]) // the dynamic default replaces the indigo seed
+        assertEquals("SPEC_2021", settings["color_spec"])
+        assertEquals("TonalSpot", settings["color_style"])
+        assertEquals("STANDARD", settings["color_contrast"])
+        assertEquals("circle", settings["home_layout_style"])
+        assertEquals("status", settings["stats_top_layout"])
+        assertEquals(false, settings["home_hide_working_mode"])
+        assertTrue(parse("{}").warnings.isEmpty())
+    }
+    @Test fun explicitFieldsOverrideTheImportDefaults() {
+        val settings = parse("""{"customColor":"sakura","useSystemDynamicColor":false,
+            "colorGenerationMode":"custom","colorContrast":"HIGH","nightModeFollowSys":false,
+            "nightModeEnabled":false}""").settings
+        assertEquals(0xFF9B404F.toInt(), settings["key_color"])
+        assertEquals("custom", settings["color_generation_mode"])
+        assertEquals("HIGH", settings["color_contrast"])
+        assertEquals(1, settings["color_mode"])
+    }
+    @Test fun unknownGenerationModeIsReportedAndNotApplied() {
+        val plan = parse("""{"colorGenerationMode":"neon"}""")
+        assertFalse("color_generation_mode" in plan.settings)
+        assertTrue("colorGenerationMode=neon" in plan.warnings)
+        assertThrows(Exception::class.java) { parse("""{"colorGenerationMode":true}""") }
+    }
+    @Test fun importDefaultsDoNotMutateTheCallersJson() {
+        val json = JSONObject("{}")
+        ThemePackSchema.parse(json, emptySet())
+        assertEquals(0, json.length())
     }
     @Test fun legacyLayoutsMapToCircleWithWarning() {
         val plan = parse("""{"homeLayoutStyle":"sign"}""")

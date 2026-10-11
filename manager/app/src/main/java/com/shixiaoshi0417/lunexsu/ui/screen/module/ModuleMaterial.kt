@@ -142,6 +142,14 @@ import com.shixiaoshi0417.lunexsu.ui.component.material.TonalCard
 import com.shixiaoshi0417.lunexsu.ui.component.statustag.StatusTag
 import com.shixiaoshi0417.lunexsu.ui.theme.LocalModuleDescriptionMaxLines
 import com.shixiaoshi0417.lunexsu.ui.util.reboot
+import android.content.res.Configuration
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.platform.LocalConfiguration
+import com.shixiaoshi0417.lunexsu.ui.component.bottombar.LocalFloatingBarReservedHeight
+import com.shixiaoshi0417.lunexsu.ui.component.bottombar.LocalFloatingBarVisible
+import com.shixiaoshi0417.lunexsu.ui.component.bottombar.LocalIsFloatingNavMode
+import androidx.compose.ui.unit.IntOffset
 
 @SuppressLint("StringFormatInvalid")
 @Composable
@@ -380,20 +388,38 @@ fun ModulePagerMaterial(
                     actions.onOpenFlash(uris)
                 }
 
-                SmallExtendedFloatingActionButton(
-                    modifier = Modifier.padding(bottom = bottomInnerPadding),
-                    expanded = fabExpanded,
-                    onClick = {
-                        // Select the zip files to install
-                        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-                            type = "application/zip"
-                            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-                        }
-                        selectZipLauncher.launch(intent)
+                // The FAB rides with the floating navigation bar: it drops into the bar's space when
+                // the bar auto-hides, instead of floating where the bar used to be. (From FinaSU.)
+                val floatingNavMode = LocalIsFloatingNavMode.current
+                val floatingBarVisible = LocalFloatingBarVisible.current
+                val floatingBarReserved = LocalFloatingBarReservedHeight.current
+                val isLandscape =
+                    LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+                val fabDrop by animateDpAsState(
+                    targetValue = if (floatingNavMode && !floatingBarVisible && !isLandscape) {
+                        floatingBarReserved
+                    } else {
+                        0.dp
                     },
-                    icon = { Icon(Icons.Filled.Add, moduleInstall) },
-                    text = { Text(text = moduleInstall) },
+                    animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                    label = "fabDrop",
                 )
+                Box(modifier = Modifier.offset { IntOffset(0, fabDrop.roundToPx()) }) {
+                    SmallExtendedFloatingActionButton(
+                        modifier = Modifier.padding(bottom = bottomInnerPadding),
+                        expanded = fabExpanded,
+                        onClick = {
+                            // Select the zip files to install
+                            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                                type = "application/zip"
+                                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                            }
+                            selectZipLauncher.launch(intent)
+                        },
+                        icon = { Icon(Icons.Filled.Add, moduleInstall) },
+                        text = { Text(text = moduleInstall) },
+                    )
+                }
             }
         },
         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),

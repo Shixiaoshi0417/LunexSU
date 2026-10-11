@@ -18,6 +18,7 @@ import com.shixiaoshi0417.lunexsu.data.repository.SettingsRepositoryImpl
 import com.shixiaoshi0417.lunexsu.ksuApp
 import com.shixiaoshi0417.lunexsu.ui.screen.settings.SettingsUiState
 import com.shixiaoshi0417.lunexsu.ui.theme.ColorContrast
+import com.shixiaoshi0417.lunexsu.ui.theme.ColorGenerationMode
 import com.shixiaoshi0417.lunexsu.ui.theme.ColorMode
 import com.shixiaoshi0417.lunexsu.ui.theme.ThemeController
 
@@ -56,6 +57,7 @@ class SettingsViewModel(
             val amoledBlack = repo.amoledBlack
             val useDynamicColor = repo.useDynamicColor
             val colorContrast = repo.colorContrast
+            val colorGenerationMode = repo.colorGenerationMode
             val homeLayoutStyle = repo.homeLayoutStyle
             val statsTopLayout = repo.statsTopLayout
             val homeHideWorkingMode = repo.homeHideWorkingMode
@@ -119,6 +121,7 @@ class SettingsViewModel(
                     amoledBlack = amoledBlack,
                     useDynamicColor = useDynamicColor,
                     colorContrast = colorContrast,
+                    colorGenerationMode = colorGenerationMode,
                     homeLayoutStyle = homeLayoutStyle,
                     statsTopLayout = statsTopLayout,
                     homeHideWorkingMode = homeHideWorkingMode,
@@ -243,7 +246,8 @@ class SettingsViewModel(
 
     fun setColorContrast(contrast: ColorContrast) {
         repo.colorContrast = contrast.name
-        _uiState.update { it.copy(colorContrast = contrast.name) }
+        repo.colorGenerationMode = ColorGenerationMode.CUSTOM
+        _uiState.update { it.copy(colorContrast = contrast.name, colorGenerationMode = ColorGenerationMode.CUSTOM) }
     }
 
     fun setHomeLayoutStyle(style: String) {
@@ -261,14 +265,18 @@ class SettingsViewModel(
         _uiState.update { it.copy(homeHideWorkingMode = hidden) }
     }
 
+    // Picking a palette style, spec or contrast asks for a regenerated scheme, so it leaves the
+    // classic palette an imported theme pack applied (as in FinaSU).
     fun setColorStyle(style: String) {
         repo.colorStyle = style
-        _uiState.update { it.copy(colorStyle = style) }
+        repo.colorGenerationMode = ColorGenerationMode.CUSTOM
+        _uiState.update { it.copy(colorStyle = style, colorGenerationMode = ColorGenerationMode.CUSTOM) }
     }
 
     fun setColorSpec(spec: String) {
         repo.colorSpec = spec
-        _uiState.update { it.copy(colorSpec = spec) }
+        repo.colorGenerationMode = ColorGenerationMode.CUSTOM
+        _uiState.update { it.copy(colorSpec = spec, colorGenerationMode = ColorGenerationMode.CUSTOM) }
     }
 
     fun setEnablePredictiveBack(enabled: Boolean) {

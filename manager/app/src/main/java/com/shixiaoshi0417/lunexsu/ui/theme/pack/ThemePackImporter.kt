@@ -12,6 +12,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import com.shixiaoshi0417.lunexsu.data.model.HomeLayoutStyle
+import com.shixiaoshi0417.lunexsu.ui.theme.ColorGenerationMode
 import com.shixiaoshi0417.lunexsu.ui.theme.FontConfig
 import java.io.Closeable
 import java.io.File
@@ -107,6 +108,7 @@ internal object ThemePackImporter {
                 publish(prefs, mapOf(
                     "color_mode" to 0, "key_color" to 0, "color_style" to "TonalSpot",
                     "color_spec" to "SPEC_2025", "color_contrast" to "STANDARD",
+                    "color_generation_mode" to ColorGenerationMode.CUSTOM,
                     "use_dynamic_color" to true, "miuix_monet" to false, "amoled_black" to false,
                     "home_layout_style" to "circle", "stats_top_layout" to HomeLayoutStyle.STATS_TOP_STATUS,
                     "home_hide_working_mode" to false, "font_mode" to "SYSTEM_DEFAULT",

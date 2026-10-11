@@ -1,120 +1,58 @@
+// Adapted from FinaSU, formerly FolkSU (https://github.com/LyraVoid/FinaSU), GPL-3.0.
 package com.shixiaoshi0417.lunexsu.ui.component.bottombar
 
-import com.shixiaoshi0417.lunexsu.ui.component.material.WallpaperChromeZone
-import com.shixiaoshi0417.lunexsu.ui.component.material.ChromeEdge
-import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFolkWallpaperTokens
-import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuOpen
-import androidx.compose.material.icons.filled.Extension
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.outlined.Extension
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Shield
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.WideNavigationRail
-import androidx.compose.material3.WideNavigationRailDefaults
-import androidx.compose.material3.WideNavigationRailItem
-import androidx.compose.material3.WideNavigationRailValue
-import androidx.compose.material3.rememberWideNavigationRailState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import com.shixiaoshi0417.lunexsu.Natives
-import com.shixiaoshi0417.lunexsu.R
-import com.shixiaoshi0417.lunexsu.data.repository.SettingsRepositoryImpl
 import com.shixiaoshi0417.lunexsu.ui.LocalMainPagerState
+import com.shixiaoshi0417.lunexsu.ui.component.material.ChromeEdge
+import com.shixiaoshi0417.lunexsu.ui.component.material.WallpaperChromeZone
 
+/**
+ * Side navigation rail matching the FolkPatch rail: an icon-only [NavigationRail] whose items are
+ * vertically centered. It is fixed, with no collapse control and no label-bearing wide variant, so
+ * the side bar looks the same on phones and tablets.
+ *
+ * In wallpaper mode it shares the docked bottom bar's rule ([BottomBarControl]): the rail turns
+ * transparent so the wallpaper reads through, and a [ChromeEdge.Start] scrim softly fades it into
+ * the content instead of ending in a hard color band.
+ */
 @Composable
 fun NavigationRailMaterial(
     navigationBadge: NavigationBadgeState,
     modifier: Modifier = Modifier,
 ) {
-    val fullFeatured = Natives.isFullFeatured()
-    if (!fullFeatured) return
+    if (!Natives.isFullFeatured()) return
 
     val mainPagerState = LocalMainPagerState.current
-
-    val items = listOf(
-        Triple(R.string.home, Icons.Filled.Home, Icons.Outlined.Home),
-        Triple(R.string.superuser, Icons.Filled.Shield, Icons.Outlined.Shield),
-        Triple(R.string.module, Icons.Filled.Extension, Icons.Outlined.Extension),
-        Triple(R.string.settings, Icons.Filled.Settings, Icons.Outlined.Settings)
-    )
-
-    val settingsRepo = remember { SettingsRepositoryImpl() }
-    val state = rememberWideNavigationRailState(
-        initialValue = if (settingsRepo.navigationRailExpanded) {
-            WideNavigationRailValue.Expanded
-        } else {
-            WideNavigationRailValue.Collapsed
-        },
-    )
-    val scope = rememberCoroutineScope()
-    val expanded = state.targetValue == WideNavigationRailValue.Expanded
-    LaunchedEffect(state.targetValue) {
-        settingsRepo.navigationRailExpanded =
-            state.targetValue == WideNavigationRailValue.Expanded
-    }
-
-    // Over a wallpaper the rail follows the bottom bar: transparent, with a start-edge chrome zone.
-    val wallpaperActive = LocalFolkWallpaperTokens.current != null
-    // The zone wraps the rail, which keeps the caller's modifier also when no wallpaper is shown.
-    WallpaperChromeZone(edge = ChromeEdge.Start) {
-        WideNavigationRail(
+    val railStyle = BottomBarControl.style(BottomBarLayout.Rail)
+    // The zone passes its content through outside wallpaper mode, so the rail keeps the modifier.
+    WallpaperChromeZone(edge = ChromeEdge.Start, material = railStyle.scrim) {
+        NavigationRail(
             modifier = modifier.fillMaxHeight(),
-            state = state,
-            colors = WideNavigationRailDefaults.colors().copy(
-                containerColor = if (wallpaperActive) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer,
-                contentColor = MaterialTheme.colorScheme.onSurface,
-            ),
-            windowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout).only(
-                WindowInsetsSides.Start + WindowInsetsSides.Vertical
-            ),
-            contentPadding = PaddingValues(vertical = 20.dp),
-            header = {
-                IconButton(
-                    modifier = Modifier.padding(start = 24.dp),
-                    onClick = {
-                        scope.launch {
-                            if (expanded) state.collapse() else state.expand()
-                        }
-                    },
-                ) {
-                    Icon(
-                        if (expanded) Icons.AutoMirrored.Filled.MenuOpen else Icons.Filled.Menu,
-                        contentDescription = stringResource(
-                            if (expanded) R.string.nav_rail_collapse else R.string.nav_rail_expand
-                        )
-                    )
-                }
-            },
+            containerColor = railStyle.containerColor,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            windowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout)
+                .only(WindowInsetsSides.Start + WindowInsetsSides.Vertical),
         ) {
-            items.forEachIndexed { index, (label, selectedIcon, unselectedIcon) ->
+            Spacer(Modifier.weight(1f))
+            BottomBarDestination.entries.forEachIndexed { index, destination ->
                 val selected = mainPagerState.selectedPage == index
-                WideNavigationRailItem(
-                    railExpanded = expanded,
+                NavigationRailItem(
                     selected = selected,
                     onClick = {
                         if (!selected) {
@@ -123,14 +61,19 @@ fun NavigationRailMaterial(
                     },
                     icon = {
                         NavigationIconWithBadge(
-                            icon = if (selected) selectedIcon else unselectedIcon,
-                            contentDescription = stringResource(label),
+                            destination = destination,
+                            selected = selected,
                             badge = badgeFor(index, navigationBadge),
                         )
                     },
-                    label = { Text(stringResource(label)) }
+                    label = { Text(stringResource(destination.label)) },
+                    alwaysShowLabel = false,
+                    colors = railStyle.indicatorColor?.let {
+                        NavigationRailItemDefaults.colors(indicatorColor = it)
+                    } ?: NavigationRailItemDefaults.colors(),
                 )
             }
+            Spacer(Modifier.weight(1f))
         }
     }
 }

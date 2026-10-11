@@ -81,6 +81,8 @@ import androidx.compose.ui.unit.round
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import androidx.compose.material3.Slider
+import androidx.compose.material3.rememberSliderState
 
 val LocalListItemShapes = compositionLocalOf<ListItemShapes?> { null }
 private val SegmentedOuterRadius = 16.dp
@@ -566,6 +568,41 @@ fun SegmentedSwitchItem(
             )
         },
         supportingContent = summary?.let { { Text(it) } }
+    )
+}
+
+/** A list row with a slider underneath, committing the value when the drag ends. (From FinaSU.) */
+@Composable
+fun SegmentedSliderItem(
+    icon: ImageVector? = null,
+    title: String,
+    summary: String? = null,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    valueText: (Float) -> String,
+    colors: ListItemColors = defaultSegmentedColors(),
+    enabled: Boolean = true,
+    onValueChangeFinished: (Float) -> Unit,
+) {
+    val sliderState = rememberSliderState(value = value, trackRange = valueRange)
+
+    SegmentedListItem(
+        enabled = enabled,
+        colors = colors,
+        headlineContent = { Text(title) },
+        leadingContent = icon?.let { { Icon(it, title) } },
+        trailingContent = { Text(valueText(sliderState.value)) },
+        supportingContent = {
+            Column {
+                summary?.let { Text(it) }
+                Slider(
+                    state = sliderState,
+                    onValueChangeFinished = { onValueChangeFinished(sliderState.value) },
+                    enabled = enabled,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
     )
 }
 

@@ -33,7 +33,21 @@ internal data class ThemePackPlan(
 
 /** FPT fields are translated explicitly; arbitrary JSON keys never become preferences. */
 internal object ThemePackSchema {
-    private val colors = linkedMapOf(
+    /**
+     * FinaSU (like FolkPatch) applies these values for fields an old or config-only pack leaves
+     * out, so every import lands on the same palette/layout baseline instead of mixing with the
+     * previous theme. In particular a pack gets the "classic" color generation unless it opts
+     * into "custom": its colors are not regenerated with a contrast boost it was not designed for.
+     */
+    val importDefaults: Map<String, Any> = mapOf(
+        "customColor" to "indigo", "homeLayoutStyle" to "circle", "statsTopLayout" to "list",
+        "nightModeEnabled" to true, "nightModeFollowSys" to true, "useSystemDynamicColor" to true,
+        "colorGenerationMode" to "classic", "colorStandard" to "MD3_2021",
+        "colorStyle" to "TONAL_SPOT", "colorContrast" to "STANDARD",
+        "isListWorkingCardModeHidden" to false,
+    )
+
+    val colors = linkedMapOf(
         "indigo" to 0xFF4355B9, "blue" to 0xFF0061A4, "light_blue" to 0xFF006493,
         "cyan" to 0xFF006876, "teal" to 0xFF006A60, "green" to 0xFF006E1A,
         "light_green" to 0xFF006C48, "lime" to 0xFF5B6300, "yellow" to 0xFF695F00,
@@ -49,7 +63,9 @@ internal object ThemePackSchema {
         "background_kernel", "background_system_module", "background_settings")
     val imageExtensions = setOf("png", "jpg", "jpeg", "webp", "gif")
 
-    fun parse(json: JSONObject, names: Set<String>): ThemePackPlan {
+    fun parse(source: JSONObject, names: Set<String>): ThemePackPlan {
+        val json = JSONObject(source.toString())
+        importDefaults.forEach { (key, value) -> if (!json.has(key)) json.put(key, value) }
         val used = mutableSetOf<String>()
         val warnings = mutableListOf<String>()
         val settings = linkedMapOf<String, Any>()
@@ -103,6 +119,12 @@ internal object ThemePackSchema {
             settings["use_dynamic_color"] = dynamic
             settings["miuix_monet"] = dynamic
             if (dynamic) settings["key_color"] = 0
+        }
+        if (json.has("colorGenerationMode")) {
+            when (val mode = text("colorGenerationMode")) {
+                "classic", "custom" -> settings["color_generation_mode"] = mode
+                else -> warnings += "colorGenerationMode=$mode"
+            }
         }
         if (json.has("colorStyle")) {
             styles[text("colorStyle")]?.let { settings["color_style"] = it.name }

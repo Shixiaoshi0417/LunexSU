@@ -72,6 +72,9 @@ fun MiuixLunexSUTheme(
     }
 
     val resolvedKeyColor: Color? = when {
+        // A classic (theme pack) catalog seed uses FolkPatch's protocol primary, as in Material.
+        appSettings.keyColor != 0 && appSettings.colorGenerationMode == ColorGenerationMode.CLASSIC ->
+            FptPalette.seed(Color(appSettings.keyColor), darkTheme)
         appSettings.keyColor != 0 -> Color(appSettings.keyColor)
         appSettings.colorMode.isMonet ->
             if (darkTheme) dynamicDarkColorScheme(context).primary

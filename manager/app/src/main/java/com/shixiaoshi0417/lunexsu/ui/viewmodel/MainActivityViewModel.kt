@@ -73,6 +73,7 @@ class MainActivityViewModel(
             "amoled_black",
             "use_dynamic_color",
             "color_contrast",
+            "color_generation_mode",
             "home_layout_style",
             "stats_top_layout",
             "home_hide_working_mode",

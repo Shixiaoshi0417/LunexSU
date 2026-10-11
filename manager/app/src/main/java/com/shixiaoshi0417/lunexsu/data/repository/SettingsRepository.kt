@@ -12,6 +12,7 @@ interface SettingsRepository {
     var amoledBlack: Boolean
     var useDynamicColor: Boolean
     var colorContrast: String
+    var colorGenerationMode: String
     var homeLayoutStyle: String
     var statsTopLayout: String
     var homeHideWorkingMode: Boolean

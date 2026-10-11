@@ -60,6 +60,7 @@ fun MaterialLunexSUTheme(
         paletteStyle = appSettings.paletteStyle,
         colorSpec = appSettings.colorSpec,
         contrastLevel = appSettings.contrast.level,
+        generationMode = appSettings.colorGenerationMode,
     )
 
     // Over a pack wallpaper a light theme takes dark-neutral (light text) roles when the visible
@@ -75,6 +76,7 @@ fun MaterialLunexSUTheme(
         paletteStyle = PaletteStyle.Neutral,
         colorSpec = appSettings.colorSpec,
         contrastLevel = appSettings.contrast.level,
+        generationMode = appSettings.colorGenerationMode,
     )
     val systemBarDark = darkTheme || flipToDark
 

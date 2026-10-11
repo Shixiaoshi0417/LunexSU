@@ -15,6 +15,7 @@ import com.shixiaoshi0417.lunexsu.magica.BootCompletedReceiver
 import com.shixiaoshi0417.lunexsu.ui.UiMode
 import com.shixiaoshi0417.lunexsu.ui.screen.modulerepo.RepoSort
 import com.shixiaoshi0417.lunexsu.ui.theme.ColorContrast
+import com.shixiaoshi0417.lunexsu.ui.theme.ColorGenerationMode
 import com.shixiaoshi0417.lunexsu.ui.theme.ThemePreferenceMigration
 import com.shixiaoshi0417.lunexsu.ui.util.execKsud
 import com.shixiaoshi0417.lunexsu.ui.util.getFeaturePersistValue
@@ -84,6 +85,10 @@ class SettingsRepositoryImpl : SettingsRepository {
     override var colorContrast: String
         get() = prefs.getString("color_contrast", ColorContrast.STANDARD.name) ?: ColorContrast.STANDARD.name
         set(value) = prefs.edit { putString("color_contrast", value) }
+
+    override var colorGenerationMode: String
+        get() = ColorGenerationMode.fromValue(prefs.getString("color_generation_mode", null))
+        set(value) = prefs.edit { putString("color_generation_mode", ColorGenerationMode.fromValue(value)) }
 
     override var homeLayoutStyle: String
         get() = HomeLayoutStyle.fromValue(prefs.getString("home_layout_style", null))

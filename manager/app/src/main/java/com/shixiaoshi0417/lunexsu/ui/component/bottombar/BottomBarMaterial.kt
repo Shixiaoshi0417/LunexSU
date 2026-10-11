@@ -1,64 +1,46 @@
+// Adapted from FinaSU, formerly FolkSU (https://github.com/LyraVoid/FinaSU), GPL-3.0.
 package com.shixiaoshi0417.lunexsu.ui.component.bottombar
 
-import com.shixiaoshi0417.lunexsu.ui.component.material.WallpaperChromeZone
-import com.shixiaoshi0417.lunexsu.ui.component.material.ChromeEdge
-import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFolkWallpaperTokens
-import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Extension
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.outlined.Extension
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarItem
+import androidx.compose.material3.ShortNavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import com.shixiaoshi0417.lunexsu.Natives
-import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.ui.LocalMainPagerState
+import com.shixiaoshi0417.lunexsu.ui.component.material.ChromeEdge
+import com.shixiaoshi0417.lunexsu.ui.component.material.WallpaperChromeZone
 
+/** The docked bottom bar of the "Always bottom bar" navigation mode. */
 @Composable
 fun BottomBarMaterial(navigationBadge: NavigationBadgeState) {
-    val fullFeatured = Natives.isFullFeatured()
-    if (!fullFeatured) return
+    if (!Natives.isFullFeatured()) return
 
     val mainPagerState = LocalMainPagerState.current
 
-    val items = listOf(
-        Triple(R.string.home, Icons.Filled.Home, Icons.Outlined.Home),
-        Triple(R.string.superuser, Icons.Filled.Shield, Icons.Outlined.Shield),
-        Triple(R.string.module, Icons.Filled.Extension, Icons.Outlined.Extension),
-        Triple(R.string.settings, Icons.Filled.Settings, Icons.Outlined.Settings)
-    )
-
-    // Over a wallpaper the bar is transparent and the chrome zone draws its platform with a soft
-    // edge. (Adapted from FinaSU's BottomBarControl, GPL-3.0.)
-    val wallpaperActive = LocalFolkWallpaperTokens.current != null
-    WallpaperChromeZone(edge = ChromeEdge.Bottom) {
+    val barStyle = BottomBarControl.style(BottomBarLayout.Docked)
+    WallpaperChromeZone(edge = ChromeEdge.Bottom, material = barStyle.scrim) {
         ShortNavigationBar(
-            containerColor = if (wallpaperActive) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer,
+            containerColor = barStyle.containerColor,
             windowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout).only(
                 WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom
             )
         ) {
-            items.forEachIndexed { index, (label, selectedIcon, unselectedIcon) ->
+            BottomBarDestination.entries.forEachIndexed { index, destination ->
                 val selected = mainPagerState.selectedPage == index
                 ShortNavigationBarItem(
                     selected = selected,
@@ -69,28 +51,51 @@ fun BottomBarMaterial(navigationBadge: NavigationBadgeState) {
                     },
                     icon = {
                         NavigationIconWithBadge(
-                            icon = if (selected) selectedIcon else unselectedIcon,
-                            contentDescription = stringResource(label),
+                            destination = destination,
+                            selected = selected,
                             badge = badgeFor(index, navigationBadge),
                         )
                     },
                     label = {
                         Text(
-                            stringResource(label),
+                            stringResource(destination.label),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                    }
+                    },
+                    colors = barStyle.indicatorColor?.let {
+                        ShortNavigationBarItemDefaults.colors(selectedIndicatorColor = it)
+                    } ?: ShortNavigationBarItemDefaults.colors(),
                 )
             }
         }
     }
 }
 
+/** A destination icon: filled when selected, outlined otherwise. */
+@Composable
+fun NavBarIcon(
+    destination: BottomBarDestination,
+    isSelected: Boolean,
+    modifier: Modifier = Modifier,
+    tint: Color = if (isSelected) {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    },
+) {
+    Icon(
+        imageVector = if (isSelected) destination.iconSelected else destination.iconNotSelected,
+        contentDescription = stringResource(destination.label),
+        tint = tint,
+        modifier = modifier,
+    )
+}
+
 @Composable
 internal fun NavigationIconWithBadge(
-    icon: ImageVector,
-    contentDescription: String?,
+    destination: BottomBarDestination,
+    selected: Boolean,
     badge: NavBadge?,
 ) {
     if (badge != null) {
@@ -110,9 +115,9 @@ internal fun NavigationIconWithBadge(
                 }
             }
         ) {
-            Icon(icon, contentDescription)
+            NavBarIcon(destination, selected)
         }
     } else {
-        Icon(icon, contentDescription)
+        NavBarIcon(destination, selected)
     }
 }

@@ -108,6 +108,7 @@ import com.shixiaoshi0417.lunexsu.ui.theme.ColorContrast
 import com.shixiaoshi0417.lunexsu.ui.theme.ColorMode
 import com.shixiaoshi0417.lunexsu.ui.theme.DefaultKeyColor
 import com.shixiaoshi0417.lunexsu.ui.theme.keyColorOptions
+import com.shixiaoshi0417.lunexsu.ui.theme.ColorGenerationMode
 import com.shixiaoshi0417.lunexsu.ui.theme.rememberLunexSUColorScheme
 import kotlin.math.roundToInt
 
@@ -185,6 +186,7 @@ fun ColorPaletteScreenMaterial(
                     paletteStyle = colorStyle,
                     colorSpec = colorSpec,
                     contrastLevel = contrastLevel,
+                    generationMode = uiState.colorGenerationMode,
                 )
             }
 
@@ -450,6 +452,10 @@ fun ColorPaletteScreenMaterial(
                 )
             }
 
+            item {
+                NavModeSectionMaterial()
+            }
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 item {
                     SegmentedColumn(
@@ -620,6 +626,7 @@ private fun ThemePreviewCard(
     paletteStyle: PaletteStyle = PaletteStyle.TonalSpot,
     colorSpec: ColorSpec.SpecVersion = ColorSpec.SpecVersion.SPEC_2025,
     contrastLevel: Double = 0.0,
+    generationMode: String = ColorGenerationMode.CUSTOM,
 ) {
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.toFloat()
@@ -634,6 +641,7 @@ private fun ThemePreviewCard(
         paletteStyle = paletteStyle,
         colorSpec = colorSpec,
         contrastLevel = contrastLevel,
+        generationMode = generationMode,
     )
 
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {

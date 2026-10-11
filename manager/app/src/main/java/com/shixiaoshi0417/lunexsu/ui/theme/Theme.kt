@@ -66,6 +66,25 @@ enum class ColorContrast(val level: Double) {
     }
 }
 
+/**
+ * How the color scheme is produced, persisted as `color_generation_mode` (FinaSU protocol values).
+ *
+ * [CLASSIC] keeps the palette a theme pack was designed with: the system Monet scheme unchanged,
+ * FolkPatch's fixed table for a catalog seed, and no contrast boost. It is what an imported pack
+ * gets unless it says otherwise, so a pack cannot be pushed into a high-contrast regeneration it
+ * was never designed for. [CUSTOM] (the default) regenerates the scheme with the chosen palette
+ * style, spec and contrast; changing any of those switches back to it.
+ */
+object ColorGenerationMode {
+    const val CLASSIC = "classic"
+    const val CUSTOM = "custom"
+
+    fun fromValue(value: String?): String = if (value == CLASSIC) CLASSIC else CUSTOM
+
+    /** Contrast only applies to schemes the user regenerates; a classic scheme keeps its own. */
+    fun contrastLevel(mode: String, requested: Double): Double = if (mode == CUSTOM) requested else 0.0
+}
+
 /** The seed used when Monet is off and no key color was picked. */
 val DefaultKeyColor = Color(0xFF6750A4)
 
@@ -79,6 +98,7 @@ data class AppSettings(
     /** Pure black surfaces, applied whenever the effective theme is dark. */
     val amoled: Boolean = colorMode.isAmoled,
     val contrast: ColorContrast = ColorContrast.STANDARD,
+    val colorGenerationMode: String = ColorGenerationMode.CUSTOM,
 )
 
 val PaletteStyle.supportsSpec2025: Boolean
@@ -152,6 +172,7 @@ object ThemeController {
             useDynamicColor = repo.useDynamicColor,
             amoled = storedAmoled,
             contrast = ColorContrast.fromName(repo.colorContrast),
+            colorGenerationMode = ColorGenerationMode.fromValue(repo.colorGenerationMode),
         )
     }
 }
