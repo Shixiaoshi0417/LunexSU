@@ -82,6 +82,15 @@ static inline bool ksu_auth_should_umount(bool allow_su, bool active, bool nrp_u
     return nrp_use_default ? default_umount : nrp_umount;
 }
 
+/* A failed su exec under a temporary grant must not hand an App the elevated
+ * credentials, seccomp and namespaces of an applied Root profile. A refused
+ * escape aborts before any of those change, so the App just gets the error.
+ */
+static inline bool ksu_auth_kill_after_failed_exec(bool temporary, bool escaped)
+{
+    return temporary && escaped;
+}
+
 static inline void ksu_auth_invalidate(struct ksu_authorization_state *s)
 {
     KSU_AUTH_WRITE(s->once, 0);

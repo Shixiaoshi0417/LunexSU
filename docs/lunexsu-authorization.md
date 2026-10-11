@@ -39,7 +39,9 @@ localized strings, and `tests/authorization`. Implementation is on
   instruction runs and refunds its reservation.
   GRANT_ROOT cannot consume/use Once: it is not an exec into su. Failed prepare
   or exec refunds; a failed temporary exec is SIGKILLed before it can return
-  to userspace with changed credentials/seccomp/namespaces. Successful Root
+  to userspace with changed credentials/seccomp/namespaces. A refused escape
+  (for example a process that disabled re-escalation) changes nothing, so the
+  App only receives the error and is not killed. Successful Root
   processes and their descendants are not terminated or stripped of privileges.
 - Timed permits repeated admissions strictly before the CLOCK_BOOTTIME
   deadline. Sleep counts. Changing wall-clock time cannot extend a grant.

@@ -18,6 +18,7 @@
 
 #include "arch.h"
 #include "policy/allowlist.h"
+#include "policy/authorization_state.h"
 #include "policy/feature.h"
 #include "klog.h" // IWYU pragma: keep
 #include "runtime/ksud.h"
@@ -173,6 +174,7 @@ static long ksu_handle_execve_sucompat_common(const char __user **filename_user,
     struct file *ksud_file;
     const struct cred *old_cred;
     struct ksu_auth_lease lease;
+    bool escaped;
 
     if (execveat && ((int)PT_REGS_SYSCALL_PARM1(regs) != AT_FDCWD || (int)PT_REGS_PARM5(regs) != 0))
         goto do_orig_execve;
@@ -240,6 +242,7 @@ static long ksu_handle_execve_sucompat_common(const char __user **filename_user,
     if (ret) {
         pr_err("escape_with_root_profile failed: %ld\n", ret);
     }
+    escaped = !ret;
     if (!ret)
         ret = ksu_syscall_table[__NR_execveat](regs);
     if (ret >= 0) {
@@ -264,7 +267,7 @@ static long ksu_handle_execve_sucompat_common(const char __user **filename_user,
          * Those side effects cannot safely be rolled back after failed exec.
          * Never return to the original app with a refunded temporary grant
          * and elevated credentials. Successful Root tasks are unaffected. */
-        if (lease.temporary)
+        if (ksu_auth_kill_after_failed_exec(lease.temporary, escaped))
             force_sig(SIGKILL);
     }
     return ret;

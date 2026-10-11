@@ -106,6 +106,12 @@ int main(void)
     assert(!ksu_auth_should_umount(true, ksu_auth_available(&state, start), false, true, false));
     assert(ksu_auth_grant(&state, KSU_AUTH_PERMANENT, 0, start));
     assert(!ksu_auth_should_umount(true, ksu_auth_available(&state, UINT64_MAX), true, false, true));
+    /* A failed su exec kills only after the Root profile was applied; a refused
+     * escape (no credential change) returns the error. Permanent never kills. */
+    assert(ksu_auth_kill_after_failed_exec(true, true));
+    assert(!ksu_auth_kill_after_failed_exec(true, false));
+    assert(!ksu_auth_kill_after_failed_exec(false, true));
+    assert(!ksu_auth_kill_after_failed_exec(false, false));
     /* Non-root profiles keep their own or the default policy. */
     assert(ksu_auth_should_umount(false, false, true, false, true));
     assert(!ksu_auth_should_umount(false, false, false, false, true));
