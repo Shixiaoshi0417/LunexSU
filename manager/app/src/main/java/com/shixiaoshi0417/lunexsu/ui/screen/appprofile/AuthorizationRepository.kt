@@ -4,6 +4,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import com.shixiaoshi0417.lunexsu.Natives
 
+/** Only a Core with authorization support has Once credits and Timed countdowns to refresh. */
+fun shouldPollAuthorization(special: Boolean, profile: Natives.Profile): Boolean =
+    !special && profile.authorizationSupported
+
 /** Both UI modes use this transaction boundary, including countdown refresh.
  * Never retry a rejected generation or write through the permanent-only ABI.
  */

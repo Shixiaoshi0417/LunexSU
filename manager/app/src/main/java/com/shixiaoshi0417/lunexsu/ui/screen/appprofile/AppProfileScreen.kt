@@ -86,7 +86,7 @@ fun AppProfileScreen(uid: Int) {
     }
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(uid, packageName, lifecycleOwner) {
-        if (primaryAppInfo.special) return@LaunchedEffect
+        if (!shouldPollAuthorization(primaryAppInfo.special, initialProfile)) return@LaunchedEffect
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             while (true) {
                 delay(1000)

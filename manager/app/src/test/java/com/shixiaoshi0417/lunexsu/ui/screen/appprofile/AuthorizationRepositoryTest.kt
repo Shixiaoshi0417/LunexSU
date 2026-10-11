@@ -32,6 +32,13 @@ class AuthorizationRepositoryTest {
         assertNull(authorizationGrant(permanent.copy(currentUid = 1000), 1, "5"))
     }
 
+    @Test fun onlyAuthorizationCoresPollTheProfilePage() {
+        assertTrue(shouldPollAuthorization(false, permanent))
+        assertFalse(shouldPollAuthorization(true, permanent))
+        // A legacy Core has no Once credit or Timed countdown that could change.
+        assertFalse(shouldPollAuthorization(false, permanent.copy(authorizationSupported = false)))
+    }
+
     @Test fun unsupportedCoreNeverWritesTemporaryOrRetriesPermanent() = runBlocking {
         var writes = 0
         val legacy = permanent.copy(authorizationSupported = false)
