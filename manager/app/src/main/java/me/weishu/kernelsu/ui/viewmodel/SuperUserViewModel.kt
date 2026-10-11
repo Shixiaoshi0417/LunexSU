@@ -395,6 +395,23 @@ class SuperUserViewModel(
         }
     }
 
+    /**
+     * Once and Timed grants end inside Core without any UI event. Re-read only those
+     * profiles and refresh the list once one of them changed state.
+     */
+    suspend fun refreshTemporaryGrants() {
+        val temporary = synchronized(appsLock) { cachedApps }.filter { app ->
+            app.profile?.let { it.allowSu && it.authorizationMode != 0 && it.authorizationState != 0 } == true
+        }
+        if (temporary.isEmpty()) return
+        val changed = withContext(Dispatchers.IO) {
+            temporary.any { app ->
+                Natives.getAppProfile(app.profileKey, app.uid).authorizationState != app.profile?.authorizationState
+            }
+        }
+        if (changed) refreshAppList()
+    }
+
     fun loadAppList(force: Boolean = false, resort: Boolean = true): Job {
         return viewModelScope.launch {
             if (force || _uiState.value.groupedApps.isEmpty()) {

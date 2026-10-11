@@ -7,10 +7,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
 import me.weishu.kernelsu.ui.component.SearchStatus
 import me.weishu.kernelsu.ui.LocalUiMode
 import me.weishu.kernelsu.ui.UiMode
@@ -55,6 +59,18 @@ fun SuperUserPager(
         }
         initialResumeHandled.value = true
         onPauseOrDispose {}
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(isCurrentPage, lifecycleOwner) {
+        if (!isCurrentPage) return@LaunchedEffect
+        // Expiry and Once consumption happen in Core; nothing else tells the list about them.
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                if (!viewModel.uiState.value.isRefreshing) viewModel.refreshTemporaryGrants()
+                delay(1000)
+            }
+        }
     }
 
     val onSearchTextChange: (String) -> Unit = viewModel::updateSearchText
