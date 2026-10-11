@@ -104,11 +104,14 @@ object Natives {
     private const val NOBODY_UID = 9999
 
     fun setDefaultUmountModules(umountModules: Boolean): Boolean {
+        // UAPI 6 rejects a write whose generation differs from the stored record.
+        val generation = getAppProfile(NON_ROOT_DEFAULT_PROFILE_KEY, NOBODY_UID).authorizationGeneration
         Profile(
             NON_ROOT_DEFAULT_PROFILE_KEY,
             NOBODY_UID,
             false,
-            umountModules = umountModules
+            umountModules = umountModules,
+            authorizationGeneration = generation,
         ).let {
             return setAppProfile(it)
         }
