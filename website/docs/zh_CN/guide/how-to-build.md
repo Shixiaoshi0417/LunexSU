@@ -53,7 +53,7 @@ tools/bazel build --config=fast //common:kernel_aarch64_dist
 
 ::: code-group
 
-```sh[最新 tag(稳定版本)]
+```sh[最新 main(推荐)]
 curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -
 ```
 
@@ -61,10 +61,14 @@ curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/
 curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -s main
 ```
 
-```sh[指定 tag(比如 v0.5.2)]
-curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -s v0.5.2
+```sh[指定提交或 tag]
+curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -s <commit-or-tag>
 ```
 
+:::
+
+::: warning
+早于 LunexSU 的 tag（如 v0.5.2、v3.3.0）是上游 KernelSU 的版本，只认上游管理器，无法识别 LunexSU 管理器。
 :::
 
 然后重建内核，您将获得带有 LunexSU 的内核映像！

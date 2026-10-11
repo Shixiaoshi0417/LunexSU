@@ -61,7 +61,7 @@ rm common/android/abi_gki_protected_exports_*
 
 ::: code-group
 
-```sh[最新 tag (穩定版本)]
+```sh[最新 main (推薦)]
 curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -
 ```
 
@@ -69,10 +69,14 @@ curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/
 curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -s main
 ```
 
-```sh[選取 tag (例如 v0.5.2)]
-curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -s v0.5.2
+```sh[選取提交或 tag]
+curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -s <commit-or-tag>
 ```
 
+:::
+
+::: warning
+早於 LunexSU 的 tag（如 v0.5.2、v3.3.0）是上游 KernelSU 的版本，只認上游管理器，無法識別 LunexSU 管理器。
 :::
 
 然後重新建置核心，您將會得到一個帶有 LunexSU 的核心映像！

@@ -8,7 +8,7 @@ display_usage() {
     echo "  --cleanup:              Cleans up previous modifications made by the script."
     echo "  <commit-or-tag>:        Sets up or updates the LunexSU to specified tag or commit."
     echo "  -h, --help:             Displays this usage information."
-    echo "  (no args):              Sets up or updates the LunexSU environment to the latest tagged version."
+    echo "  (no args):              Sets up or updates the LunexSU environment to the latest main branch."
 }
 
 initialize_variables() {
@@ -42,13 +42,13 @@ setup_kernelsu() {
     test -d "$GKI_ROOT/LunexSU" || git clone https://github.com/Shixiaoshi0417/LunexSU "$GKI_ROOT/LunexSU" && echo "[+] Repository cloned."
     cd "$GKI_ROOT/LunexSU"
     git stash && echo "[-] Stashed current changes."
-    if [ "$(git status | grep -Po 'v\d+(\.\d+)*' | head -n1)" ]; then
+    # The fork's tags are upstream KernelSU releases, which expect the upstream
+    # Manager package and certificate. The default is therefore LunexSU's main.
+    if [ -z "${1-}" ] || [ "$(git status | grep -Po 'v\d+(\.\d+)*' | head -n1)" ]; then
         git checkout main && echo "[-] Switched to main branch."
     fi
     git pull && echo "[+] Repository updated."
-    if [ -z "${1-}" ]; then
-        git checkout "$(git describe --abbrev=0 --tags)" && echo "[-] Checked out latest tag."
-    else
+    if [ -n "${1-}" ]; then
         git checkout "$1" && echo "[-] Checked out $1." || echo "[-] Checkout default branch"
     fi
     cd "$DRIVER_DIR"

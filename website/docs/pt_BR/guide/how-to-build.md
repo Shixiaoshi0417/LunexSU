@@ -61,7 +61,7 @@ Se você conseguir compilar o kernel com sucesso, adicionar suporte ao LunexSU s
 
 ::: code-group
 
-```sh[Tag mais recente (estável)]
+```sh[main mais recente (recomendado)]
 curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -
 ```
 

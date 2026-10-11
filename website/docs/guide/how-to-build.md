@@ -61,7 +61,7 @@ If you can successfully build the kernel, adding support for LunexSU will be rel
 
 ::: code-group
 
-```sh[Latest tag (stable)]
+```sh[Latest main (recommended)]
 curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -
 ```
 
@@ -69,10 +69,14 @@ curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/
 curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -s main
 ```
 
-```sh[Select tag (such as v0.5.2)]
-curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -s v0.5.2
+```sh[Select commit or tag]
+curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -s <commit-or-tag>
 ```
 
+:::
+
+::: warning
+Tags older than LunexSU itself (such as v0.5.2 or v3.3.0) are upstream KernelSU releases. They expect the upstream Manager and do not recognize the LunexSU Manager.
 :::
 
 Then, rebuild the kernel and you will get a kernel image with LunexSU!

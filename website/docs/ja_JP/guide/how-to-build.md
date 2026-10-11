@@ -50,7 +50,7 @@ tools/bazel build --config=fast //common:kernel_aarch64_dist
 もしカーネルを正常にビルドできた場合、LunexSU をビルドするのは簡単です。カーネルソースのルートディレクトリで任意のものを選択して実行します：
 
 ::: code-group
-```sh[最新タグ(安定版)]
+```sh[最新の main (推奨)]
 curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -
 ```
 ```sh[ main ブランチ (開発用)]

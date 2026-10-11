@@ -49,7 +49,7 @@ tools/bazel build --config=fast //common:kernel_aarch64_dist
 
 Jika Anda dapat build kernel dengan sukses, maka build LunexSU sangatlah mudah, jalankan perintah ini di root dir kernel source:
 
-- Latest tag(stable)
+- Latest main (recommended)
 
 ```sh
 curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -
