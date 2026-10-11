@@ -11,6 +11,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import me.weishu.kernelsu.data.model.HomeLayoutStyle
 import me.weishu.kernelsu.ui.theme.FontConfig
 import java.io.Closeable
 import java.io.File
@@ -46,7 +47,7 @@ internal object ThemePackImporter {
             }
             if (plan.fontMode == "custom") {
                 val font = files.getValue(requireNotNull(plan.font))
-                require(font.length() <= 32L * 1024 * 1024) { "Font exceeds size limit" }
+                require(font.length() <= FontConfig.MAX_FONT_BYTES) { "Font exceeds size limit" }
                 require(Typeface.Builder(font).build() != null) { "Invalid font" }
             }
             PreparedThemePack(directory, json.toString(), files.toMap(), plan)
@@ -103,7 +104,7 @@ internal object ThemePackImporter {
                     "color_mode" to 0, "key_color" to 0, "color_style" to "TonalSpot",
                     "color_spec" to "SPEC_2025", "color_contrast" to "STANDARD",
                     "use_dynamic_color" to true, "miuix_monet" to false, "amoled_black" to false,
-                    "home_layout_style" to "circle", "stats_top_layout" to "list",
+                    "home_layout_style" to "circle", "stats_top_layout" to HomeLayoutStyle.STATS_TOP_STATUS,
                     "home_hide_working_mode" to false, "font_mode" to "SYSTEM_DEFAULT",
                 ), setOf(ACTIVE_PACK, ACTIVE_JSON, "custom_font_file"))
                 withContext(Dispatchers.Main) {

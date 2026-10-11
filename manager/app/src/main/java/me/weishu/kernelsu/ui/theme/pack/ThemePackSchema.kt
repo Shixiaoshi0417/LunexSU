@@ -3,6 +3,7 @@
 package me.weishu.kernelsu.ui.theme.pack
 
 import com.materialkolor.PaletteStyle
+import me.weishu.kernelsu.data.model.HomeLayoutStyle
 import org.json.JSONObject
 
 internal data class PackMetadata(val name: String, val author: String, val version: String, val description: String)
@@ -121,8 +122,11 @@ internal object ThemePackSchema {
         }
         if (json.has("statsTopLayout")) {
             val layout = text("statsTopLayout")
-            if (layout in setOf("list", "grid")) settings["stats_top_layout"] = layout
-            else warnings += "statsTopLayout=$layout"
+            when (layout) {
+                "list" -> settings["stats_top_layout"] = HomeLayoutStyle.STATS_TOP_STATUS
+                "grid" -> settings["stats_top_layout"] = HomeLayoutStyle.STATS_TOP_GRID
+                else -> warnings += "statsTopLayout=$layout"
+            }
         }
         if (json.has("homeLayoutStyle")) {
             val layout = text("homeLayoutStyle")

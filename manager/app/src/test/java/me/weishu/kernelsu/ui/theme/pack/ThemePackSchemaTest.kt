@@ -22,6 +22,13 @@ class ThemePackSchemaTest {
         assertEquals(true, plan.settings["miuix_monet"])
         assertEquals(true, plan.settings["use_dynamic_color"])
     }
+    @Test fun mapsStatsHeaderToLunexTokens() {
+        assertEquals("status", parse("""{"statsTopLayout":"list"}""").settings["stats_top_layout"])
+        assertEquals("grid", parse("""{"statsTopLayout":"grid"}""").settings["stats_top_layout"])
+        val unknown = parse("""{"statsTopLayout":"cards"}""")
+        assertFalse("stats_top_layout" in unknown.settings)
+        assertTrue("statsTopLayout=cards" in unknown.warnings)
+    }
     @Test fun preservesExactCustomArgb() {
         assertEquals(-123456, parse("""{"folksu_keyColor":-123456}""").settings["key_color"])
     }

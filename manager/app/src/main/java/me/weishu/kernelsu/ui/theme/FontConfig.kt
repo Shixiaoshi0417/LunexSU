@@ -17,6 +17,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
 import java.util.UUID
 
 /**
@@ -46,6 +48,9 @@ object FontConfig {
     private const val KEY_CUSTOM_FONT_FILE = "custom_font_file"
     private const val FILE_PREFIX = "custom_font_"
     private const val TAG = "FontConfig"
+
+    /** Largest font file accepted, whether picked directly or shipped in a theme pack. */
+    internal const val MAX_FONT_BYTES = 32L * 1024 * 1024
     private val imports = FontImportGuard()
 
     var fontMode: FontMode by mutableStateOf(FontMode.SYSTEM_DEFAULT)
@@ -117,8 +122,7 @@ object FontConfig {
         var applied = false
         return try {
             val copied = context.contentResolver.openInputStream(uri)?.use { input ->
-                destFile.outputStream().use { output -> input.copyTo(output) }
-                true
+                destFile.outputStream().use { output -> copyBounded(input, output, MAX_FONT_BYTES) }
             } ?: false
             if (!copied || !isLoadableFont(destFile)) {
                 destFile.delete()
@@ -168,6 +172,19 @@ object FontConfig {
         // Pack assets remain available to its immutable configuration until pack GC removes them.
         if (filename.startsWith(FILE_PREFIX) && '/' !in filename && '\\' !in filename) {
             File(context.filesDir, filename).delete()
+        }
+    }
+
+    /** Copies at most [limit] bytes; a larger source is rejected instead of filling storage. */
+    private fun copyBounded(input: InputStream, output: OutputStream, limit: Long): Boolean {
+        val buffer = ByteArray(64 * 1024)
+        var total = 0L
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) return true
+            total += read
+            if (total > limit) return false
+            output.write(buffer, 0, read)
         }
     }
 
