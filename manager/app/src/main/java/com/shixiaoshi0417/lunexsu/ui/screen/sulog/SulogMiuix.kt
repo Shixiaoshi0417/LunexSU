@@ -1,5 +1,6 @@
 package com.shixiaoshi0417.lunexsu.ui.screen.sulog
 
+import com.shixiaoshi0417.lunexsu.ui.theme.miuixBarColor
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -116,7 +117,7 @@ fun SulogScreenMiuix(
     }
     val backdrop = rememberBlurBackdrop(enableBlur)
     val blurActive = backdrop != null
-    val barColor = if (blurActive) Color.Transparent else colorScheme.surface
+    val barColor = miuixBarColor(blurActive)
     val pullToRefreshState = rememberPullToRefreshState()
     val listState = rememberLazyListState()
     val fileSelector = buildSulogFileSelector(state.files, state.selectedFilePath)

@@ -1,5 +1,6 @@
 package com.shixiaoshi0417.lunexsu.ui.screen.executemoduleaction
 
+import com.shixiaoshi0417.lunexsu.ui.theme.miuixBarColor
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -101,7 +102,7 @@ fun ExecuteModuleActionScreenMiuix(
     val enableBlur = LocalEnableBlur.current
     val backdrop = rememberBlurBackdrop(enableBlur)
     val blurActive = backdrop != null
-    val barColor = if (blurActive) Color.Transparent else colorScheme.surface
+    val barColor = miuixBarColor(blurActive)
 
     BackHandler(enabled = !state.isComplete) { }
 

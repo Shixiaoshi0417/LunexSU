@@ -53,6 +53,23 @@ bar icons) and the painted scrim is raised to the smallest value that keeps that
 text at WCAG AA 4.5:1 over a white wallpaper. The pack's dim values are never
 rewritten. A dark theme never flips; its readability is left to the night dim, as
 in FinaSU. MIUIX applies the dual dim without the brightness adaptation.
+
+Containers follow FinaSU's wallpaper materials. `backgroundOpacity` is the panel
+alpha (0 shows the wallpaper fully, 1 is opaque; a pack without it imports as
+0.5, like FinaSU). Group (list groups, cards) uses it one-to-one, Raised adds
+0.12, Overlay (dialogs, menus) stays at 0.96, and Chrome (top/bottom bars, rail,
+pinned tab row) keeps a 0.10 floor and strengthens to at least 0.85 as a large
+top bar collapses. Only fills are translucent: each material pairs an opaque
+surface tint with opaque content colors, and no `Modifier.alpha` is involved.
+A container inside another material draws no second fill, and the rows of a
+list group share one group fill. In the Material UI the theme keeps every
+surface role opaque (only the canvas is transparent), so components without a
+material, such as dialogs, sheets and the theme preview, stay readable. MIUIX
+draws cards and list popups with the same `surfaceContainer` role, so the root
+Scaffold, which hosts its overlay dialogs and popups, keeps an opaque background
+and the 0.96 overlay alpha, while page content gets the group alpha; MIUIX bars
+use the chrome material unless their blur backdrop is active. Without a pack
+wallpaper both UIs render exactly as before.
 Drawables render through Compose's canvas with page clipping, so preloaded pager
 backgrounds cannot cover the current page. Expected preparation errors are returned
 inside the loading job before being handled; a bad package cannot cancel its dialog

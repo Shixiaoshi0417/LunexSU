@@ -1,5 +1,9 @@
 package com.shixiaoshi0417.lunexsu.ui.component.bottombar
 
+import com.shixiaoshi0417.lunexsu.ui.component.material.WallpaperChromeZone
+import com.shixiaoshi0417.lunexsu.ui.component.material.ChromeEdge
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFolkWallpaperTokens
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
@@ -44,36 +48,41 @@ fun BottomBarMaterial(navigationBadge: NavigationBadgeState) {
         Triple(R.string.settings, Icons.Filled.Settings, Icons.Outlined.Settings)
     )
 
-    ShortNavigationBar(
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        windowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout).only(
-            WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom
-        )
-    ) {
-        items.forEachIndexed { index, (label, selectedIcon, unselectedIcon) ->
-            val selected = mainPagerState.selectedPage == index
-            ShortNavigationBarItem(
-                selected = selected,
-                onClick = {
-                    if (!selected) {
-                        mainPagerState.animateToPage(index)
-                    }
-                },
-                icon = {
-                    NavigationIconWithBadge(
-                        icon = if (selected) selectedIcon else unselectedIcon,
-                        contentDescription = stringResource(label),
-                        badge = badgeFor(index, navigationBadge),
-                    )
-                },
-                label = {
-                    Text(
-                        stringResource(label),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+    // Over a wallpaper the bar is transparent and the chrome zone draws its platform with a soft
+    // edge. (Adapted from FinaSU's BottomBarControl, GPL-3.0.)
+    val wallpaperActive = LocalFolkWallpaperTokens.current != null
+    WallpaperChromeZone(edge = ChromeEdge.Bottom) {
+        ShortNavigationBar(
+            containerColor = if (wallpaperActive) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer,
+            windowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout).only(
+                WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom
             )
+        ) {
+            items.forEachIndexed { index, (label, selectedIcon, unselectedIcon) ->
+                val selected = mainPagerState.selectedPage == index
+                ShortNavigationBarItem(
+                    selected = selected,
+                    onClick = {
+                        if (!selected) {
+                            mainPagerState.animateToPage(index)
+                        }
+                    },
+                    icon = {
+                        NavigationIconWithBadge(
+                            icon = if (selected) selectedIcon else unselectedIcon,
+                            contentDescription = stringResource(label),
+                            badge = badgeFor(index, navigationBadge),
+                        )
+                    },
+                    label = {
+                        Text(
+                            stringResource(label),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                )
+            }
         }
     }
 }

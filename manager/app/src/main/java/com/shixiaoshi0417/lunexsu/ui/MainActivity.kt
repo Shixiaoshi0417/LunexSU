@@ -1,5 +1,7 @@
 package com.shixiaoshi0417.lunexsu.ui
 
+import com.shixiaoshi0417.lunexsu.ui.theme.MiuixWallpaperContent
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFolkWallpaperTokens
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
@@ -265,7 +267,9 @@ class MainActivity : ComponentActivity() {
                                 containerColor = if (LocalThemePackBackground.current) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer
                             ) { navDisplay() }
 
-                            UiMode.Miuix -> Scaffold { navDisplay() }
+                            // The root Scaffold hosts MIUIX overlay dialogs and popups (opaque); the
+                            // pages inside it get the translucent wallpaper card material.
+                            UiMode.Miuix -> Scaffold { MiuixWallpaperContent { navDisplay() } }
                         }
                     }
                     SideEffect { contentReady = true }
@@ -375,7 +379,8 @@ fun MainScreen(
     }
     val uiMode = LocalUiMode.current
     val surfaceColor = when (uiMode) {
-        UiMode.Material -> MaterialTheme.colorScheme.surface // Blur is not used in Material, this is just a placeholder
+        // Blur is not used in Material, this is just a placeholder; it never covers a pack wallpaper.
+        UiMode.Material -> if (LocalFolkWallpaperTokens.current != null) Color.Transparent else MaterialTheme.colorScheme.surface
         UiMode.Miuix -> MiuixTheme.colorScheme.surface
     }
     val blurBackdrop = rememberBlurBackdrop(enableBlur)

@@ -1,9 +1,11 @@
 package com.shixiaoshi0417.lunexsu.ui.component.material
 
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.WallpaperMaterial
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,6 +62,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.runtime.staticCompositionLocalOf
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFolkWallpaperTokens
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.WallpaperSurfaceRole
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
@@ -84,16 +91,79 @@ private const val SegmentedSpringDamping = 0.9f
 @DslMarker
 annotation class SegmentedColumnDsl
 
+/**
+ * True inside [WallpaperGroupBackground]. Over a wallpaper a list group needs a single fill: the
+ * [ListItemDefaults.SegmentedGap] between rows would otherwise leak the wallpaper through every seam,
+ * and translucent rows over a translucent group would darken twice. (Adapted from FinaSU, GPL-3.0.)
+ */
+private val LocalWallpaperGroupActive = staticCompositionLocalOf { false }
+
 @Composable
-private fun defaultSegmentedColors(): ListItemColors = ListItemDefaults.segmentedColors(
-    containerColor = colorScheme.surfaceBright,
-    disabledContainerColor = colorScheme.surfaceBright,
-    supportingContentColor = colorScheme.onSurfaceVariant
-)
+private fun WallpaperGroupBackground(content: @Composable () -> Unit) {
+    val tokens = LocalFolkWallpaperTokens.current
+    val material = wallpaperMaterialFor(tokens, LocalWallpaperMaterialRole.current, WallpaperSurfaceRole.Group)
+    if (tokens == null) {
+        content()
+        return
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (material != null) {
+                    Modifier.background(material.fill, RoundedCornerShape(SegmentedOuterRadius))
+                } else {
+                    Modifier
+                }
+            )
+    ) {
+        CompositionLocalProvider(
+            LocalWallpaperGroupActive provides true,
+            LocalWallpaperMaterialRole provides WallpaperSurfaceRole.Group,
+        ) {
+            content()
+        }
+    }
+}
+
+/** A row's own fill over a wallpaper: none inside a material (the group already paints it), else the group material. */
+internal fun segmentedRowFill(group: WallpaperMaterial, insideMaterial: Boolean): Color =
+    if (insideMaterial) Color.Transparent else group.fill
+
+@Composable
+private fun defaultSegmentedColors(): ListItemColors {
+    // Over a wallpaper the group background carries the material; rows inside it are transparent.
+    val material = LocalFolkWallpaperTokens.current?.group
+    if (material != null) {
+        val fill = segmentedRowFill(material, LocalWallpaperGroupActive.current || LocalWallpaperMaterialRole.current != null)
+        return ListItemDefaults.segmentedColors(
+            containerColor = fill,
+            contentColor = material.contentColor,
+            disabledContainerColor = fill,
+            supportingContentColor = material.supportingColor,
+        )
+    }
+    return ListItemDefaults.segmentedColors(
+        containerColor = colorScheme.surfaceBright,
+        disabledContainerColor = colorScheme.surfaceBright,
+        supportingContentColor = colorScheme.onSurfaceVariant
+    )
+}
 
 @Composable
 private fun defaultSingleSegmentedShape(index: Int, count: Int): ListItemShapes {
     val base = ListItemDefaults.segmentedShapes(index, count)
+    if (LocalFolkWallpaperTokens.current != null) {
+        // Over a wallpaper standalone rows tile into one continuous group: only the ends stay rounded.
+        return base.copy(
+            shape = RoundedCornerShape(
+                topStart = if (index == 0) SegmentedOuterRadius else 0.dp,
+                topEnd = if (index == 0) SegmentedOuterRadius else 0.dp,
+                bottomStart = if (index == count - 1) SegmentedOuterRadius else 0.dp,
+                bottomEnd = if (index == count - 1) SegmentedOuterRadius else 0.dp,
+            )
+        )
+    }
     return if (count == 1) {
         base.copy(shape = MaterialTheme.shapes.large)
     } else {
@@ -119,15 +189,17 @@ fun SegmentedColumn(
                 modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
             )
         }
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            content.forEachIndexed { index, itemContent ->
-                CompositionLocalProvider(
-                    LocalListItemShapes provides defaultSingleSegmentedShape(
-                        index = index,
-                        count = if (visibleLen > 0) visibleLen else content.size
-                    ),
-                ) {
-                    itemContent()
+        WallpaperGroupBackground {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                content.forEachIndexed { index, itemContent ->
+                    CompositionLocalProvider(
+                        LocalListItemShapes provides defaultSingleSegmentedShape(
+                            index = index,
+                            count = if (visibleLen > 0) visibleLen else content.size
+                        ),
+                    ) {
+                        itemContent()
+                    }
                 }
             }
         }
@@ -188,69 +260,71 @@ fun SegmentedColumn(
         val firstVisible = entries.indexOfFirst { it.visible }
         val lastVisible = entries.indexOfLast { it.visible }
 
-        Layout(
-            content = {
-                entries.forEachIndexed { index, entry ->
-                    key(entry.key ?: index) {
-                        val isFirst = if (firstVisible == -1) index == 0 else index == firstVisible
-                        val isLast = if (lastVisible == -1) index == entries.lastIndex else index == lastVisible
+        WallpaperGroupBackground {
+            Layout(
+                content = {
+                    entries.forEachIndexed { index, entry ->
+                        key(entry.key ?: index) {
+                            val isFirst = if (firstVisible == -1) index == 0 else index == firstVisible
+                            val isLast = if (lastVisible == -1) index == entries.lastIndex else index == lastVisible
 
-                        val topRadius by animateDpAsState(
-                            if (isFirst) SegmentedOuterRadius else SegmentedInnerRadius,
-                            dpSpring, label = "SegmentedTopRadius"
-                        )
-                        val bottomRadius by animateDpAsState(
-                            if (isLast) SegmentedOuterRadius else SegmentedInnerRadius,
-                            dpSpring, label = "SegmentedBottomRadius"
-                        )
-                        val gap by animateDpAsState(
-                            if (isFirst) 0.dp else ListItemDefaults.SegmentedGap,
-                            dpSpring, label = "SegmentedGap"
-                        )
+                            val topRadius by animateDpAsState(
+                                if (isFirst) SegmentedOuterRadius else SegmentedInnerRadius,
+                                dpSpring, label = "SegmentedTopRadius"
+                            )
+                            val bottomRadius by animateDpAsState(
+                                if (isLast) SegmentedOuterRadius else SegmentedInnerRadius,
+                                dpSpring, label = "SegmentedBottomRadius"
+                            )
+                            val gap by animateDpAsState(
+                                if (isFirst) 0.dp else ListItemDefaults.SegmentedGap,
+                                dpSpring, label = "SegmentedGap"
+                            )
 
-                        val shape = RoundedCornerShape(
-                            topStart = topRadius, topEnd = topRadius,
-                            bottomStart = bottomRadius, bottomEnd = bottomRadius
-                        )
+                            val shape = RoundedCornerShape(
+                                topStart = topRadius, topEnd = topRadius,
+                                bottomStart = bottomRadius, bottomEnd = bottomRadius
+                            )
 
-                        Box(
-                            modifier = Modifier
-                                .zIndex(if (entry.visible) (entries.size - index).toFloat() else -index.toFloat())
-                                .graphicsLayer {
-                                    val progress = progresses[index].value.coerceAtLeast(0f)
-                                    clip = true
-                                    this.shape = object : Shape {
-                                        override fun createOutline(
-                                            size: Size,
-                                            layoutDirection: LayoutDirection,
-                                            density: Density,
-                                        ): Outline = Outline.Rectangle(Rect(0f, 0f, size.width, size.height * progress))
+                            Box(
+                                modifier = Modifier
+                                    .zIndex(if (entry.visible) (entries.size - index).toFloat() else -index.toFloat())
+                                    .graphicsLayer {
+                                        val progress = progresses[index].value.coerceAtLeast(0f)
+                                        clip = true
+                                        this.shape = object : Shape {
+                                            override fun createOutline(
+                                                size: Size,
+                                                layoutDirection: LayoutDirection,
+                                                density: Density,
+                                            ): Outline = Outline.Rectangle(Rect(0f, 0f, size.width, size.height * progress))
+                                        }
+                                        alpha = (progress * 1.5f).coerceIn(0f, 1f)
                                     }
-                                    alpha = (progress * 1.5f).coerceIn(0f, 1f)
-                                }
-                        ) {
-                            CompositionLocalProvider(
-                                LocalListItemShapes provides ListItemDefaults.segmentedShapes(0, 1).copy(shape = shape)
                             ) {
-                                Column(modifier = Modifier.padding(top = gap)) {
-                                    entry.content()
+                                CompositionLocalProvider(
+                                    LocalListItemShapes provides ListItemDefaults.segmentedShapes(0, 1).copy(shape = shape)
+                                ) {
+                                    Column(modifier = Modifier.padding(top = gap)) {
+                                        entry.content()
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
-        ) { measurables, constraints ->
-            val placeables = measurables.map { it.measure(constraints) }
-            val positions = IntArray(placeables.size)
-            var y = 0f
-            placeables.forEachIndexed { index, placeable ->
-                positions[index] = y.roundToInt()
-                y += placeable.height * progresses[index].value.coerceAtLeast(0f)
-            }
-            layout(constraints.maxWidth, y.roundToInt().coerceAtLeast(0)) {
+            ) { measurables, constraints ->
+                val placeables = measurables.map { it.measure(constraints) }
+                val positions = IntArray(placeables.size)
+                var y = 0f
                 placeables.forEachIndexed { index, placeable ->
-                    placeable.placeRelative(0, positions[index])
+                    positions[index] = y.roundToInt()
+                    y += placeable.height * progresses[index].value.coerceAtLeast(0f)
+                }
+                layout(constraints.maxWidth, y.roundToInt().coerceAtLeast(0)) {
+                    placeables.forEachIndexed { index, placeable ->
+                        placeable.placeRelative(0, positions[index])
+                    }
                 }
             }
         }
@@ -263,10 +337,27 @@ fun SegmentedItem(
     count: Int,
     content: @Composable () -> Unit,
 ) {
+    val wallpaper = LocalFolkWallpaperTokens.current != null
     CompositionLocalProvider(
         LocalListItemShapes provides defaultSingleSegmentedShape(index, count),
     ) {
-        content()
+        if (!wallpaper) {
+            content()
+        } else {
+            // The parent list spaces standalone rows by SegmentedGap; report a height reduced by
+            // that gap and let the row overflow into it, so the squared rows join into one group.
+            val gapPx = with(LocalDensity.current) { ListItemDefaults.SegmentedGap.roundToPx() }
+            Box(
+                modifier = Modifier.layout { measurable, constraints ->
+                    val placeable = measurable.measure(constraints)
+                    layout(placeable.width, (placeable.height - gapPx).coerceAtLeast(0)) {
+                        placeable.placeRelative(0, 0)
+                    }
+                }
+            ) {
+                content()
+            }
+        }
     }
 }
 
@@ -276,6 +367,18 @@ fun SegmentedItemContainer(
     content: @Composable () -> Unit,
 ) {
     val shapes = LocalListItemShapes.current ?: ListItemDefaults.segmentedShapes(0, 1)
+    if (LocalFolkWallpaperTokens.current != null) {
+        FolkWallpaperSurface(
+            role = WallpaperSurfaceRole.Group,
+            shape = shapes.shape,
+            modifier = modifier.fillMaxWidth(),
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                content()
+            }
+        }
+        return
+    }
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = colorScheme.surfaceBright,

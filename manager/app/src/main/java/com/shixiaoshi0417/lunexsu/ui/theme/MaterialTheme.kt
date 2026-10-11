@@ -18,6 +18,8 @@ import com.materialkolor.PaletteStyle
 import com.shixiaoshi0417.lunexsu.ui.webui.MonetColorsProvider
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalThemePackBackground
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalWallpaperDim
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.resolveFolkWallpaperTokens
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFolkWallpaperTokens
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.ThemePackState
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.adaptNeutralRoles
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.effectiveWallpaperDim
@@ -84,19 +86,12 @@ fun MaterialLunexSUTheme(
         }
     }
 
+    // Over a wallpaper only the canvas is transparent. Surface roles stay opaque: they are the source
+    // colors of the wallpaper materials, which own all translucency per component (one material
+    // owner, no double veil), so dialogs and menus built on these roles stay readable.
     val wallpaperScheme = if (background != null) {
-        val opacity = background.opacity
         val base = if (flipToDark) adaptNeutralRoles(colorScheme, neutralScheme) else colorScheme
-        base.copy(
-            background = Color.Transparent, surface = Color.Transparent,
-            surfaceContainer = base.surfaceContainer.copy(alpha = opacity),
-            surfaceContainerLowest = base.surfaceContainerLowest.copy(alpha = opacity),
-            surfaceContainerLow = base.surfaceContainerLow.copy(alpha = opacity),
-            surfaceContainerHigh = base.surfaceContainerHigh.copy(alpha = opacity),
-            surfaceContainerHighest = base.surfaceContainerHighest.copy(alpha = opacity),
-            surfaceBright = base.surfaceBright.copy(alpha = opacity),
-            surfaceVariant = base.surfaceVariant.copy(alpha = opacity),
-        )
+        base.copy(background = Color.Transparent)
     } else colorScheme
     // Light text over a light theme's wallpaper gets the smallest scrim that keeps it legible.
     val renderDim = when {
@@ -104,7 +99,9 @@ fun MaterialLunexSUTheme(
         flipToDark -> guardedDim(requestedDim, wallpaperScheme) ?: requestedDim
         else -> requestedDim
     }
+    // Derive the materials from the animated scheme, so a panel's fill and its text interpolate together.
     val animatedColorScheme = wallpaperScheme.animateAsState()
+    val wallpaperTokens = background?.let { resolveFolkWallpaperTokens(animatedColorScheme, it.opacity) }
     val fontFamily = rememberAppFontFamily()
 
     MaterialExpressiveTheme(
@@ -123,6 +120,7 @@ fun MaterialLunexSUTheme(
             CompositionLocalProvider(
                 LocalRippleConfiguration provides rippleConfiguration,
                 LocalWallpaperDim provides renderDim,
+                LocalFolkWallpaperTokens provides wallpaperTokens,
             ) {
                 MonetColorsProvider.UpdateCss(colorScheme)
                 content()

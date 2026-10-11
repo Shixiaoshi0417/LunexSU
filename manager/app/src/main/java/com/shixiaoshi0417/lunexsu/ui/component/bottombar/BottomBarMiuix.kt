@@ -1,5 +1,6 @@
 package com.shixiaoshi0417.lunexsu.ui.component.bottombar
 
+import com.shixiaoshi0417.lunexsu.ui.theme.miuixBarColor
 import androidx.annotation.StringRes
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.WindowInsets
@@ -64,7 +65,7 @@ fun BottomBarMiuix(
         BlurredBar(blurBackdrop) {
             NavigationBar(
                 modifier = modifier,
-                color = if (blurBackdrop != null) Color.Transparent else MiuixTheme.colorScheme.surface,
+                color = miuixBarColor(blurActive = blurBackdrop != null),
                 content = {
                     items.forEachIndexed { index, item ->
                         NavigationBarItem(

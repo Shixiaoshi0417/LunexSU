@@ -176,7 +176,8 @@ internal object ThemePackSchema {
         require(!enabled || if (multiple) images.keys.any { it >= 0 } else images.containsKey(-1)) {
             "Enabled wallpaper requires a background for its selected mode"
         }
-        val background = PackBackground(enabled, multiple, scalar("backgroundOpacity", 0.6f),
+        // FinaSU imports a missing backgroundOpacity as 0.5; it is the panel alpha of every wallpaper material.
+        val background = PackBackground(enabled, multiple, scalar("backgroundOpacity", 0.5f),
             scalar("backgroundBlur", 0f, 100.0), scalar("backgroundDim", 0.2f),
             boolean("isDualBackgroundDimEnabled"), scalar("backgroundDayDim", 0.2f),
             scalar("backgroundNightDim", 0.4f), images)

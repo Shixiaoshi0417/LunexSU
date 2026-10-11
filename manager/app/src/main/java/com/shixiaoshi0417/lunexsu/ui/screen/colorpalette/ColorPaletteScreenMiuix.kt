@@ -1,5 +1,6 @@
 package com.shixiaoshi0417.lunexsu.ui.screen.colorpalette
 
+import com.shixiaoshi0417.lunexsu.ui.theme.miuixBarColor
 import android.annotation.SuppressLint
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
@@ -109,7 +110,7 @@ fun ColorPaletteScreenMiuix(
     val enableBlurState = LocalEnableBlur.current
     val backdrop = rememberBlurBackdrop(enableBlurState)
     val blurActive = backdrop != null
-    val barColor = if (blurActive) Color.Transparent else colorScheme.surface
+    val barColor = miuixBarColor(blurActive)
     val uiState = state.uiState
     val currentColorMode = state.currentColorMode
     val isDark = currentColorMode.isDark || currentColorMode.isSystem && isSystemInDarkTheme()

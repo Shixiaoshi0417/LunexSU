@@ -12,8 +12,12 @@ import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalThemePackBackground
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFolkWallpaperTokens
 
+/**
+ * Over a pack wallpaper the page canvas is transparent so the wallpaper stays continuous, and the
+ * bars draw their reading platform through [WallpaperChromeZone]. (Adapted from FinaSU, GPL-3.0.)
+ */
 @Composable
 fun ExpressiveScaffold(
     modifier: Modifier = Modifier,
@@ -27,25 +31,43 @@ fun ExpressiveScaffold(
     contentWindowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     content: @Composable (PaddingValues) -> Unit,
 ) {
+    val wallpaperActive = LocalFolkWallpaperTokens.current != null
     Scaffold(
         modifier = modifier,
-        topBar = topBar,
-        bottomBar = bottomBar,
+        topBar = {
+            if (wallpaperActive) WallpaperChromeZone(ChromeEdge.Top) { topBar() } else topBar()
+        },
+        bottomBar = {
+            if (wallpaperActive) WallpaperChromeZone(ChromeEdge.Bottom) { bottomBar() } else bottomBar()
+        },
         snackbarHost = snackbarHost,
         floatingActionButton = floatingActionButton,
         floatingActionButtonPosition = floatingActionButtonPosition,
-        containerColor = if (LocalThemePackBackground.current) Color.Transparent else containerColor,
-        contentColor = contentColor,
+        containerColor = if (wallpaperActive) Color.Transparent else containerColor,
+        contentColor = if (wallpaperActive) MaterialTheme.colorScheme.onSurface else contentColor,
         contentWindowInsets = contentWindowInsets,
         content = content,
     )
 }
 
+/** Over a wallpaper the bar is transparent (the chrome zone draws its platform) with opaque content. */
 @Composable
 fun expressiveTopAppBarColors(
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
     scrolledContainerColor: Color = containerColor,
-): TopAppBarColors = TopAppBarDefaults.topAppBarColors(
-    containerColor = containerColor,
-    scrolledContainerColor = scrolledContainerColor,
-)
+): TopAppBarColors {
+    val tokens = LocalFolkWallpaperTokens.current
+    if (tokens != null) {
+        return TopAppBarDefaults.topAppBarColors(
+            containerColor = Color.Transparent,
+            scrolledContainerColor = Color.Transparent,
+            titleContentColor = tokens.chrome.contentColor,
+            navigationIconContentColor = tokens.chrome.contentColor,
+            actionIconContentColor = tokens.chrome.contentColor,
+        )
+    }
+    return TopAppBarDefaults.topAppBarColors(
+        containerColor = containerColor,
+        scrolledContainerColor = scrolledContainerColor,
+    )
+}

@@ -1,5 +1,6 @@
 package com.shixiaoshi0417.lunexsu.ui.screen.superuser
 
+import com.shixiaoshi0417.lunexsu.ui.theme.miuixBarColor
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -120,7 +121,7 @@ fun SuperUserPagerMiuix(
 
     val backdrop = rememberBlurBackdrop(enableBlur)
     val blurActive = backdrop != null
-    val barColor = if (blurActive) Color.Transparent else colorScheme.surface
+    val barColor = miuixBarColor(blurActive)
 
     Scaffold(
         topBar = {

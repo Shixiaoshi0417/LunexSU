@@ -1,5 +1,6 @@
 package com.shixiaoshi0417.lunexsu.ui.screen.template
 
+import com.shixiaoshi0417.lunexsu.ui.theme.miuixBarColor
 import android.annotation.SuppressLint
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -142,7 +143,7 @@ fun AppProfileTemplateScreenMiuix(
     val enableBlur = LocalEnableBlur.current
     val backdrop = rememberBlurBackdrop(enableBlur)
     val blurActive = backdrop != null
-    val barColor = if (blurActive) Color.Transparent else colorScheme.surface
+    val barColor = miuixBarColor(blurActive)
 
     Scaffold(
         topBar = {

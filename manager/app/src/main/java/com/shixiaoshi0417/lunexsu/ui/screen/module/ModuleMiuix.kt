@@ -1,5 +1,6 @@
 package com.shixiaoshi0417.lunexsu.ui.screen.module
 
+import com.shixiaoshi0417.lunexsu.ui.theme.miuixBarColor
 import android.annotation.SuppressLint
 import android.app.Activity.RESULT_OK
 import android.content.ClipData
@@ -256,7 +257,7 @@ fun ModulePagerMiuix(
 
     val backdrop = rememberBlurBackdrop(enableBlur)
     val blurActive = backdrop != null
-    val barColor = if (blurActive) Color.Transparent else colorScheme.surface
+    val barColor = miuixBarColor(blurActive)
 
     Scaffold(
         topBar = {

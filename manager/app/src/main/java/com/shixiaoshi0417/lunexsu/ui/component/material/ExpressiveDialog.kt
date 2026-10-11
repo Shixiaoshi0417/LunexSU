@@ -21,7 +21,7 @@ fun ExpressiveDialog(
     title: (@Composable () -> Unit)? = null,
     text: (@Composable () -> Unit)? = null,
     shape: Shape = MaterialTheme.shapes.extraLarge,
-    containerColor: Color = AlertDialogDefaults.containerColor,
+    containerColor: Color = wallpaperOverlayColor(AlertDialogDefaults.containerColor),
     iconContentColor: Color = AlertDialogDefaults.iconContentColor,
     titleContentColor: Color = AlertDialogDefaults.titleContentColor,
     textContentColor: Color = AlertDialogDefaults.textContentColor,

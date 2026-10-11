@@ -1,5 +1,9 @@
 package com.shixiaoshi0417.lunexsu.ui.component.bottombar
 
+import com.shixiaoshi0417.lunexsu.ui.component.material.WallpaperChromeZone
+import com.shixiaoshi0417.lunexsu.ui.component.material.ChromeEdge
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFolkWallpaperTokens
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -74,54 +78,59 @@ fun NavigationRailMaterial(
             state.targetValue == WideNavigationRailValue.Expanded
     }
 
-    WideNavigationRail(
-        modifier = modifier.fillMaxHeight(),
-        state = state,
-        colors = WideNavigationRailDefaults.colors().copy(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-        ),
-        windowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout).only(
-            WindowInsetsSides.Start + WindowInsetsSides.Vertical
-        ),
-        contentPadding = PaddingValues(vertical = 20.dp),
-        header = {
-            IconButton(
-                modifier = Modifier.padding(start = 24.dp),
-                onClick = {
-                    scope.launch {
-                        if (expanded) state.collapse() else state.expand()
-                    }
-                },
-            ) {
-                Icon(
-                    if (expanded) Icons.AutoMirrored.Filled.MenuOpen else Icons.Filled.Menu,
-                    contentDescription = stringResource(
-                        if (expanded) R.string.nav_rail_collapse else R.string.nav_rail_expand
+    // Over a wallpaper the rail follows the bottom bar: transparent, with a start-edge chrome zone.
+    val wallpaperActive = LocalFolkWallpaperTokens.current != null
+    // The zone wraps the rail, which keeps the caller's modifier also when no wallpaper is shown.
+    WallpaperChromeZone(edge = ChromeEdge.Start) {
+        WideNavigationRail(
+            modifier = modifier.fillMaxHeight(),
+            state = state,
+            colors = WideNavigationRailDefaults.colors().copy(
+                containerColor = if (wallpaperActive) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ),
+            windowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout).only(
+                WindowInsetsSides.Start + WindowInsetsSides.Vertical
+            ),
+            contentPadding = PaddingValues(vertical = 20.dp),
+            header = {
+                IconButton(
+                    modifier = Modifier.padding(start = 24.dp),
+                    onClick = {
+                        scope.launch {
+                            if (expanded) state.collapse() else state.expand()
+                        }
+                    },
+                ) {
+                    Icon(
+                        if (expanded) Icons.AutoMirrored.Filled.MenuOpen else Icons.Filled.Menu,
+                        contentDescription = stringResource(
+                            if (expanded) R.string.nav_rail_collapse else R.string.nav_rail_expand
+                        )
                     )
+                }
+            },
+        ) {
+            items.forEachIndexed { index, (label, selectedIcon, unselectedIcon) ->
+                val selected = mainPagerState.selectedPage == index
+                WideNavigationRailItem(
+                    railExpanded = expanded,
+                    selected = selected,
+                    onClick = {
+                        if (!selected) {
+                            mainPagerState.animateToPage(index)
+                        }
+                    },
+                    icon = {
+                        NavigationIconWithBadge(
+                            icon = if (selected) selectedIcon else unselectedIcon,
+                            contentDescription = stringResource(label),
+                            badge = badgeFor(index, navigationBadge),
+                        )
+                    },
+                    label = { Text(stringResource(label)) }
                 )
             }
-        },
-    ) {
-        items.forEachIndexed { index, (label, selectedIcon, unselectedIcon) ->
-            val selected = mainPagerState.selectedPage == index
-            WideNavigationRailItem(
-                railExpanded = expanded,
-                selected = selected,
-                onClick = {
-                    if (!selected) {
-                        mainPagerState.animateToPage(index)
-                    }
-                },
-                icon = {
-                    NavigationIconWithBadge(
-                        icon = if (selected) selectedIcon else unselectedIcon,
-                        contentDescription = stringResource(label),
-                        badge = badgeFor(index, navigationBadge),
-                    )
-                },
-                label = { Text(stringResource(label)) }
-            )
         }
     }
 }
