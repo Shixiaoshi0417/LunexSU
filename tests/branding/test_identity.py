@@ -183,6 +183,19 @@ class IdentityTests(unittest.TestCase):
             self.assertEqual(b"ksuinit", (base / "ksuinit/LunexSU-ksuinit-aarch64").read_bytes())
             self.assertEqual(b"android12-5.10_lunexsu.ko", (base / "lkm/LunexSU-lkm-aarch64-android12-5.10.ko").read_bytes())
 
+    def test_branding_does_not_rename_third_party_links(self):
+        # Only this fork's own repository may carry the LunexSU name in a GitHub URL.
+        links = re.compile(r"https://github\.com/([^\s\"'()<>`\\]+)")
+        for base in ("manager/app/src/main", "website/docs"):
+            for path in (ROOT / base).rglob("*"):
+                if path.suffix not in {".kt", ".java", ".xml", ".md", ".json", ".ts", ".vue"} or "node_modules" in path.parts:
+                    continue
+                for link in links.findall(path.read_text(encoding="utf-8")):
+                    if "lunexsu" in link.lower():
+                        self.assertTrue(link.startswith("Shixiaoshi0417/LunexSU"), f"{path}: {link}")
+        self.assertIn("https://github.com/tiann/KernelSU", read("manager/app/src/main/java/com/shixiaoshi0417/lunexsu/ui/screen/about/AboutScreen.kt"))
+        self.assertIn("https://github.com/KernelSU-Modules-Repo/", read("manager/app/src/main/java/com/shixiaoshi0417/lunexsu/ui/screen/modulerepo/ModuleRepoScreen.kt"))
+
     def test_upstream_compatibility_and_ui_attribution_remain(self):
         self.assertIn('"[ksu_driver]"', read("manager/app/src/main/cpp/ksu.cc"))
         self.assertIn('"/kernelsu.ko"', read("userspace/ksuinit/src/init.rs"))
