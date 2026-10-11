@@ -609,9 +609,9 @@ bool ksu_uid_should_umount(uid_t uid)
     } else {
         // only an active grant keeps modules mounted for a Root profile
         struct perm_data *p = container_of(profile, struct perm_data, profile);
-        res = ksu_auth_should_umount(profile->allow_su, auth_available_rcu(p), profile->nrp_config.use_default,
-                                     profile->nrp_config.profile.umount_modules,
-                                     default_non_root_profile.umount_modules);
+        res =
+            ksu_auth_should_umount(profile->allow_su, auth_available_rcu(p), profile->nrp_config.use_default,
+                                   profile->nrp_config.profile.umount_modules, default_non_root_profile.umount_modules);
     }
     rcu_read_unlock();
 
