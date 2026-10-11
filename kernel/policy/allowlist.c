@@ -33,7 +33,8 @@
 #include "policy/authorization_path.h"
 
 #define FILE_MAGIC 0x7f4b5355 // ' KSU', u32
-#define FILE_FORMAT_VERSION 5 // v4 profile followed by authorization mode
+#define FILE_FORMAT_VERSION 4 // upstream format; temporary grants are stored without Root
+#define FILE_FORMAT_VERSION_AUTH 5 // read only: earlier builds stored mode and duration per record
 
 #define KSU_APP_PROFILE_PRESERVE_UID 9999 // NOBODY_UID
 #define KSU_DEFAULT_SELINUX_DOMAIN "u:r:" KERNEL_SU_DOMAIN ":s0"
@@ -777,6 +778,14 @@ static int prepare_allowlist_store(void *ctx)
     return vfs_fsync(store->directory, 0);
 }
 
+static bool write_allowlist_record(struct file *fp, const struct perm_data *entry, loff_t *off)
+{
+    struct app_profile record = entry->profile;
+
+    ksu_auth_prepare_record(&record, entry->auth.mode);
+    return kernel_write(fp, &record, sizeof(record), off) == sizeof(record);
+}
+
 static int write_allowlist_snapshot(void *ctx)
 {
     struct allowlist_store *store = ctx;
@@ -821,21 +830,11 @@ static int write_allowlist_snapshot(void *ctx)
             entry = replacement;
             replaced = true;
         }
-        if (kernel_write(fp, &entry->profile, sizeof(entry->profile), &off) != sizeof(entry->profile) ||
-            kernel_write(fp, &entry->auth.mode, sizeof(entry->auth.mode), &off) != sizeof(entry->auth.mode) ||
-            kernel_write(fp, &entry->auth.duration_seconds, sizeof(entry->auth.duration_seconds), &off) !=
-                sizeof(entry->auth.duration_seconds)) {
+        if (!write_allowlist_record(fp, entry, &off))
             return -EIO;
-        }
     }
-    if (replacement && !replaced &&
-        (kernel_write(fp, &replacement->profile, sizeof(replacement->profile), &off) != sizeof(replacement->profile) ||
-         kernel_write(fp, &replacement->auth.mode, sizeof(replacement->auth.mode), &off) !=
-             sizeof(replacement->auth.mode) ||
-         kernel_write(fp, &replacement->auth.duration_seconds, sizeof(replacement->auth.duration_seconds), &off) !=
-             sizeof(replacement->auth.duration_seconds))) {
+    if (replacement && !replaced && !write_allowlist_record(fp, replacement, &off))
         return -EIO;
-    }
     return 0;
 }
 
@@ -1083,7 +1082,7 @@ void ksu_load_allow_list()
         goto exit;
     }
 
-    if (version < 2 || version > FILE_FORMAT_VERSION) {
+    if (version < 2 || version > FILE_FORMAT_VERSION_AUTH) {
         pr_err("invalid allowlist version: %d\n", version);
         goto exit;
     }
@@ -1104,13 +1103,18 @@ void ksu_load_allow_list()
                 pr_info("load_allow_list read err: %zd\n", ret);
             break;
         }
-        if (version >= 5 &&
-            (kernel_read(fp, &cmd.mode, sizeof(cmd.mode), &off) != sizeof(cmd.mode) || cmd.mode > KSU_AUTH_TIMED ||
-             kernel_read(fp, &cmd.duration_seconds, sizeof(cmd.duration_seconds), &off) !=
-                 sizeof(cmd.duration_seconds) ||
-             cmd.duration_seconds > KSU_AUTH_MAX_SECONDS)) {
-            pr_err("invalid authorization record\n");
-            break;
+        if (version == FILE_FORMAT_VERSION_AUTH) {
+            if (kernel_read(fp, &cmd.mode, sizeof(cmd.mode), &off) != sizeof(cmd.mode) || cmd.mode > KSU_AUTH_TIMED ||
+                kernel_read(fp, &cmd.duration_seconds, sizeof(cmd.duration_seconds), &off) !=
+                    sizeof(cmd.duration_seconds) ||
+                cmd.duration_seconds > KSU_AUTH_MAX_SECONDS) {
+                pr_err("invalid authorization record\n");
+                break;
+            }
+            // A temporary grant from before the reboot restores without Root.
+            ksu_auth_prepare_record(profile, cmd.mode);
+            cmd.mode = KSU_AUTH_PERMANENT;
+            cmd.duration_seconds = 0;
         }
 
         migrate_profile(version, profile);
@@ -1125,7 +1129,7 @@ void ksu_load_allow_list()
     ksu_show_allow_list();
     filp_close(fp, 0);
     // A guarded load persists its revocations, which also removes the marker.
-    if (version < FILE_FORMAT_VERSION || guarded)
+    if (version != FILE_FORMAT_VERSION || guarded)
         ksu_persistent_allow_list();
     return;
 

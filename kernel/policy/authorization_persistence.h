@@ -9,7 +9,7 @@
 #include <stddef.h>
 #include <string.h>
 #endif
-#include "uapi/app_profile.h"
+#include "uapi/authorization.h"
 
 /* Production transaction ordering, also exercised by the host fault tests.
  * prepare appends the transaction's uid to a rejection marker and persists it
@@ -71,6 +71,17 @@ static inline void ksu_auth_strip_root(struct app_profile *profile)
     profile->allow_su = false;
     memset(&profile->rp_config, 0, sizeof(profile->rp_config));
     profile->nrp_config.use_default = true;
+}
+
+/* The allowlist stays the upstream v4 format. Temporary grants never survive a
+ * reboot, so their record carries no Root: any KernelSU Core, including an
+ * upstream downgrade, reads it without turning a temporary grant permanent.
+ * Format 5 records (mode after each profile) are restored through this too.
+ */
+static inline void ksu_auth_prepare_record(struct app_profile *profile, __u32 mode)
+{
+    if (mode != KSU_AUTH_PERMANENT)
+        ksu_auth_strip_root(profile);
 }
 
 static inline int ksu_auth_store(const struct ksu_auth_storage_ops *ops, void *ctx)

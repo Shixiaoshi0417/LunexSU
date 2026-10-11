@@ -35,8 +35,8 @@ cannot be obtained through GRANT_ROOT. Skipped probe tests are reported.
 Additional required release/device cases (manual to avoid destructive harness
 operations on real devices):
 
-- Grant unused Once / active Timed, hard reboot, reopen the page: original mode
-  remains inactive, and new su is denied. Permanent survives. Also unload/reload
+- Grant unused Once / active Timed, hard reboot, reopen the page: the App shows
+  as not authorized, and new su is denied. Permanent survives. Also unload/reload
   the module if supported; framework soft reboot preserves kernel boottime.
 - While Timed is active, move wall clock forward/backward and suspend; duration
   follows boottime. Restore the device's original time/sync settings afterward.
@@ -68,8 +68,11 @@ operations on real devices):
 - Check both Material and MIUIX modes, presets/custom duration validation,
   countdown after background/resume, renewal/revoke, and editing Root templates
   without resetting remaining time. Verify module + Metamodule regression flows.
-- Load legacy v2/v3/v4 allowlists; validate Permanent migration. Inject truncated
-  v5 record/unknown mode/future version: no temporary profile becomes permanent.
+- Load legacy v2/v3/v4 allowlists; validate Permanent migration. Load a v5 file
+  from an earlier build: temporary records restore without Root and the file is
+  rewritten as v4. Inject truncated v5 record/unknown mode/future version: no
+  temporary profile becomes permanent. Flash an upstream KernelSU LKM: Permanent
+  grants and profiles load, temporary ones stay revoked.
 
 The harness never flashes a kernel, installs a fixture, reboots, changes the
 wall clock, or uninstalls apps automatically. Those operations need a dedicated

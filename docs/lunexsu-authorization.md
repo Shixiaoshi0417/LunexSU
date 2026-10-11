@@ -47,9 +47,10 @@ localized strings, and `tests/authorization`. Implementation is on
   deadline. Sleep counts. Changing wall-clock time cannot extend a grant.
   Renewal starts a new duration from the current boottime (not from the old
   deadline). UI presets are 5/15/60 minutes; custom values are 1-525600 minutes.
-- Once and Timed are **boot-scoped**. Reboot (or module unload/reload) retains
-  the selected mode/duration but invalidates all deadlines and credits. Soft
-  Android framework restart within the same kernel does not reset boottime.
+- Once and Timed are **boot-scoped**. Reboot (or module unload/reload) ends
+  them: the App restores as not authorized with the default non-root profile
+  and needs a new grant. Soft Android framework restart within the same kernel
+  does not reset boottime.
 - KEEP edits cannot rearm, renew, or change mode. Creating an authorized entry
   or changing `allow_su` from false to true requires explicit GRANT, including
   Permanent. Legacy SET_APP_PROFILE keeps its existing Permanent semantics.
@@ -91,10 +92,14 @@ Legacy SET_APP_PROFILE preserves temporary state and cannot turn an expired
 grant permanent. New Managers reject temporary grants on old kernels.
 Core+Manager+ksud must be deployed together to satisfy existing UAPI checks.
 
-Disk format 5 is a v4 profile followed by u32 mode and u64 configured duration.
-No deadline/credit/install handle is persisted. Formats 2-4 migrate as permanent.
-Unknown modes, truncated records and future versions are rejected. An upstream
-downgrade rejects format 5 rather than reading temporary grants as permanent.
+The allowlist stays the upstream v4 format. A temporary grant is written as a
+record without Root (default non-root profile), so no reader, including an
+upstream KernelSU Core after a downgrade, can restore it as Permanent, and a
+downgrade keeps every Permanent grant and profile. No mode, deadline, credit or
+install handle is persisted. Formats 2-4 migrate as permanent. Format 5 files
+from earlier LunexSU builds (mode and duration after each profile) are read the
+same way and rewritten as v4; unknown modes, truncated records and future
+versions are rejected.
 Explicit policy writes are synchronous and durable **before** publishing the
 new in-memory profile; all file writers hold the same mutex throughout the
 transaction. A complete snapshot is written to a newly created `.allowlist.tmp`,

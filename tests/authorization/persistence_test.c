@@ -57,18 +57,19 @@ static int prepare(void *ctx)
     return s->fault == GUARD_DIR_SYNC ? -EIO : fsync(s->directory);
 }
 
+/* Mirrors write_allowlist_record(): upstream v4 records, temporary grants
+ * written without Root. */
 static void write_record(int fd, const struct app_profile *profile, uint32_t mode)
 {
-    const uint64_t duration = 0;
-    checked_write(fd, profile, sizeof(*profile));
-    checked_write(fd, &mode, sizeof(mode));
-    checked_write(fd, &duration, sizeof(duration));
+    struct app_profile record = *profile;
+    ksu_auth_prepare_record(&record, mode);
+    checked_write(fd, &record, sizeof(record));
 }
 
 static int write_snapshot(void *ctx)
 {
     struct store *s = ctx;
-    const uint32_t header[] = {0x7f4b5355, 5};
+    const uint32_t header[] = {0x7f4b5355, 4};
     assert(!unlinkat(s->directory, ".allowlist.tmp", 0) || errno == ENOENT);
     s->staging = openat(s->directory, ".allowlist.tmp", O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0600);
     assert(s->staging >= 0);
@@ -127,7 +128,7 @@ static const struct ksu_auth_storage_ops ops = {
 };
 
 /* Mirrors ksu_load_allow_list(): guarded uids lose Root, other records load.
- * Temporary grants never survive a reboot, so only Permanent records grant. */
+ * A v4 record grants Root exactly when it says so, as for an upstream Core. */
 static struct loaded reboot(struct store *s)
 {
     struct ksu_auth_guard guard = {0};
@@ -145,16 +146,13 @@ static struct loaded reboot(struct store *s)
     struct loaded result = {0};
     fd = openat(s->directory, ".allowlist", O_RDONLY);
     assert(fd >= 0);
-    assert(lseek(fd, 8, SEEK_SET) == 8);
+    uint32_t header[2];
+    assert(read(fd, header, sizeof(header)) == sizeof(header) && header[1] == 4);
     struct app_profile profile;
-    uint32_t mode;
-    uint64_t duration;
     while (read(fd, &profile, sizeof(profile)) == sizeof(profile)) {
-        assert(read(fd, &mode, sizeof(mode)) == sizeof(mode));
-        assert(read(fd, &duration, sizeof(duration)) == sizeof(duration));
         if (guarded && ksu_auth_guard_covers(&guard, profile.curr_uid))
             ksu_auth_strip_root(&profile);
-        bool root = profile.allow_su && mode == KSU_AUTH_PERMANENT;
+        bool root = profile.allow_su;
         if (profile.curr_uid == s->candidate.curr_uid)
             result.candidate_root = root;
         else if (profile.curr_uid == s->bystander.curr_uid)
@@ -251,7 +249,7 @@ int main(void)
                 /* Before atomic replacement, the live file is untouched. */
                 int fd = openat(s.directory, ".allowlist", O_RDONLY);
                 struct app_profile profile;
-                assert(fd >= 0 && lseek(fd, 8 + sizeof(profile) + 12, SEEK_SET) == (off_t)(8 + sizeof(profile) + 12));
+                assert(fd >= 0 && lseek(fd, 8 + sizeof(profile), SEEK_SET) == (off_t)(8 + sizeof(profile)));
                 assert(read(fd, &profile, sizeof(profile)) == sizeof(profile));
                 assert(profile.curr_uid == 10123 && !profile.allow_su);
                 assert(!close(fd));
@@ -314,6 +312,29 @@ int main(void)
         assert(!loaded.candidate_root && loaded.bystander_root);
         close_store(&s, dir);
     }
-    puts("PASS: production persistence transaction, 10 I/O faults, interrupted stages, uid-scoped reboot revocation and retry");
+    /* Committed temporary grants are stored without Root, so neither this
+     * loader nor an upstream downgrade can restore them as Permanent. */
+    for (uint32_t mode = KSU_AUTH_ONCE; mode <= KSU_AUTH_TIMED; ++mode) {
+        char dir[] = "/tmp/lunexsu-temporary-XXXXXX";
+        struct store s = open_store(dir);
+        s.candidate.allow_su = true;
+        s.mode = mode;
+        assert(!ksu_auth_store(&ops, &s));
+        close_staging(&s);
+        struct loaded loaded = reboot(&s);
+        assert(!loaded.candidate_root && loaded.bystander_root);
+        close_store(&s, dir);
+    }
+    /* Format 5 records from earlier builds restore the same way. */
+    {
+        struct app_profile profile;
+        init_profile(&profile, 10123, "test.fixture", true);
+        ksu_auth_prepare_record(&profile, KSU_AUTH_ONCE);
+        assert(!profile.allow_su && profile.nrp_config.use_default);
+        init_profile(&profile, 10123, "test.fixture", true);
+        ksu_auth_prepare_record(&profile, KSU_AUTH_PERMANENT);
+        assert(profile.allow_su);
+    }
+    puts("PASS: production persistence transaction, 10 I/O faults, interrupted stages, uid-scoped reboot revocation, upstream v4 records and retry");
     return 0;
 }
