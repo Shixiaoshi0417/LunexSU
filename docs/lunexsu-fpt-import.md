@@ -42,6 +42,17 @@ while retaining the selected UI and unrelated settings.
 GIF and animated WebP images use Android's drawable decoder; animation stops when
 the page is inactive or the activity is not resumed. Images are downsampled to a
 maximum dimension of 2048 pixels for rendering.
+
+The black scrim follows FinaSU's dual dim: `backgroundDim` (default 0.2) applies to
+both themes, or with `isDualBackgroundDimEnabled` the light theme uses
+`backgroundDayDim` (0.2) and the dark theme `backgroundNightDim` (0.4). In the
+Material UI a light theme also follows the visible page's wallpaper brightness,
+measured once per image from a 64 px decode: when brightness × (1 − dim) is below
+0.5, the neutral roles switch to a dark neutral palette (light text, light system
+bar icons) and the painted scrim is raised to the smallest value that keeps that
+text at WCAG AA 4.5:1 over a white wallpaper. The pack's dim values are never
+rewritten. A dark theme never flips; its readability is left to the night dim, as
+in FinaSU. MIUIX applies the dual dim without the brightness adaptation.
 Drawables render through Compose's canvas with page clipping, so preloaded pager
 backgrounds cannot cover the current page. Expected preparation errors are returned
 inside the loading job before being handled; a bad package cannot cancel its dialog

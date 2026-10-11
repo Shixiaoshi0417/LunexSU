@@ -39,10 +39,24 @@ class ThemePackSchemaTest {
         assertThrows(Exception::class.java) { parse("""{"isBackgroundEnabled":"true"}""") }
     }
     @Test fun rejectsOutOfRangeImageParameters() {
-        listOf("backgroundOpacity", "backgroundDim", "backgroundNightDim").forEach {
+        listOf("backgroundOpacity", "backgroundDim", "backgroundDayDim", "backgroundNightDim").forEach {
             assertThrows(Exception::class.java) { parse("""{"$it":1.1}""") }
         }
         assertThrows(Exception::class.java) { parse("""{"backgroundBlur":101}""") }
+    }
+    @Test fun mapsFinaSuDualDimFieldsAndDefaults() {
+        val defaults = parse("{}").background
+        assertFalse(defaults.dualDim)
+        assertEquals(0.2f, defaults.dim)
+        assertEquals(0.2f, defaults.dayDim)
+        assertEquals(0.4f, defaults.nightDim)
+        val dual = parse("""{"isDualBackgroundDimEnabled":true,"backgroundDim":0.3,
+            "backgroundDayDim":0.15,"backgroundNightDim":0.65}""").background
+        assertTrue(dual.dualDim)
+        assertEquals(0.3f, dual.dim)
+        assertEquals(0.15f, dual.dayDim)
+        assertEquals(0.65f, dual.nightDim)
+        assertThrows(Exception::class.java) { parse("""{"isDualBackgroundDimEnabled":"yes"}""") }
     }
     @Test fun requiresWallpaperForTheSelectedMode() {
         assertThrows(Exception::class.java) { parse("""{"isBackgroundEnabled":true}""") }

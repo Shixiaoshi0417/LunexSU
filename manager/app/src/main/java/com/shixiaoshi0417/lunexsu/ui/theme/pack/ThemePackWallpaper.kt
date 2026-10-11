@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
@@ -32,6 +33,48 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.shixiaoshi0417.lunexsu.ui.theme.isInDarkTheme
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
+
+/** Average luminance of each wallpaper file, measured once from a 64 px software decode. */
+private object ThemePackLuminance {
+    private val cache = ConcurrentHashMap<String, Float>()
+
+    private fun key(file: File) = "${file.path}:${file.lastModified()}:${file.length()}"
+
+    fun cached(file: File?): Float? = file?.let { cache[key(it)] }
+
+    suspend fun measure(file: File): Float = cache[key(file)] ?: withContext(Dispatchers.IO) {
+        val pixels = try {
+            val bitmap = ImageDecoder.decodeBitmap(ImageDecoder.createSource(file)) { decoder, info, _ ->
+                decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                val longest = maxOf(info.size.width, info.size.height).coerceAtLeast(1)
+                if (longest > 64) decoder.setTargetSize(
+                    (info.size.width.toLong() * 64 / longest).toInt().coerceAtLeast(1),
+                    (info.size.height.toLong() * 64 / longest).toInt().coerceAtLeast(1),
+                )
+            }
+            IntArray(bitmap.width * bitmap.height).also {
+                bitmap.getPixels(it, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+                bitmap.recycle()
+            }
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            IntArray(0)
+        }
+        averageLuminance(pixels).also { cache[key(file)] = it }
+    }
+}
+
+/** Luminance (0..1) of the wallpaper on the visible page, or -1 while unknown. */
+@Composable
+internal fun rememberThemePackLuminance(): Float {
+    val pack = ThemePackState.active
+    val file = pack?.plan?.background?.image(ThemePackState.visiblePage)?.let { File(pack.directory, it) }
+    val luminance by produceState(ThemePackLuminance.cached(file) ?: -1f, file) {
+        value = file?.let { ThemePackLuminance.measure(it) } ?: -1f
+    }
+    return luminance
+}
 
 @Composable
 internal fun ThemePackWallpaper(page: Int = 0, isCurrentPage: Boolean = true) {
@@ -83,8 +126,11 @@ internal fun ThemePackWallpaper(page: Int = 0, isCurrentPage: Boolean = true) {
         update()
         onDispose { lifecycle.removeObserver(observer); (drawable as? AnimatedImageDrawable)?.stop() }
     }
+    LaunchedEffect(page, isCurrentPage) {
+        if (isCurrentPage) ThemePackState.visiblePage = page
+    }
     val dark = isInDarkTheme()
-    val dim = if (config.dualDim) { if (dark) config.nightDim else config.dayDim } else config.dim
+    val dim = LocalWallpaperDim.current ?: effectiveWallpaperDim(config, dark)
     Box(Modifier.fillMaxSize().background(if (dark) Color(0xFF17171A) else Color(0xFFF5F5FA))) {
         drawable?.let { image ->
             // Draw through Compose's canvas so pager/route clipping also applies to native drawables.
