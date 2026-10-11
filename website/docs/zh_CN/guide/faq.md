@@ -67,7 +67,7 @@ GKI1 跟 GKI2 完全是两个东西，所以你需要自行编译内核。
 
 ## LunexSU 能修改 hosts 吗，我如何使用 AdAway？
 
-当然可以。但这个功能 LunexSU 没有内置，你可以安装这个 [systemless-hosts](https://github.com/symbuzzer/systemless-hosts-LunexSU-module)
+当然可以。但这个功能 LunexSU 没有内置，你可以安装这个 [systemless-hosts](https://github.com/symbuzzer/systemless-hosts-KernelSU-module)
 
 ## 为什么全新安装后模块不工作？
 

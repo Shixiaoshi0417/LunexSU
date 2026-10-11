@@ -71,7 +71,7 @@ Chúng tôi không khuyến nghị bạn sửa đổi trực tiếp phân vùng 
 
 ## LunexSU có thể sửa đổi hosts không? Làm cách nào để sử dụng AdAway?
 
-Tất nhiên. Nhưng LunexSU không có hỗ trợ hosts tích hợp sẵn, bạn có thể cài đặt module như [systemless-hosts](https://github.com/symbuzzer/systemless-hosts-LunexSU-module) để thực hiện.
+Tất nhiên. Nhưng LunexSU không có hỗ trợ hosts tích hợp sẵn, bạn có thể cài đặt module như [systemless-hosts](https://github.com/symbuzzer/systemless-hosts-KernelSU-module) để thực hiện.
 
 ## Tại sao các module của tôi không hoạt động sau khi cài đặt mới?
 

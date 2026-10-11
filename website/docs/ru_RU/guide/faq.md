@@ -71,7 +71,7 @@ GKI 1.0 полностью отличается от GKI 2.0, вы должны 
 
 ## Может ли LunexSU модифицировать hosts? Как использовать AdAway?
 
-Конечно. Но LunexSU не имеет встроенной поддержки hosts, вы можете установить модуль типа [systemless-hosts](https://github.com/symbuzzer/systemless-hosts-LunexSU-module) для этого.
+Конечно. Но LunexSU не имеет встроенной поддержки hosts, вы можете установить модуль типа [systemless-hosts](https://github.com/symbuzzer/systemless-hosts-KernelSU-module) для этого.
 
 ## Почему мои модули не работают после новой установки?
 

@@ -62,7 +62,7 @@ LunexSU は現在カーネル4.14にバックポートされていますが、�
 今はまだありませんが（将来的にはあるかもしれません）、グローバルマウントの名前空間に手動で切り替える方法は、以下のようにたくさんあります：
 
 1. `nsenter -t 1 -m sh` でシェルをグローバル名前空間にします。
-2. `nsenter --mount=/proc/1/ns/mnt` を実行したいコマンドに追加すればグローバル名前空間で実行されます。 LunexSU は [このような使い方](https://github.com/Shixiaoshi0417/LunexSU/blob/77056a710073d7a5f7ee38f9e77c9fd0b3256576/manager/app/src/main/java/com/shixiaoshi0417/lunexsu/ui/util/KsuCli.kt#L115) もできます。
+2. `nsenter --mount=/proc/1/ns/mnt` を実行したいコマンドに追加すればグローバル名前空間で実行されます。 LunexSU は [このような使い方](https://github.com/tiann/KernelSU/blob/77056a710073d7a5f7ee38f9e77c9fd0b3256576/manager/app/src/main/java/me/weishu/kernelsu/ui/util/KsuCli.kt#L115) もできます。
 
 ## GKI 1.0 なのですが、使えますか？
 

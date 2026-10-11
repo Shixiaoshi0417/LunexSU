@@ -81,4 +81,4 @@ Não recomendamos que você modifique a partição do sistema diretamente. Por f
 
 ## LunexSU pode modificar hosts? Como posso usar AdAway?
 
-Claro. Mas o LunexSU não tem suporte a hosts integrados, você pode instalar um módulo como [systemless-hosts](https://github.com/symbuzzer/systemless-hosts-LunexSU-module) para fazer isso.
+Claro. Mas o LunexSU não tem suporte a hosts integrados, você pode instalar um módulo como [systemless-hosts](https://github.com/symbuzzer/systemless-hosts-KernelSU-module) para fazer isso.
