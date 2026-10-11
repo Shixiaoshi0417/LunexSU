@@ -196,6 +196,14 @@ class IdentityTests(unittest.TestCase):
         self.assertIn("https://github.com/tiann/KernelSU", read("manager/app/src/main/java/com/shixiaoshi0417/lunexsu/ui/screen/about/AboutScreen.kt"))
         self.assertIn("https://github.com/KernelSU-Modules-Repo/", read("manager/app/src/main/java/com/shixiaoshi0417/lunexsu/ui/screen/modulerepo/ModuleRepoScreen.kt"))
 
+    def test_branding_suite_runs_in_ci(self):
+        # Every file in this directory runs on push and pull request, so a broken
+        # fixture cannot go unnoticed until an external review.
+        workflow = read(".github/workflows/test-branding.yml")
+        self.assertIn("tests/branding/test_*.py", workflow)
+        for trigger in ("push:", "pull_request:"):
+            self.assertIn(trigger, workflow)
+
     def test_upstream_compatibility_and_ui_attribution_remain(self):
         self.assertIn('"[ksu_driver]"', read("manager/app/src/main/cpp/ksu.cc"))
         self.assertIn('"/kernelsu.ko"', read("userspace/ksuinit/src/init.rs"))

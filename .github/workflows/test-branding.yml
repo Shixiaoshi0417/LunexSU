@@ -1,0 +1,32 @@
+name: Branding and packaging tests
+
+# These tests read workflows, Kbuild, setup.sh, Manager sources and docs, so
+# they run for every change instead of a path filter that could miss one.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  branding:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Run tests/branding
+        run: |
+          set -e
+          for test in tests/branding/test_*.py; do
+            echo "::group::$test"
+            python3 "$test"
+            echo "::endgroup::"
+          done
