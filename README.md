@@ -6,9 +6,56 @@
 
 # LunexSU
 
-LunexSU 是基于 [KernelSU](https://github.com/tiann/KernelSU) 的 Android 内核 Root 项目，在现有超级用户预管理机制中加入授权有效期，并提供 Material / MIUIX 两套界面。
+一个 Android 上基于内核的 Root 方案。
+
+LunexSU 基于 [KernelSU](https://github.com/tiann/KernelSU)，在现有超级用户预管理机制中加入授权有效期，并提供 Material / MIUIX 两套界面。本文沿用 KernelSU README 的介绍结构，补充 LunexSU 的功能与使用说明。
+
+[![Builds](https://img.shields.io/github/actions/workflow/status/Shixiaoshi0417/LunexSU/build-manager.yml?label=Manager&logo=github)](https://github.com/Shixiaoshi0417/LunexSU/actions)
+[![License: GPL v2](https://img.shields.io/badge/Kernel-GPL%20v2-orange.svg?logo=gnu)](kernel/LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/Manager%20%26%20Userspace-GPL%20v3-blue.svg?logo=gnu)](LICENSE)
 
 [下载发布版本](https://github.com/Shixiaoshi0417/LunexSU/releases) · [构建记录](https://github.com/Shixiaoshi0417/LunexSU/actions) · [问题反馈](https://github.com/Shixiaoshi0417/LunexSU/issues)
+
+## 特性
+
+- 基于内核的 `su` 和权限管理，沿用 KernelSU 的超级用户预管理方式。
+- 基于 [Metamodule](https://kernelsu.org/zh_CN/guide/metamodule.html) 的模块系统：可插拔的模块架构，支持无系统修改。
+- [App Profile](https://kernelsu.org/zh_CN/guide/app-profile.html)：为每个应用配置 Root 身份、能力和 SELinux 上下文，把 Root 权限关进笼子里。
+- 本次、限时、永久三种授权模式，在真正的 Root 授权路径检查有效期。
+- Material / MIUIX 双 UI，以及来自 FolkSU 的主题配色、字体、交互动效和 Material 首页布局。
+- FolkSU FPT 主题包导入，支持配色、字体、首页布局和图片背景。
+- 统一的 LunexSU 品牌资源与 Android 自适应启动器图标。
+
+## 兼容状态
+
+KernelSU 上游面向 Android GKI 2.0 设备（内核 5.10 及以上），上游 README 也列出旧内核（最低 4.14+）的自行编译支持。LunexSU 继承相应的内核集成方式；具体设备还需确认内核配置、KMI、安装方式及签名，不能仅凭内核版本判断兼容性。
+
+上游列出的架构为 `arm64-v8a` 和 `x86_64`，并包含 WSA、ChromeOS 和容器 Android 等运行环境。这些是上游的兼容范围，LunexSU 的 Root 有效期仍需在对应 Core 的实际设备上验证。
+
+> [!CAUTION]
+> KernelSU 上游指出，部分新内核的变更可能导致 `x86_64` 无法运行，甚至发生 kernel panic。请先阅读 [上游 x86_64 支持说明](https://kernelsu.org/zh_CN/guide/x86_64-support.html)。普通 Android Studio 模拟器可以验证 Manager 界面，但需要配套 Core 才能测试 Root 授权。
+
+Root 有效期需要配套的 LunexSU Manager、ksud 和 Core（授权 UAPI v6）；单独替换 Manager 不能让旧 Core 执行临时授权策略。
+
+## 使用方法
+
+1. 从 [LunexSU Releases](https://github.com/Shixiaoshi0417/LunexSU/releases) 获取适合设备的版本；开发构建可查看 [Actions](https://github.com/Shixiaoshi0417/LunexSU/actions)。
+2. 参考 KernelSU 的 [安装教程](https://kernelsu.org/zh_CN/guide/installation.html)，确认设备、KMI 和安装方式，安装与 Manager 配套的 LunexSU Core。
+3. 打开超级用户页面，为应用配置权限及「本次 / 限时 / 永久」授权模式。
+4. 在模块页面管理模块；需要修改 `/system` 文件时，按 [Metamodule 指南](https://kernelsu.org/zh_CN/guide/metamodule.html) 配置挂载支持。
+5. 在主题设置中选择配色、字体和布局，或导入 FolkSU FPT 主题包。
+
+常用文档：
+
+- [KernelSU 官方网站与指南](https://kernelsu.org/zh_CN/)
+- [如何构建 KernelSU](https://kernelsu.org/zh_CN/guide/how-to-build.html)
+- [非 GKI 设备集成](https://kernelsu.org/zh_CN/guide/how-to-integrate-for-non-gki.html)
+- [模块开发指南](https://kernelsu.org/zh_CN/guide/module.html)
+- [App Profile](https://kernelsu.org/zh_CN/guide/app-profile.html)
+- [模块 WebUI](https://kernelsu.org/zh_CN/guide/module-webui.html)
+- [常见问题](https://kernelsu.org/zh_CN/guide/faq.html)
+
+以上 KernelSU 文档用于说明基础机制；LunexSU 新增功能以本仓库的文档为准。
 
 ## Root 授权有效期
 
@@ -32,11 +79,17 @@ LunexSU 是基于 [KernelSU](https://github.com/tiann/KernelSU) 的 Android 内�
 
 启动器使用完整底色与留白的自适应图标，由 Android 应用设备对应的圆形或圆角遮罩；应用内、网站和文档使用同一套 LunexSU 品牌资源。
 
-## 模块与兼容性
+## 模块系统
 
-保留 KernelSU 的模块、Metamodule、App Profile 和模块 WebUI 机制。设备是否可用取决于内核、架构、安装方式及签名配置，请参考 [上游安装指南](website/docs/zh_CN/guide/installation.md)。
+保留 KernelSU 的模块、Metamodule、App Profile 和模块 WebUI 机制：
 
-Root 有效期需要配套的 LunexSU Manager、ksud 和 Core（授权 UAPI v6）；单独替换 Manager 不能让旧 Core 执行临时授权策略。主机测试和编译验证已覆盖授权并发与持久化故障；真实设备的 `su`/SELinux、重启、多用户、卸载重装及模块回归仍需验证。
+- 在 Manager 中安装、启用、停用和卸载模块。
+- 沿用模块启动脚本、`system.prop` 和 SELinux 策略处理。
+- 由 Metamodule 提供系统文件挂载能力，同一时间只允许一个活动 Metamodule。
+- 通过模块 WebUI 使用模块提供的配置界面。
+- 通过 App Profile 配置各应用的 Root 权限及非 Root 行为。
+
+只使用脚本、SELinux 策略或 `system.prop` 的模块无需 Metamodule；修改 `/system` 文件的模块需要配套挂载实现。详见 [上游安装指南](website/docs/zh_CN/guide/installation.md) 和 [Metamodule 指南](https://kernelsu.org/zh_CN/guide/metamodule.html)。
 
 ## 构建与开发
 
@@ -70,11 +123,43 @@ cp ../target/aarch64-linux-android/release/ksud app/src/main/jniLibs/arm64-v8a/l
 
 内核及签名构建以 [构建工作流](.github/workflows) 为准。Windows 可通过 Android Studio 配置工具链；本仓库的本地验证使用 WSL。网站构建使用 `bun install` 和 `bun run docs:build`。
 
-## 许可与致谢
+## 测试与验证
+
+- Root 授权：主机测试覆盖并发额度竞争、失败退还、到期判定及持久化故障，设备测试入口见 [授权测试说明](tests/authorization/README.md)。
+- Manager：已运行主题相关 JVM 单元测试、Android 集成测试及 Material / MIUIX 模拟器导入流程，详见 [FPT 导入验证记录](docs/lunexsu-fpt-import.md)。
+- 品牌资源：启动器、启动页、应用内、网站和文档的资源说明见 [图标适配记录](docs/lunexsu-brand-assets.md)。
+- 构建与整体集成记录见 [集成验证说明](docs/lunexsu-theme-integration.md)。
+
+真实设备的 `su`/SELinux、重启、多用户、卸载重装及模块回归仍需在配套 LunexSU Core 上验证；普通模拟器的主题测试不能代替这些检查。
+
+## 参与开发与翻译
+
+欢迎通过 [Issues](https://github.com/Shixiaoshi0417/LunexSU/issues) 反馈问题，或通过 [Pull Requests](https://github.com/Shixiaoshi0417/LunexSU/pulls) 提交改进。报告设备相关问题时，请附上设备型号、Android 版本、内核版本、安装方式、Manager/Core 版本以及复现步骤。
+
+本项目 README 仅提供简体中文与英语：默认显示中文，点击顶部的 **English** 切换。Manager 的语言资源沿用现有项目结构，新增字符串应保持中英文一致；这与 README 的双语范围分开维护。
+
+修改内核接口时需同步 ksud 和 Manager JNI；开发约定与各组件检查命令见 [AGENTS.md](AGENTS.md)。
+
+## 讨论
+
+- LunexSU 问题反馈：[GitHub Issues](https://github.com/Shixiaoshi0417/LunexSU/issues)。
+- KernelSU 上游讨论：Telegram [@KernelSU](https://t.me/KernelSU)。该频道属于上游。
+- FolkSU 主题与 UI 来源：[LyraVoid/FolkSU](https://github.com/LyraVoid/FolkSU)。
+
+## 安全性
+
+有关报告安全漏洞的信息，请参阅 [SECURITY.md](SECURITY.md)。该文件保留上游 KernelSU 的报告政策；LunexSU 新增代码相关问题请明确标注所用分支和版本。
+
+## 许可证
 
 - `kernel/` 使用 [GPL-2.0-only](kernel/LICENSE)；其余部分沿用 [GPL-3.0-or-later](LICENSE) 及文件中的原始许可声明。
+- FolkSU 移植代码保留原作者与 GPL 许可声明，范围和参考版本见 [UI 移植记录](docs/lunexsu-folksu-theme.md)。
+
+## 鸣谢
+
 - [KernelSU / tiann](https://github.com/tiann/KernelSU)：内核 Root、管理器及模块系统的上游。
 - [FolkSU / LyraVoid](https://github.com/LyraVoid/FolkSU)：主题、首页布局、交互动效及 FPT 格式的 UI 来源。
-- [Kernel-Assisted Superuser](https://git.zx2c4.com/kernel-assisted-superuser/about/)、[Magisk](https://github.com/topjohnwu/Magisk)、[genuine](https://github.com/brevent/genuine/)、[Diamorphine](https://github.com/m0nad/Diamorphine)：保留上游致谢。
-
-安全问题报告方式见 [SECURITY.md](SECURITY.md)。
+- [Kernel-Assisted Superuser](https://git.zx2c4.com/kernel-assisted-superuser/about/)：KernelSU 的灵感。
+- [Magisk](https://github.com/topjohnwu/Magisk)：强大的 Root 工具箱。
+- [genuine](https://github.com/brevent/genuine/)：APK v2 签名验证。
+- [Diamorphine](https://github.com/m0nad/Diamorphine)：上游引用的内核实现技巧。
