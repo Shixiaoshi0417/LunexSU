@@ -187,7 +187,7 @@
     <string name="profile_flags_desc_no_new_privs">Zapobiega dalszemu podnoszeniu uprawnień przez LunexSU w kontekście tego profilu root.</string>
     <string name="install_force_backup">Utwórz kopię zapasową jako obraz fabryczny</string>
     <string name="install_force_backup_summary">Upewnij się, że wybrany obraz boot to obraz fabryczny</string>
-    <string name="about_ui_source">Źródło interfejsu: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">Źródło interfejsu: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">Uprawnienia jednorazowe i czasowe wygasają po ponownym uruchomieniu. Już działające procesy Root nadal działają. Aplikacje ze wspólnym UID współdzielą to uprawnienie.</string>
     <string name="authorization_busy">Uruchamianie procesu su</string>
     <string name="authorization_custom_minutes">Własna liczba minut (1–525600)</string>

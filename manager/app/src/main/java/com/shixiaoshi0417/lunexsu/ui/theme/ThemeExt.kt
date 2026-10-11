@@ -32,7 +32,7 @@ fun ColorScheme.amoledBackground(amoled: Boolean): ColorScheme =
  * card could render soft on one seed and loud on another. Attention and destructive states must stay
  * recognisable, so the semantic error role stays fixed whatever the seed does.
  *
- * Adapted from FolkSU (https://github.com/LyraVoid/FolkSU), GPL-3.0.
+ * Adapted from FinaSU, formerly FolkSU (https://github.com/LyraVoid/FinaSU), GPL-3.0.
  */
 fun ColorScheme.withSemanticError(isDark: Boolean): ColorScheme = copy(
     error = if (isDark) Color(0xFFFFB4AB) else Color(0xFFBA1A1A),

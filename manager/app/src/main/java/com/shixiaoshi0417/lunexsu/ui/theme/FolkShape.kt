@@ -1,4 +1,4 @@
-// Adapted from FolkSU (https://github.com/LyraVoid/FolkSU), GPL-3.0.
+// Adapted from FinaSU, formerly FolkSU (https://github.com/LyraVoid/FinaSU), GPL-3.0.
 package com.shixiaoshi0417.lunexsu.ui.theme
 
 import androidx.compose.foundation.shape.CornerBasedShape

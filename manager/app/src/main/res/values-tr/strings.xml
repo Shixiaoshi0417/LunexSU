@@ -254,7 +254,7 @@
     <string name="profile_flags_desc_no_new_privs">Bu root profili bağlamında LunexSU aracılığıyla daha fazla ayrıcalık yükseltmesini engeller.</string>
     <string name="install_force_backup">Stok imaj olarak yedekle</string>
     <string name="install_force_backup_summary">Lütfen seçtiğiniz boot imajının stok imaj olduğundan emin olun</string>
-    <string name="about_ui_source">UI kaynağı: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">UI kaynağı: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">Tek seferlik ve süreli izinler yeniden başlatmada sona erer. Çalışmakta olan Root işlemleri çalışmaya devam eder. Paylaşılan UID kullanan uygulamalar bu izni paylaşır.</string>
     <string name="authorization_busy">Bir su işlemi başlatılıyor</string>
     <string name="authorization_custom_minutes">Özel dakika (1–525600)</string>

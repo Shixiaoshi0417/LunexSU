@@ -13,7 +13,7 @@
     <string name="require_manager_version">É necesario actualizar o xestor.</string>
     <string name="require_kernel_version">É necesario actualizar o núcleo. Toca para instalar.</string>
     <string name="require_kernel_version_gki">É necesario actualizar o núcleo.</string>
-    <string name="about_ui_source">Orixe da interface: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">Orixe da interface: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">As autorizacións dunha vez e temporais caducan ao reiniciar. Os procesos Root xa iniciados seguen en execución. As aplicacións con UID compartido comparten esta autorización.</string>
     <string name="authorization_busy">Estase iniciando un proceso su</string>
     <string name="authorization_custom_minutes">Minutos personalizados (1–525600)</string>

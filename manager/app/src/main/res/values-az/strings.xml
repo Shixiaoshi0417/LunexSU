@@ -104,7 +104,7 @@
     <string name="profile_flags_desc_no_new_privs">Bu root profili kontekstində LunexSU vasitəsilə əlavə səlahiyyət yüksəltməsinin qarşısını alır.</string>
     <string name="install_force_backup">Orijinal imic kimi yedəklə</string>
     <string name="install_force_backup_summary">Zəhmət olmasa seçdiyiniz boot imicinin orijinal imic olduğuna əmin olun</string>
-    <string name="about_ui_source">İnterfeys mənbəyi: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">İnterfeys mənbəyi: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">Birdəfəlik və müddətli icazə yenidən başladıqda bitir. Artıq işləyən Root prosesləri işləməyə davam edir. Ortaq UID-li tətbiqlər bu icazəni paylaşır.</string>
     <string name="authorization_busy">su prosesi başladılır</string>
     <string name="authorization_custom_minutes">Fərdi dəqiqə (1–525600)</string>

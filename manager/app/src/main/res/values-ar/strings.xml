@@ -144,7 +144,7 @@
     <string name="profile_flags_desc_no_new_privs">يمنع المزيد من تصعيد الصلاحيات عبر LunexSU من داخل سياق ملف تعريف الروت هذا.</string>
     <string name="install_force_backup">نسخ احتياطي كصورة أصلية</string>
     <string name="install_force_backup_summary">يرجى التأكد من أن صورة boot التي اخترتها هي الصورة الأصلية</string>
-    <string name="about_ui_source">مصدر الواجهة: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">مصدر الواجهة: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">تنتهي صلاحية التفويض لمرة واحدة والتفويض المؤقت عند إعادة التشغيل. تستمر عمليات Root التي بدأت بالفعل في العمل. تتشارك التطبيقات ذات UID المشترك هذا التفويض.</string>
     <string name="authorization_busy">جارٍ بدء عملية su</string>
     <string name="authorization_custom_minutes">دقائق مخصصة (1–525600)</string>

@@ -1,8 +1,8 @@
-// Adapted from FolkSU (https://github.com/LyraVoid/FolkSU), GPL-3.0.
+// Adapted from FinaSU, formerly FolkSU (https://github.com/LyraVoid/FinaSU), GPL-3.0.
 package com.shixiaoshi0417.lunexsu.data.model
 
 /**
- * Tokens persisted under the `home_layout_style` preference key. The tokens match FolkSU's, so a
+ * Tokens persisted under the `home_layout_style` preference key. The tokens match FinaSU's, so a
  * value carried over from there maps onto the same layout. Unknown tokens fall back to [CIRCLE].
  *
  * The layouts are rendered by the Material UI; the MIUIX home keeps its own layout.

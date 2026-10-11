@@ -73,7 +73,7 @@
     <string name="profile_flags_desc_no_new_privs">ಈ ರೂಟ್ ಪ್ರೊಫೈಲ್‌ನ ಸಂದರ್ಭದೊಳಗೆ LunexSU ಮುಖಾಂತರ ಹೆಚ್ಚಿನ ಹಕ್ಕು ಏರಿಕೆಯನ್ನು ತಡೆಯುತ್ತದೆ.</string>
     <string name="install_force_backup">ಮೂಲ ಇಮೇಜ್ ಆಗಿ ಬ್ಯಾಕಪ್ ಮಾಡಿ</string>
     <string name="install_force_backup_summary">ದಯವಿಟ್ಟು ನೀವು ಆಯ್ಕೆ ಮಾಡಿದ boot ಇಮೇಜ್ ಮೂಲ ಇಮೇಜ್ ಆಗಿದೆ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ</string>
-    <string name="about_ui_source">UI ಮೂಲ: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">UI ಮೂಲ: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">ಒಂದು ಬಾರಿಯ ಮತ್ತು ಸಮಯ ಮಿತಿಯ ಅನುಮತಿಗಳು ರೀಬೂಟ್ ಮಾಡಿದಾಗ ಅವಧಿ ಮುಗಿಯುತ್ತವೆ. ಈಗಾಗಲೇ ಚಾಲನೆಯಲ್ಲಿರುವ Root ಪ್ರಕ್ರಿಯೆಗಳು ಮುಂದುವರಿಯುತ್ತವೆ. ಹಂಚಿಕೊಂಡ UID ಹೊಂದಿರುವ ಆ್ಯಪ್‌ಗಳು ಈ ಅನುಮತಿಯನ್ನು ಹಂಚಿಕೊಳ್ಳುತ್ತವೆ.</string>
     <string name="authorization_busy">su ಪ್ರಕ್ರಿಯೆ ಪ್ರಾರಂಭವಾಗುತ್ತಿದೆ</string>
     <string name="authorization_custom_minutes">ಕಸ್ಟಮ್ ನಿಮಿಷಗಳು (1–525600)</string>

@@ -299,7 +299,7 @@
     <string name="nav_rail_collapse">Thu gọn thanh điều hướng</string>
     <string name="settings_navigation_badge">Biểu tượng Điều hướng</string>
     <string name="settings_navigation_badge_summary">Hiển thị số lượng ứng dụng được cấp phép và số lượng module được kích hoạt trên thanh điều hướng.</string>
-    <string name="about_ui_source">Nguồn UI: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">Nguồn UI: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">Quyền một lần và có thời hạn sẽ hết hiệu lực khi khởi động lại. Các tiến trình Root đã chạy vẫn tiếp tục chạy. Các ứng dụng dùng chung UID sẽ dùng chung quyền này.</string>
     <string name="authorization_busy">Đang khởi chạy tiến trình su</string>
     <string name="authorization_custom_minutes">Số phút tùy chỉnh (1–525600)</string>

@@ -1,5 +1,5 @@
-// Adapted from FolkSU ThemeSettingsMapping/ThemeValidation, GPL-3.0.
-// https://github.com/LyraVoid/FolkSU/tree/fa57d340
+// Adapted from FinaSU ThemeSettingsMapping/ThemeValidation, GPL-3.0.
+// https://github.com/LyraVoid/FinaSU/tree/fa57d340
 package com.shixiaoshi0417.lunexsu.ui.theme.pack
 
 import com.materialkolor.PaletteStyle

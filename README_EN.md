@@ -25,8 +25,8 @@ The Manager package is `com.shixiaoshi0417.lunexsu` (`.pr` for PR builds). It in
 - Module system based on [Metamodules](https://kernelsu.org/guide/metamodule.html): pluggable infrastructure for systemless modifications.
 - [App Profile](https://kernelsu.org/guide/app-profile.html): configure each app's Root identity, capabilities and SELinux context to constrain Root privileges.
 - Once, Timed and Permanent grants, enforced in the actual Root admission path.
-- Material / MIUIX interfaces with FolkSU palettes, fonts, interaction effects and Material home layouts.
-- FolkSU FPT theme import for colors, fonts, home layouts and image backgrounds.
+- Material / MIUIX interfaces with FinaSU palettes, fonts, interaction effects and Material home layouts.
+- FinaSU FPT theme import for colors, fonts, home layouts and image backgrounds.
 - Shared LunexSU brand assets and an Android adaptive launcher icon.
 
 ## Compatibility state
@@ -46,7 +46,7 @@ Authorization expiry requires matching LunexSU Manager, ksud and Core builds (au
 2. Follow KernelSU's [installation guide](https://kernelsu.org/guide/installation.html) to check the device, KMI and installation method, then install LunexSU Core matching Manager.
 3. Configure each app's profile and Once / Timed / Permanent grant mode in the superuser page.
 4. Manage modules on the modules page. For `/system` modifications, configure mount support using the [Metamodule guide](https://kernelsu.org/guide/metamodule.html).
-5. Select colors, fonts and layouts in theme settings, or import a FolkSU FPT theme pack.
+5. Select colors, fonts and layouts in theme settings, or import a FinaSU FPT theme pack.
 
 Useful documentation:
 
@@ -76,9 +76,9 @@ Generation checks, full UID/package/data-directory identity and fail-closed pers
 
 ## Interface and themes
 
-**UI source: [FolkSU by LyraVoid](https://github.com/LyraVoid/FolkSU).** LunexSU adapts its palettes, font settings, press/motion effects and five Material home layouts: Circle, Grid, Focus, Dashboard and Stats. It retains KernelSU's Material / MIUIX architecture. The reference snapshot is `fa57d340`, with original GPL attribution preserved. See [the UI port inventory](docs/lunexsu-folksu-theme.md).
+**UI source: [FinaSU (formerly FolkSU) by LyraVoid](https://github.com/LyraVoid/FinaSU).** LunexSU adapts its palettes, font settings, press/motion effects and five Material home layouts: Circle, Grid, Focus, Dashboard and Stats. It retains KernelSU's Material / MIUIX architecture. The reference snapshot is `fa57d340`, with original GPL attribution preserved. See [the UI port inventory](docs/lunexsu-folksu-theme.md).
 
-Theme settings include system/light/dark mode, AMOLED, dynamic colors, custom seed colors, palette styles and font import. FolkSU FPT import supports colors, fonts, home layouts and global/per-page image backgrounds, with metadata and compatibility notices before applying and a restore-default action. The online theme store, video/audio, per-card pictures and custom navigation icons are not ported yet. See [FolkSU FPT import](docs/lunexsu-fpt-import.md) for the workflow and compatibility scope.
+Theme settings include system/light/dark mode, AMOLED, dynamic colors, custom seed colors, palette styles and font import. FinaSU FPT import supports colors, fonts, home layouts and global/per-page image backgrounds, with metadata and compatibility notices before applying and a restore-default action. The online theme store, video/audio, per-card pictures and custom navigation icons are not ported yet. See [FinaSU FPT import](docs/lunexsu-fpt-import.md) for the workflow and compatibility scope.
 
 The adaptive launcher icon has a filled background and safe padding; Android supplies the device mask. In-app, website and documentation marks use the same LunexSU artwork.
 
@@ -147,7 +147,7 @@ Kernel interface changes require matching ksud and Manager JNI updates. See [AGE
 
 - LunexSU feedback: [GitHub Issues](https://github.com/Shixiaoshi0417/LunexSU/issues).
 - Upstream KernelSU discussion: Telegram [@KernelSU](https://t.me/KernelSU), maintained by upstream.
-- FolkSU themes and UI source: [LyraVoid/FolkSU](https://github.com/LyraVoid/FolkSU).
+- FinaSU themes and UI source: [LyraVoid/FinaSU](https://github.com/LyraVoid/FinaSU).
 
 ## Security
 
@@ -156,12 +156,12 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting. It describes this pr
 ## License
 
 - `kernel/` is [GPL-2.0-only](kernel/LICENSE). Other components retain [GPL-3.0-or-later](LICENSE) and their original file-level license notices.
-- FolkSU ports retain original author and GPL license notices. See the [UI port inventory](docs/lunexsu-folksu-theme.md) for scope and the reference version.
+- FinaSU ports retain original author and GPL license notices. See the [UI port inventory](docs/lunexsu-folksu-theme.md) for scope and the reference version.
 
 ## Credits
 
 - [KernelSU / tiann](https://github.com/tiann/KernelSU): upstream kernel Root, Manager and module system.
-- [FolkSU / LyraVoid](https://github.com/LyraVoid/FolkSU): UI themes, home layouts, interaction effects and FPT format.
+- [FinaSU (formerly FolkSU) / LyraVoid](https://github.com/LyraVoid/FinaSU): UI themes, home layouts, interaction effects and FPT format.
 - [Kernel-Assisted Superuser](https://git.zx2c4.com/kernel-assisted-superuser/about/): the KernelSU idea.
 - [Magisk](https://github.com/topjohnwu/Magisk): the powerful Root tool.
 - [genuine](https://github.com/brevent/genuine/): APK v2 signature validation.

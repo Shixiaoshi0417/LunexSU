@@ -291,7 +291,7 @@ fun SegmentedItemContainer(
  * M3's [SegmentedListItem] hard-codes its ripple and has no `indication` parameter, so a press reads
  * through [folkPressScale] instead. The same [MutableInteractionSource] drives the scale and the
  * row's own clickable, and a transparent ripple configuration stands in for `indication = null`.
- * (Adapted from FolkSU, GPL-3.0.)
+ * (Adapted from FinaSU, GPL-3.0.)
  */
 @Composable
 private fun SegmentedRow(

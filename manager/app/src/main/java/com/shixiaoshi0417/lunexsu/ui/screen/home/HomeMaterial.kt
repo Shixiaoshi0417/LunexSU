@@ -39,7 +39,7 @@ import com.shixiaoshi0417.lunexsu.ui.component.rebootlistpopup.RebootListPopup
 
 /**
  * The Material home. The warnings always come first; the board under them is the layout picked in
- * the theme settings (Circle, Grid, Focus, Dashboard or Stats, ported from FolkSU). Every layout
+ * the theme settings (Circle, Grid, Focus, Dashboard or Stats, ported from FinaSU). Every layout
  * reads the same [HomeUiState] snapshot, so switching layouts never changes what is reported.
  */
 @Composable

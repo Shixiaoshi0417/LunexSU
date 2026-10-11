@@ -18,7 +18,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 
 /**
  * A rounded tonal card. A clickable card answers a press with the shared scale-and-haptic feedback
- * instead of a ripple (the press model adapted from FolkSU, GPL-3.0).
+ * instead of a ripple (the press model adapted from FinaSU, GPL-3.0).
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

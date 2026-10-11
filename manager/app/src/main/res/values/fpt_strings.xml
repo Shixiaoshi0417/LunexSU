@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="fpt_import">Import FolkSU theme (.fpt)</string>
+    <string name="fpt_import">Import FinaSU theme (.fpt)</string>
     <string name="fpt_summary">Apply a theme package with colors, fonts and image backgrounds</string>
     <string name="fpt_reset">Restore default theme</string>
     <string name="fpt_reset_message">Reset colors, font, home layout and imported backgrounds to their defaults?</string>

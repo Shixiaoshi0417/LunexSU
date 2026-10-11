@@ -1,8 +1,8 @@
-# FolkSU theme import in LunexSU
+# FinaSU theme import in LunexSU
 
 ## Implementation plan
 
-- [x] Review FolkSU snapshot `fa57d340` and the existing Manager settings,
+- [x] Review FinaSU snapshot `fa57d340` and the existing Manager settings,
   font importer, Material/MIUIX themes and page backgrounds.
 - [x] Adapt the bounded FPT reader and validate configuration/resources before
   applying. Keep the AES-CBC/ZIP protocol and upstream attribution.
@@ -17,7 +17,7 @@
 
 ## Compatibility scope
 
-The format is taken from [FolkSU by LyraVoid](https://github.com/LyraVoid/FolkSU),
+The format is taken from [FinaSU by LyraVoid](https://github.com/LyraVoid/FinaSU),
 snapshot `fa57d340f4da3f42fc422eae4994c0b3be7f027c`. Its FPT container consists of a
 16-byte IV followed by an AES-CBC encrypted flat ZIP, containing `theme.json`
 and optional assets. The format's shared key is compatibility encoding, not
@@ -33,7 +33,7 @@ icons remain separate upstream systems.
 
 ## Usage
 
-Open Settings -> Theme -> Import FolkSU theme (.fpt), choose a local package and
+Open Settings -> Theme -> Import FinaSU theme (.fpt), choose a local package and
 review the name, author, version, resource count and compatibility notices. Apply
 uses the same prepared payload that was reviewed. Cancel leaves the current theme
 unchanged. Restore default theme resets colors, font, home layout and backgrounds
@@ -83,7 +83,7 @@ metadata/warnings, cancellation, application, invalid-file recovery and successf
 retry, and restore-default flows. Chinese preview text was checked on Material.
 Restarting the actual Manager preserved the imported Stats layout, font and Home
 background; visual inspection confirmed the adjacent-page clipping fix. Both About
-screens displayed the new artwork and FolkSU/LyraVoid attribution. The crash buffer
+screens displayed the new artwork and FinaSU/LyraVoid attribution. The crash buffer
 was empty. The fixture contains ignored Root/UI/token fields to verify isolation.
 
 The AVD reported `recognized=false uapi=0`. Its theme UI test host is confined to

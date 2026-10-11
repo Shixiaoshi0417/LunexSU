@@ -87,7 +87,7 @@
     <string name="profile_flags_desc_no_new_privs">מונע הסלמת הרשאות נוספת דרך LunexSU מתוך ההקשר של פרופיל root זה.</string>
     <string name="install_force_backup">גבה כתמונת מקור</string>
     <string name="install_force_backup_summary">אנא ודא שתמונת האתחול שבחרת היא תמונת המקור</string>
-    <string name="about_ui_source">מקור הממשק: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">מקור הממשק: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">הרשאות חד־פעמיות ומוגבלות בזמן פוקעות בהפעלה מחדש. תהליכי Root שכבר פועלים ממשיכים לפעול. אפליקציות עם UID משותף חולקות הרשאה זו.</string>
     <string name="authorization_busy">תהליך su מופעל</string>
     <string name="authorization_custom_minutes">דקות מותאמות אישית (1–525600)</string>

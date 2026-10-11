@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="fpt_import">导入 FolkSU 主题（.fpt）</string>
+    <string name="fpt_import">导入 FinaSU 主题（.fpt）</string>
     <string name="fpt_summary">从主题包应用配色、字体和图片背景</string>
     <string name="fpt_reset">恢复默认主题</string>
     <string name="fpt_reset_message">将配色、字体、首页布局和导入的背景恢复为默认值？</string>

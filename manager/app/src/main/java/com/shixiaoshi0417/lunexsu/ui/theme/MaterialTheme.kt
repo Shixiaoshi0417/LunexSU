@@ -19,7 +19,7 @@ import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalThemePackBackground
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.ThemePackState
 
 // The default dark ripple alpha is nearly invisible on near-black surfaces, so boost it for a clear
-// press feedback at night. Light mode keeps Compose's default. (From FolkSU, GPL-3.0.)
+// press feedback at night. Light mode keeps Compose's default. (From FinaSU, GPL-3.0.)
 private val DarkRippleAlpha = RippleAlpha(
     draggedAlpha = 0.32f,
     focusedAlpha = 0.24f,

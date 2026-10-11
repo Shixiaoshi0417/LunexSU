@@ -2,7 +2,7 @@
 
 ## Plan and audit
 
-- [x] Preserve the unfinished FolkSU theme work on `worktree-folksu-theme`.
+- [x] Preserve the unfinished FinaSU theme work on `worktree-folksu-theme`.
 - [x] Merge `codex/root-authorization-expiry`, including its persistence/KEEP review fixes.
 - [x] Resolve the English/Chinese resources without removing either feature's strings.
 - [x] Use LunexSU for the app name, APK prefix, messages, exported logs and fork update/source URLs.
@@ -25,7 +25,7 @@ ksud help, diagnostics and installer output also use LunexSU; the `su -v`
 KernelSU identity remains compatible with existing module detection. The Manager
 CI build now runs unit tests and compiles its authorization instrumentation runner.
 Existing package IDs, JNI names, module protocols, stored layout tokens and
-KernelSU/FolkSU copyright attribution are retained for compatibility. Donation
+KernelSU/FinaSU copyright attribution are retained for compatibility. Donation
 and upstream documentation destinations remain explicitly attributed to upstream.
 
 Once and Timed are scoped to the current boot. Once consumes one successful new

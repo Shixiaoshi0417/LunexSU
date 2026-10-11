@@ -188,7 +188,7 @@
     <string name="install_load_kmis_failed">無法讀取內嵌 LKM 清單，請取消後重試。</string>
     <string name="install_no_bundled_lkm">此構建沒有內嵌 LKM。請使用完整管理器構建，或取消後選擇相符的本機 LKM 檔案。</string>
     <string name="install_no_matching_lkm">此構建沒有適合此裝置的內嵌 LKM，請使用完整構建或相符的本機 LKM。</string>
-    <string name="about_ui_source">UI 來源：FolkSU（LyraVoid）</string>
+    <string name="about_ui_source">UI 來源：FinaSU（LyraVoid）</string>
     <string name="authorization_boot_scope">單次與限時授權會在重新開機後失效，已啟動的 Root 程序會繼續執行。共用 UID 的 App 共用此授權。</string>
     <string name="authorization_busy">正在啟動 su 程序</string>
     <string name="authorization_custom_minutes">自訂分鐘數（1–525600）</string>

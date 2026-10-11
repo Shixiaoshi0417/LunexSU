@@ -204,12 +204,28 @@ class IdentityTests(unittest.TestCase):
         for trigger in ("push:", "pull_request:"):
             self.assertIn(trigger, workflow)
 
+    def test_ui_credit_uses_the_renamed_finasu_project(self):
+        # FolkSU was renamed FinaSU; credits link the current repository, and the
+        # theme pack keeps FinaSU's unchanged folksu_keyColor field.
+        for name in ("README.md", "README_EN.md", "manager/app/src/main/java/com/shixiaoshi0417/lunexsu/ui/screen/about/AboutScreen.kt"):
+            self.assertIn("https://github.com/LyraVoid/FinaSU", read(name), name)
+        for path in ROOT.glob("manager/app/src/main/res/values*/strings.xml"):
+            source = path.read_text(encoding="utf-8")
+            if 'name="about_ui_source"' in source:
+                credit = re.search(r'name="about_ui_source">([^<]*)<', source)[1]
+                self.assertIn("FinaSU", credit, str(path))
+        for base in ("manager", "docs", "website/docs"):
+            for path in (ROOT / base).rglob("*"):
+                if path.suffix in {".kt", ".java", ".xml", ".md"} and "build" not in path.parts:
+                    self.assertNotIn("github.com/LyraVoid/FolkSU", path.read_text(encoding="utf-8"), str(path))
+        self.assertIn('"folksu_keyColor"', read("manager/app/src/main/java/com/shixiaoshi0417/lunexsu/ui/theme/pack/ThemePackSchema.kt"))
+
     def test_upstream_compatibility_and_ui_attribution_remain(self):
         self.assertIn('"[ksu_driver]"', read("manager/app/src/main/cpp/ksu.cc"))
         self.assertIn('"/kernelsu.ko"', read("userspace/ksuinit/src/init.rs"))
         self.assertIn('"ksu/"', read("userspace/ksud/src/defs.rs"))
-        self.assertIn("LyraVoid/FolkSU", read("README.md"))
-        self.assertIn("LyraVoid/FolkSU", read("README_EN.md"))
+        self.assertIn("LyraVoid/FinaSU", read("README.md"))
+        self.assertIn("LyraVoid/FinaSU", read("README_EN.md"))
 
 
 if __name__ == "__main__":

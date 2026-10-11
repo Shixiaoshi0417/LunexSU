@@ -18,7 +18,7 @@ fun AboutScreen() {
         id = R.string.about_source_code,
         "<b><a href=\"https://github.com/Shixiaoshi0417/LunexSU\">GitHub</a></b>",
         "<b><a href=\"https://github.com/tiann/KernelSU\">KernelSU (upstream)</a></b>"
-    ) + "<br/><b><a href=\"https://github.com/LyraVoid/FolkSU\">" +
+    ) + "<br/><b><a href=\"https://github.com/LyraVoid/FinaSU\">" +
         stringResource(R.string.about_ui_source) + "</a></b>"
     val state = AboutUiState(
         title = stringResource(R.string.about),

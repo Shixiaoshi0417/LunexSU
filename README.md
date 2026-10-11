@@ -25,8 +25,8 @@ LunexSU 基于 [KernelSU](https://github.com/tiann/KernelSU)，在现有超级�
 - 基于 [Metamodule](https://kernelsu.org/zh_CN/guide/metamodule.html) 的模块系统：可插拔的模块架构，支持无系统修改。
 - [App Profile](https://kernelsu.org/zh_CN/guide/app-profile.html)：为每个应用配置 Root 身份、能力和 SELinux 上下文，把 Root 权限关进笼子里。
 - 本次、限时、永久三种授权模式，在真正的 Root 授权路径检查有效期。
-- Material / MIUIX 双 UI，以及来自 FolkSU 的主题配色、字体、交互动效和 Material 首页布局。
-- FolkSU FPT 主题包导入，支持配色、字体、首页布局和图片背景。
+- Material / MIUIX 双 UI，以及来自 FinaSU 的主题配色、字体、交互动效和 Material 首页布局。
+- FinaSU FPT 主题包导入，支持配色、字体、首页布局和图片背景。
 - 统一的 LunexSU 品牌资源与 Android 自适应启动器图标。
 
 ## 兼容状态
@@ -46,7 +46,7 @@ Root 有效期需要配套的 LunexSU Manager、ksud 和 Core（授权 UAPI v6�
 2. 参考 KernelSU 的 [安装教程](https://kernelsu.org/zh_CN/guide/installation.html)，确认设备、KMI 和安装方式，安装与 Manager 配套的 LunexSU Core。
 3. 打开超级用户页面，为应用配置权限及「本次 / 限时 / 永久」授权模式。
 4. 在模块页面管理模块；需要修改 `/system` 文件时，按 [Metamodule 指南](https://kernelsu.org/zh_CN/guide/metamodule.html) 配置挂载支持。
-5. 在主题设置中选择配色、字体和布局，或导入 FolkSU FPT 主题包。
+5. 在主题设置中选择配色、字体和布局，或导入 FinaSU FPT 主题包。
 
 常用文档：
 
@@ -76,9 +76,9 @@ Root 有效期需要配套的 LunexSU Manager、ksud 和 Core（授权 UAPI v6�
 
 ## 界面与主题
 
-**UI 来源：[FolkSU，由 LyraVoid 开发](https://github.com/LyraVoid/FolkSU)。** 本项目移植其主题配色、字体设置、交互动效及 Circle、Grid、Focus、Dashboard、Stats 五种 Material 首页布局，并沿用 KernelSU 的 Material / MIUIX 双 UI 架构。移植参考版本为 `fa57d340`，保留原有 GPL 署名；具体范围见 [UI 移植记录](docs/lunexsu-folksu-theme.md)。
+**UI 来源：[FinaSU（原 FolkSU），由 LyraVoid 开发](https://github.com/LyraVoid/FinaSU)。** 本项目移植其主题配色、字体设置、交互动效及 Circle、Grid、Focus、Dashboard、Stats 五种 Material 首页布局，并沿用 KernelSU 的 Material / MIUIX 双 UI 架构。移植参考版本为 `fa57d340`，保留原有 GPL 署名；具体范围见 [UI 移植记录](docs/lunexsu-folksu-theme.md)。
 
-主题设置支持系统/明暗模式、AMOLED、动态取色、自定义颜色、调色板样式和字体导入。可导入 FolkSU FPT 主题包中的配色、字体、首页布局和全局／分页面图片背景，应用前展示主题信息及兼容提示，并支持恢复默认主题。在线主题商店、视频／音频、卡片专属图片和自定义导航图标暂未移植，详见 [主题包导入说明](docs/lunexsu-fpt-import.md)。
+主题设置支持系统/明暗模式、AMOLED、动态取色、自定义颜色、调色板样式和字体导入。可导入 FinaSU FPT 主题包中的配色、字体、首页布局和全局／分页面图片背景，应用前展示主题信息及兼容提示，并支持恢复默认主题。在线主题商店、视频／音频、卡片专属图片和自定义导航图标暂未移植，详见 [主题包导入说明](docs/lunexsu-fpt-import.md)。
 
 启动器使用完整底色与留白的自适应图标，由 Android 应用设备对应的圆形或圆角遮罩；应用内、网站和文档使用同一套 LunexSU 品牌资源。
 
@@ -147,7 +147,7 @@ cp ../target/aarch64-linux-android/release/ksud app/src/main/jniLibs/arm64-v8a/l
 
 - LunexSU 问题反馈：[GitHub Issues](https://github.com/Shixiaoshi0417/LunexSU/issues)。
 - KernelSU 上游讨论：Telegram [@KernelSU](https://t.me/KernelSU)。该频道属于上游。
-- FolkSU 主题与 UI 来源：[LyraVoid/FolkSU](https://github.com/LyraVoid/FolkSU)。
+- FinaSU 主题与 UI 来源：[LyraVoid/FinaSU](https://github.com/LyraVoid/FinaSU)。
 
 ## 安全性
 
@@ -156,12 +156,12 @@ cp ../target/aarch64-linux-android/release/ksud app/src/main/jniLibs/arm64-v8a/l
 ## 许可证
 
 - `kernel/` 使用 [GPL-2.0-only](kernel/LICENSE)；其余部分沿用 [GPL-3.0-or-later](LICENSE) 及文件中的原始许可声明。
-- FolkSU 移植代码保留原作者与 GPL 许可声明，范围和参考版本见 [UI 移植记录](docs/lunexsu-folksu-theme.md)。
+- FinaSU 移植代码保留原作者与 GPL 许可声明，范围和参考版本见 [UI 移植记录](docs/lunexsu-folksu-theme.md)。
 
 ## 鸣谢
 
 - [KernelSU / tiann](https://github.com/tiann/KernelSU)：内核 Root、管理器及模块系统的上游。
-- [FolkSU / LyraVoid](https://github.com/LyraVoid/FolkSU)：主题、首页布局、交互动效及 FPT 格式的 UI 来源。
+- [FinaSU（原 FolkSU）/ LyraVoid](https://github.com/LyraVoid/FinaSU)：主题、首页布局、交互动效及 FPT 格式的 UI 来源。
 - [Kernel-Assisted Superuser](https://git.zx2c4.com/kernel-assisted-superuser/about/)：KernelSU 的灵感。
 - [Magisk](https://github.com/topjohnwu/Magisk)：强大的 Root 工具箱。
 - [genuine](https://github.com/brevent/genuine/)：APK v2 签名验证。

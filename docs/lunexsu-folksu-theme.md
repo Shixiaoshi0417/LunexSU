@@ -1,9 +1,13 @@
-# FolkSU theme and home layouts in LunexSU Manager
+# FinaSU theme and home layouts in LunexSU Manager
 
-This note records what was ported from [FolkSU](https://github.com/LyraVoid/FolkSU)
+This note records what was ported from [FinaSU](https://github.com/LyraVoid/FinaSU)
 (GPL-3.0, reference snapshot `fa57d340`, 2026-10-10) into the LunexSU Manager, how it
 fits the Material/MIUIX split, and what was deliberately left out. Ported files carry
-an `Adapted from FolkSU` header. LunexSU is GPL-3.0 as well, so the licenses match.
+an `Adapted from FinaSU, formerly FolkSU` header. LunexSU is GPL-3.0 as well, so the licenses match.
+
+FolkSU was renamed FinaSU on 2026-10-11 (same repository, now `LyraVoid/FinaSU`);
+the reference snapshot predates the rename. FinaSU still exports the `folksu_keyColor`
+theme pack field, so that key is kept for compatibility.
 
 ## Shared theme settings (both UIs)
 
@@ -30,7 +34,7 @@ Migration: the old `color_mode = 6` (dark AMOLED) is rewritten once to
 
 ## Material UI
 
-* `MaterialExpressiveTheme` with `MotionScheme.expressive()`, the FolkSU continuous-corner
+* `MaterialExpressiveTheme` with `MotionScheme.expressive()`, the FinaSU continuous-corner
   shape ladder (`FolkShape`, needs `androidx.graphics:graphics-shapes`), the line-break aware
   typography in the chosen font, pinned semantic error colors and a stronger dark ripple.
 * Press feedback: `folkPressScale` + haptics on `TonalCard`, segmented list rows, the tab row,
@@ -47,10 +51,10 @@ Migration: the old `color_mode = 6` (dark AMOLED) is rewritten once to
 
 ## Not ported
 
-* FolkSU's original per-card photo surfaces and online theme store remain separate
+* FinaSU's original per-card photo surfaces and online theme store remain separate
   systems. LunexSU now adapts its FPT reader and settings mapping with a shared
   importer and global/per-page image backgrounds; see [FPT import](lunexsu-fpt-import.md).
 * Music/vibration media settings, custom navigation-bar icons and liquid-glass bar tuning.
 * The bundled "Xiaolai" font (`APP_DEFAULT` mode): LunexSU keeps the system font as the
   default instead of shipping a large CJK font with its own branding.
-* FolkSU's `CapabilityRepository` root probing; LunexSU's existing root checks are unchanged.
+* FinaSU's `CapabilityRepository` root probing; LunexSU's existing root checks are unchanged.

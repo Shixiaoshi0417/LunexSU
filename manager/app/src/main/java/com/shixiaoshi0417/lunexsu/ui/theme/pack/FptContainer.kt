@@ -1,4 +1,4 @@
-// Adapted from FolkSU (https://github.com/LyraVoid/FolkSU), GPL-3.0.
+// Adapted from FinaSU, formerly FolkSU (https://github.com/LyraVoid/FinaSU), GPL-3.0.
 // Reference: fa57d340f4da3f42fc422eae4994c0b3be7f027c
 package com.shixiaoshi0417.lunexsu.ui.theme.pack
 

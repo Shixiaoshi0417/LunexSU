@@ -78,7 +78,7 @@
     <string name="profile_flags_desc_no_new_privs">এই রুট প্রোফাইলের প্রেক্ষাপট থেকে LunexSU-এর মাধ্যমে আরও বিশেষাধিকার বৃদ্ধি রোধ করে।</string>
     <string name="install_force_backup">স্টক ইমেজ হিসেবে ব্যাকআপ করুন</string>
     <string name="install_force_backup_summary">অনুগ্রহ করে নিশ্চিত করুন যে আপনি যে boot ইমেজটি বেছে নিয়েছেন সেটি স্টক ইমেজ</string>
-    <string name="about_ui_source">UI-এর উৎস: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">UI-এর উৎস: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">একবারের ও সময়সীমাযুক্ত অনুমতি রিবুট করলে শেষ হয়ে যায়। আগে থেকে চালু Root প্রক্রিয়াগুলো চলতে থাকে। শেয়ার করা UID-এর অ্যাপগুলো এই অনুমতি ভাগ করে নেয়।</string>
     <string name="authorization_busy">একটি su প্রক্রিয়া শুরু হচ্ছে</string>
     <string name="authorization_custom_minutes">কাস্টম মিনিট (1–525600)</string>

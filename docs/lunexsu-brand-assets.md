@@ -7,7 +7,7 @@
   transparent monochrome derivative with the built-in imagegen tool.
 - [x] Replace brand resources and check the actual Android launcher mask.
 - [x] Rewrite the project README in Chinese with an explicit English link and
-  credit the FolkSU UI in both languages and both About page implementations.
+  credit the FinaSU UI in both languages and both About page implementations.
 - [x] Run the Manager clean release build, unit tests, instrumentation
   compilation and website production build before updating PR #2.
 
@@ -44,7 +44,7 @@ transparent exterior and tail loop; no background tile, gray fill or new content
 ## UI attribution
 
 Manager themes, shared palette/font settings and the five Material home layouts
-were adapted from [FolkSU by LyraVoid](https://github.com/LyraVoid/FolkSU), snapshot
+were adapted from [FinaSU by LyraVoid](https://github.com/LyraVoid/FinaSU), snapshot
 `fa57d340`. See [the port inventory](lunexsu-folksu-theme.md). The original source
 headers and GPL attribution remain in place.
 
@@ -59,7 +59,7 @@ passed.
 
 The Android 17 x86_64 test AVD `LunexSU_Theme_Test` displayed the complete colored
 illustration within the launcher's circular mask. Both About implementations
-displayed LunexSU artwork and the FolkSU/LyraVoid source link. Screenshots are
+displayed LunexSU artwork and the FinaSU/LyraVoid source link. Screenshots are
 generated, ignored artifacts in `dist/theme-validation/`, including `launcher.png`,
 `material-about.png` and `miuix-about.png`. FPT runtime coverage is recorded in
 [the import validation](lunexsu-fpt-import.md#validation).

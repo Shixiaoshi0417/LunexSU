@@ -45,7 +45,7 @@
     <string name="require_manager_version">Pengurus perlu dikemas kini.</string>
     <string name="require_kernel_version">Kernel perlu dikemas kini. Ketik untuk memasang.</string>
     <string name="require_kernel_version_gki">Kernel perlu dikemas kini.</string>
-    <string name="about_ui_source">Sumber UI: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">Sumber UI: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">Kebenaran sekali dan bermasa tamat apabila dimulakan semula. Proses Root yang sudah berjalan terus berjalan. Apl dengan UID dikongsi berkongsi kebenaran ini.</string>
     <string name="authorization_busy">Proses su sedang dimulakan</string>
     <string name="authorization_custom_minutes">Minit tersuai (1–525600)</string>

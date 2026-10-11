@@ -6,7 +6,7 @@
    正式包名为 `com.shixiaoshi0417.lunexsu`，PR 包名增加 `.pr`。
 2. 已完成：对齐 Core、ksud、CI 的 Manager 识别和启动路径；更换项目入口、
    更新检测、日志、安装反馈、公开产物和网站品牌。
-3. 已完成：保留上游版权和 FolkSU UI 来源，保留模块 / 内核兼容契约，
+3. 已完成：保留上游版权和 FinaSU UI 来源，保留模块 / 内核兼容契约，
    并扫描剩余旧名称，逐项确认用途。
 4. 已完成可用验证：Android NDK Rust 检查、Clippy、格式化、Manager 干净构建、
    网站构建、跨组件识别回归和模拟器测试；完整 Android LKM 与真机验证待匹配环境。
@@ -32,7 +32,7 @@ WebUI 的 `ksu` 桥接对象和 `ksu://` 协议，以及启动镜像内部 `kern
 公开下载名称和产品界面使用 LunexSU。
 
 README 保持中文默认、英文独立切换。上游文档、版权、历史 issue 链接和
-FolkSU / MIUIX 来源不冒充 LunexSU 的原创内容或服务。
+FinaSU / MIUIX 来源不冒充 LunexSU 的原创内容或服务。
 
 ## English
 
@@ -54,7 +54,7 @@ no main branch is merged.
 ## 验证记录 / Validation
 
 - GitHub 仓库描述已实际更新并读回确认，注明本次 / 限时 / 永久授权、
-  Material / MIUIX 双 UI 和 FolkSU 主题导入。
+  Material / MIUIX 双 UI 和 FinaSU 主题导入。
 - Android arm64：依次完成 `cargo ndk check`、`cargo ndk clippy`、
   `cargo fmt` / `--check` 和 ksud Release 构建，并将新二进制放入 Manager。
 - 9 项跨组件品牌 / 包名 / 签名回归、54 项新命名空间 JVM 测试、

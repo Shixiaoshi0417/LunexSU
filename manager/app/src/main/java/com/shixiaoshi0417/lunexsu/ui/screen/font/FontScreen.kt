@@ -42,7 +42,7 @@ data class FontScreenActions(
 )
 
 /**
- * The font setting shared by both UIs (adapted from FolkSU's FontScreen, GPL-3.0): the system font
+ * The font setting shared by both UIs (adapted from FinaSU's FontScreen, GPL-3.0): the system font
  * or an imported one. Selecting "custom" before a file was imported opens the picker, so the mode
  * never silently renders the system font. The change applies at once through [FontConfig].
  */

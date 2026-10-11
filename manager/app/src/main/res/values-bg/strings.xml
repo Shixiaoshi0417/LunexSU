@@ -183,7 +183,7 @@
     <string name="profile_flags_desc_no_new_privs">Предотвратява по-нататъшно повишаване на привилегиите чрез LunexSU в контекста на този root профил.</string>
     <string name="install_force_backup">Архивирай като оригинален образ</string>
     <string name="install_force_backup_summary">Моля, уверете се, че избраният от вас boot образ е оригиналният образ</string>
-    <string name="about_ui_source">Източник на интерфейса: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">Източник на интерфейса: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">Еднократното и временното разрешение изтичат при рестартиране. Вече стартираните Root процеси продължават да работят. Приложенията със споделен UID споделят това разрешение.</string>
     <string name="authorization_busy">Стартира се процес su</string>
     <string name="authorization_custom_minutes">Персонализирани минути (1–525600)</string>

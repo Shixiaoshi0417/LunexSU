@@ -150,7 +150,7 @@
     <string name="profile_flags_desc_no_new_privs">Forhindrer yderligere priviligeringseskalering via LunexSU inden for konteksten af denne root-profil.</string>
     <string name="install_force_backup">Sikkerhedskopiér som originalt image</string>
     <string name="install_force_backup_summary">Sørg for, at det valgte boot-image er det originale image</string>
-    <string name="about_ui_source">UI-kilde: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">UI-kilde: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">Engangs- og tidsbegrænset tilladelse udløber ved genstart. Allerede startede Root-processer fortsætter. Apps med delt UID deler denne tilladelse.</string>
     <string name="authorization_busy">En su-proces starter</string>
     <string name="authorization_custom_minutes">Brugerdefinerede minutter (1–525600)</string>

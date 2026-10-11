@@ -106,7 +106,7 @@
     <string name="profile_flags_desc_no_new_privs">Prepreči nadaljnje stopnjevanje privilegijev prek LunexSU znotraj konteksta tega root profila.</string>
     <string name="install_force_backup">Varnostno kopiraj kot izvorno sliko</string>
     <string name="install_force_backup_summary">Prepričajte se, da je izbrana boot slika izvorna slika</string>
-    <string name="about_ui_source">Vir uporabniškega vmesnika: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">Vir uporabniškega vmesnika: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">Enkratno in časovno omejeno dovoljenje poteče ob ponovnem zagonu. Že zagnani procesi Root delujejo naprej. Aplikacije s skupnim UID si delijo to dovoljenje.</string>
     <string name="authorization_busy">Zaganja se proces su</string>
     <string name="authorization_custom_minutes">Minute po meri (1–525600)</string>

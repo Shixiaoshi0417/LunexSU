@@ -87,7 +87,7 @@
     <string name="profile_flags_desc_no_new_privs">Neleidžia toliau didinti privilegijų per LunexSU šio root profilio kontekste.</string>
     <string name="install_force_backup">Kurti atsarginę kopiją kaip gamyklinį atvaizdą</string>
     <string name="install_force_backup_summary">Įsitikinkite, kad pasirinktas boot atvaizdas yra gamyklinis atvaizdas</string>
-    <string name="about_ui_source">Sąsajos šaltinis: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">Sąsajos šaltinis: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">Vienkartinis ir laikinas leidimas baigiasi paleidus iš naujo. Jau paleisti Root procesai toliau veikia. Bendrą UID turinčios programos dalijasi šiuo leidimu.</string>
     <string name="authorization_busy">Paleidžiamas su procesas</string>
     <string name="authorization_custom_minutes">Pasirinktinės minutės (1–525600)</string>

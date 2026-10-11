@@ -1,4 +1,4 @@
-// FPT import workflow adapted from FolkSU (https://github.com/LyraVoid/FolkSU), GPL-3.0.
+// FPT import workflow adapted from FinaSU, formerly FolkSU (https://github.com/LyraVoid/FinaSU), GPL-3.0.
 package com.shixiaoshi0417.lunexsu.ui.screen.colorpalette
 
 import android.widget.Toast

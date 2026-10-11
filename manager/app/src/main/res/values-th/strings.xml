@@ -212,7 +212,7 @@
     <string name="profile_flags_desc_no_new_privs">ป้องกันการยกระดับสิทธิ์เพิ่มเติมผ่าน LunexSU ภายในบริบทของโปรไฟล์รูทนี้</string>
     <string name="install_force_backup">สำรองเป็นอิมเมจเดิม</string>
     <string name="install_force_backup_summary">โปรดตรวจสอบให้แน่ใจว่า boot image ที่คุณเลือกเป็นอิมเมจเดิม</string>
-    <string name="about_ui_source">แหล่งที่มาของ UI: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">แหล่งที่มาของ UI: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">สิทธิ์แบบครั้งเดียวและแบบจำกัดเวลาจะหมดอายุเมื่อรีบูต กระบวนการ Root ที่เริ่มทำงานแล้วจะยังคงทำงานต่อ แอปที่ใช้ UID ร่วมกันจะใช้สิทธิ์นี้ร่วมกัน</string>
     <string name="authorization_busy">กำลังเริ่มกระบวนการ su</string>
     <string name="authorization_custom_minutes">กำหนดจำนวนนาทีเอง (1–525600)</string>

@@ -86,7 +86,7 @@
     <string name="require_manager_version">व्यवस्थापक अपडेट करणे आवश्यक आहे.</string>
     <string name="require_kernel_version">कर्नल अपडेट करणे आवश्यक आहे. इंस्टॉल करण्यासाठी टॅप करा.</string>
     <string name="require_kernel_version_gki">कर्नल अपडेट करणे आवश्यक आहे.</string>
-    <string name="about_ui_source">UI स्रोत: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">UI स्रोत: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">एकदाची आणि मुदतीची परवानगी रीबूट केल्यावर संपते. आधीपासून सुरू असलेल्या Root प्रक्रिया चालू राहतात. सामायिक UID असलेली ॲप्स ही परवानगी सामायिक करतात.</string>
     <string name="authorization_busy">su प्रक्रिया सुरू होत आहे</string>
     <string name="authorization_custom_minutes">सानुकूल मिनिटे (1–525600)</string>

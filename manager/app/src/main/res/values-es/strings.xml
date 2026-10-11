@@ -135,7 +135,7 @@
     <string name="profile_flags_desc_no_new_privs">Impide una mayor escalada de privilegios mediante LunexSU dentro del contexto de este perfil root.</string>
     <string name="install_force_backup">Respaldar como imagen original</string>
     <string name="install_force_backup_summary">Asegúrate de que la imagen de arranque seleccionada sea la imagen original</string>
-    <string name="about_ui_source">Origen de la UI: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">Origen de la UI: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">Las autorizaciones de una vez y temporales caducan al reiniciar. Los procesos Root ya iniciados siguen en ejecución. Las apps con UID compartido comparten esta autorización.</string>
     <string name="authorization_busy">Se está iniciando un proceso su</string>
     <string name="authorization_custom_minutes">Minutos personalizados (1–525600)</string>

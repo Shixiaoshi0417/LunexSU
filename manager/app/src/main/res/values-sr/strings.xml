@@ -18,7 +18,7 @@
     <string name="require_manager_version">Потребно је ажурирати менаџер.</string>
     <string name="require_kernel_version">Потребно је ажурирати кернел. Додирните за инсталирање.</string>
     <string name="require_kernel_version_gki">Потребно је ажурирати кернел.</string>
-    <string name="about_ui_source">Извор интерфејса: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">Извор интерфејса: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">Једнократна и временска дозвола истичу при поновном покретању. Већ покренути Root процеси настављају да раде. Апликације са дељеним UID-ом деле ову дозволу.</string>
     <string name="authorization_busy">Покреће се su процес</string>
     <string name="authorization_custom_minutes">Прилагођени минути (1–525600)</string>

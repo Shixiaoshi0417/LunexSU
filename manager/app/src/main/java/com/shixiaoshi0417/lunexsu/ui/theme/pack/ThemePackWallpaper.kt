@@ -1,4 +1,4 @@
-// Wallpaper behavior adapted from FolkSU, GPL-3.0; Android drawable decoding is shared by both UIs.
+// Wallpaper behavior adapted from FinaSU, GPL-3.0; Android drawable decoding is shared by both UIs.
 package com.shixiaoshi0417.lunexsu.ui.theme.pack
 
 import android.graphics.ImageDecoder

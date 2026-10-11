@@ -21,7 +21,7 @@ val Typography = Typography(
  * Material's sizes in [fontFamily] with line-break aware styles. The M3E emphasized slots match the
  * standard ones in sizing; only their weight and tracking differ.
  *
- * Adapted from FolkSU (https://github.com/LyraVoid/FolkSU), GPL-3.0.
+ * Adapted from FinaSU, formerly FolkSU (https://github.com/LyraVoid/FinaSU), GPL-3.0.
  */
 fun getTypography(fontFamily: FontFamily): Typography {
     fun heading(style: TextStyle) = style.copy(fontFamily = fontFamily).wrapAware(LineBreak.Heading)

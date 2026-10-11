@@ -299,7 +299,7 @@
     <string name="nav_rail_collapse">Ciutkan bilah navigasi</string>
     <string name="settings_navigation_badge">Lencana navigasi</string>
     <string name="settings_navigation_badge_summary">Tampilkan jumlah aplikasi yang diberi akses dan modul aktif pada bilah navigasi</string>
-    <string name="about_ui_source">Sumber UI: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">Sumber UI: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">Izin sekali dan berjangka berakhir saat dimulai ulang. Proses Root yang sudah berjalan tetap berjalan. Aplikasi dengan UID bersama berbagi izin ini.</string>
     <string name="authorization_busy">Proses su sedang dimulai</string>
     <string name="authorization_custom_minutes">Menit kustom (1–525600)</string>

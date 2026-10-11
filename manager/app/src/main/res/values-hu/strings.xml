@@ -137,7 +137,7 @@
     <string name="profile_flags_desc_no_new_privs">Megakadályozza a jogosultságok további kiterjesztését a LunexSU-n keresztül ezen root profil kontextusán belül.</string>
     <string name="install_force_backup">Biztonsági mentés gyári képként</string>
     <string name="install_force_backup_summary">Kérjük, győződj meg róla, hogy a kiválasztott boot lemezkép a gyári lemezkép</string>
-    <string name="about_ui_source">Felület forrása: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">Felület forrása: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">Az egyszeri és az időkorlátos engedély újraindításkor lejár. A már futó Root folyamatok tovább futnak. A közös UID-t használó alkalmazások osztoznak ezen az engedélyen.</string>
     <string name="authorization_busy">Egy su folyamat indul</string>
     <string name="authorization_custom_minutes">Egyéni percek (1–525600)</string>

@@ -12,7 +12,7 @@
     <string name="require_manager_version">မန်နေဂျာကို အပ်ဒိတ်လုပ်ရန် လိုအပ်သည်။</string>
     <string name="require_kernel_version">Kernel ကို အပ်ဒိတ်လုပ်ရန် လိုအပ်သည်။ ထည့်သွင်းရန် တို့ပါ။</string>
     <string name="require_kernel_version_gki">Kernel ကို အပ်ဒိတ်လုပ်ရန် လိုအပ်သည်။</string>
-    <string name="about_ui_source">UI ရင်းမြစ်- FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">UI ရင်းမြစ်- FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">တစ်ကြိမ်သုံးနှင့် အချိန်ကန့်သတ်ခွင့်ပြုချက်များသည် ပြန်လည်စတင်သောအခါ သက်တမ်းကုန်ပါသည်။ စတင်ပြီးသား Root လုပ်ငန်းစဉ်များ ဆက်လက်လည်ပတ်ပါသည်။ UID မျှဝေသုံးသော အက်ပ်များသည် ဤခွင့်ပြုချက်ကို မျှဝေသုံးပါသည်။</string>
     <string name="authorization_busy">su လုပ်ငန်းစဉ် စတင်နေသည်</string>
     <string name="authorization_custom_minutes">စိတ်ကြိုက်မိနစ် (1–525600)</string>

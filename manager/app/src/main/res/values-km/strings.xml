@@ -15,7 +15,7 @@
     <string name="require_manager_version">តម្រូវឱ្យធ្វើបច្ចុប្បន្នភាពកម្មវិធីគ្រប់គ្រង។</string>
     <string name="require_kernel_version">តម្រូវឱ្យធ្វើបច្ចុប្បន្នភាពខឺណែល។ ប៉ះដើម្បីដំឡើង។</string>
     <string name="require_kernel_version_gki">តម្រូវឱ្យធ្វើបច្ចុប្បន្នភាពខឺណែល។</string>
-    <string name="about_ui_source">ប្រភព UI៖ FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">ប្រភព UI៖ FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">ការអនុញ្ញាតម្ដង និងការអនុញ្ញាតមានកំណត់ពេល នឹងផុតកំណត់នៅពេលចាប់ផ្ដើមឡើងវិញ។ ដំណើរការ Root ដែលកំពុងដំណើរការ នៅតែបន្តដំណើរការ។ កម្មវិធីដែលប្រើ UID រួមគ្នា ប្រើការអនុញ្ញាតនេះរួមគ្នា។</string>
     <string name="authorization_busy">កំពុងចាប់ផ្ដើមដំណើរការ su</string>
     <string name="authorization_custom_minutes">នាទីផ្ទាល់ខ្លួន (1–525600)</string>

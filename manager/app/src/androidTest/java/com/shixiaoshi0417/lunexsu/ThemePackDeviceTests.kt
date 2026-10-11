@@ -63,7 +63,7 @@ internal object ThemePackDeviceTests {
             resources["font.ttf"] = font
         }
         val json = JSONObject().put("meta_name", "LunexSU FPT test").put("meta_author", "LunexSU tests")
-            .put("meta_version", "1").put("meta_description", "FolkSU-compatible local import fixture")
+            .put("meta_version", "1").put("meta_description", "FinaSU-compatible local import fixture")
             .put("customColor", "blue").put("useSystemDynamicColor", false).put("homeLayoutStyle", "stats")
             .put("nightModeFollowSys", false).put("nightModeEnabled", false)
             .put("isBackgroundEnabled", true).put("isMultiBackgroundEnabled", true)

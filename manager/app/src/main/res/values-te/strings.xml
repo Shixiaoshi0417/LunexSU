@@ -28,7 +28,7 @@
     <string name="require_manager_version">మేనేజర్‌ను అప్‌డేట్ చేయడం అవసరం.</string>
     <string name="require_kernel_version">కెర్నల్‌ను అప్‌డేట్ చేయడం అవసరం. ఇన్‌స్టాల్ చేయడానికి నొక్కండి.</string>
     <string name="require_kernel_version_gki">కెర్నల్‌ను అప్‌డేట్ చేయడం అవసరం.</string>
-    <string name="about_ui_source">UI మూలం: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">UI మూలం: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">ఒకసారి మరియు సమయ పరిమిత అనుమతులు రీబూట్ చేసినప్పుడు ముగుస్తాయి. ఇప్పటికే నడుస్తున్న Root ప్రక్రియలు కొనసాగుతాయి. షేర్ చేసిన UID ఉన్న యాప్‌లు ఈ అనుమతిని పంచుకుంటాయి.</string>
     <string name="authorization_busy">su ప్రక్రియ ప్రారంభమవుతోంది</string>
     <string name="authorization_custom_minutes">అనుకూల నిమిషాలు (1–525600)</string>

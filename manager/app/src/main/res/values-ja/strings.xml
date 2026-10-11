@@ -211,7 +211,7 @@
     <string name="profile_flags_desc_no_new_privs">この root プロファイルのコンテキスト内で、LunexSU を介したさらなる権限昇格を防止します。</string>
     <string name="install_force_backup">純正イメージとしてバックアップ</string>
     <string name="install_force_backup_summary">選択した boot イメージが純正イメージであることを確認してください</string>
-    <string name="about_ui_source">UI の出典：FolkSU（LyraVoid）</string>
+    <string name="about_ui_source">UI の出典：FinaSU（LyraVoid）</string>
     <string name="authorization_boot_scope">1 回限りと時間制限付きの許可は再起動で失効します。実行中の Root プロセスはそのまま動作します。共有 UID のアプリはこの許可を共有します。</string>
     <string name="authorization_busy">su プロセスを起動しています</string>
     <string name="authorization_custom_minutes">カスタム（分、1–525600）</string>

@@ -1,4 +1,4 @@
-// FPT compatibility adapted from FolkSU (https://github.com/LyraVoid/FolkSU), GPL-3.0.
+// FPT compatibility adapted from FinaSU, formerly FolkSU (https://github.com/LyraVoid/FinaSU), GPL-3.0.
 package com.shixiaoshi0417.lunexsu.ui.theme.pack
 
 import android.content.Context

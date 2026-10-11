@@ -145,7 +145,7 @@
     <string name="profile_flags_desc_no_new_privs">Pinipigilan ang karagdagang pagtaas ng pribilehiyo sa pamamagitan ng LunexSU mula sa loob ng konteksto ng root profile na ito.</string>
     <string name="install_force_backup">I-backup bilang stock image</string>
     <string name="install_force_backup_summary">Pakisigurado na stock image ang napili mong boot image</string>
-    <string name="about_ui_source">Pinagmulan ng UI: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">Pinagmulan ng UI: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">Nag-e-expire ang isang beses at may takdang-oras na pahintulot kapag nag-reboot. Patuloy na tatakbo ang mga Root process na nagsimula na. Ibinabahagi ang pahintulot na ito ng mga app na may parehong UID.</string>
     <string name="authorization_busy">Nagsisimula ang isang su process</string>
     <string name="authorization_custom_minutes">Custom na minuto (1–525600)</string>

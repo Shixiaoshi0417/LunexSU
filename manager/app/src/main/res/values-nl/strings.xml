@@ -165,7 +165,7 @@
     <string name="profile_flags_desc_no_new_privs">Voorkomt verdere bevoegdheidsescalatie via LunexSU binnen de context van dit root-profiel.</string>
     <string name="install_force_backup">Back-up maken als origineel image</string>
     <string name="install_force_backup_summary">Zorg ervoor dat de geselecteerde boot-image het originele image is</string>
-    <string name="about_ui_source">UI-bron: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">UI-bron: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">Eenmalige en tijdelijke machtigingen vervallen bij herstarten. Al gestarte Root-processen blijven draaien. Apps met een gedeelde UID delen deze machtiging.</string>
     <string name="authorization_busy">Er wordt een su-proces gestart</string>
     <string name="authorization_custom_minutes">Aangepaste minuten (1–525600)</string>

@@ -140,7 +140,7 @@
     <string name="profile_flags_desc_no_new_privs">Novērš turpmāku privilēģiju paaugstināšanu, izmantojot LunexSU, šī root profila kontekstā.</string>
     <string name="install_force_backup">Dublēt kā sākotnējo attēlu</string>
     <string name="install_force_backup_summary">Lūdzu, pārliecinieties, ka izvēlētais boot attēls ir sākotnējais attēls</string>
-    <string name="about_ui_source">Saskarnes avots: FolkSU (LyraVoid)</string>
+    <string name="about_ui_source">Saskarnes avots: FinaSU (LyraVoid)</string>
     <string name="authorization_boot_scope">Vienreizēja un termiņa atļauja beidzas pēc restartēšanas. Jau palaisti Root procesi turpina darboties. Lietotnes ar kopīgu UID koplieto šo atļauju.</string>
     <string name="authorization_busy">Tiek startēts su process</string>
     <string name="authorization_custom_minutes">Pielāgotas minūtes (1–525600)</string>
