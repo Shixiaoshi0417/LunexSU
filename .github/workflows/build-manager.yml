@@ -135,6 +135,13 @@ jobs:
           fi
           SIZE_HEX=$(printf '0x%04x' "$SIZE_DEC")
           HASH=$(sha256sum production-cert.der | awk '{print $1}')
+          # Kbuild defaults serve setup.sh and manual Core builds without CI overrides.
+          DEFAULT_SIZE=$(sed -n 's/^KSU_EXPECTED_SIZE ?= //p' kernel/Kbuild)
+          DEFAULT_HASH=$(sed -n 's/^KSU_EXPECTED_HASH ?= //p' kernel/Kbuild)
+          if [ "$DEFAULT_SIZE" != "$SIZE_HEX" ] || [ "$DEFAULT_HASH" != "$HASH" ]; then
+            echo "::error::kernel/Kbuild defaults ($DEFAULT_SIZE $DEFAULT_HASH) do not match the release certificate ($SIZE_HEX $HASH)"
+            exit 1
+          fi
           echo "expected_size=$SIZE_HEX" >> "$GITHUB_OUTPUT"
           echo "expected_hash=$HASH" >> "$GITHUB_OUTPUT"
 

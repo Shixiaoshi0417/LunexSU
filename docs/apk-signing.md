@@ -43,6 +43,11 @@ Actions 内嵌进 ksud 与 APK。缺少配置时失败。重签名完成后，�
 `apksigner verify --print-certs` 校验每个 APK 的证书 SHA256 与 Core 参数
 相同，然后上传产物。
 
+`kernel/Kbuild` 的 `KSU_EXPECTED_SIZE` / `KSU_EXPECTED_HASH` 默认值就是
+上面的发布证书，供 `setup.sh` 集成等不经 CI 的 Core 构建使用。正式构建会
+比对这两个默认值与 Secrets 中的证书，不一致即失败；轮换密钥时必须同时
+更新 Kbuild。
+
 工作流支持手动 `workflow_dispatch`，可在分支代码推送至 GitHub 后
 运行 Build Manager。运行它只构建和上传 Actions 产物，不自动合并 main
 或发布 Release；需要发布时另用现有 Release 工作流。
@@ -76,3 +81,8 @@ and the APK. PR builds retain temporary RSA 2048 keys and the `.pr`
 application ID. A post-signing gate verifies all APK certificate hashes
 against Core before uploading artifacts. Build Manager can be run manually
 with `workflow_dispatch`; it does not merge main or publish a Release.
+
+The `KSU_EXPECTED_SIZE` / `KSU_EXPECTED_HASH` defaults in `kernel/Kbuild` are
+this release certificate, for Core builds outside CI such as `setup.sh`
+integrations. Production builds fail if those defaults differ from the
+certificate in the secrets, so a key rotation must update Kbuild as well.
