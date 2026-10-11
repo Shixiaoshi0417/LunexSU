@@ -45,6 +45,8 @@ def control(action, mode=1, seconds=300):
 
 
 def su(_=None):
+    # adb joins shell arguments with spaces and the device shell re-parses them, so the
+    # quotes keep "id -u" one argument; unquoted, su would run `sh -c id -u` (plain `id`).
     call = subprocess.run(adb + ["shell", "run-as", args.fixture, "--user", str(args.user), "/system/bin/su", "-c", "'id -u'"],
         text=True, capture_output=True, timeout=30)
     return call.returncode == 0 and call.stdout.strip() == "0"
