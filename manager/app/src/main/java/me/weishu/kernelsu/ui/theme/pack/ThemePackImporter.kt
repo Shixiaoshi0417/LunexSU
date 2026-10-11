@@ -81,10 +81,13 @@ internal object ThemePackImporter {
                         }
                         "system" -> { changes["font_mode"] = "SYSTEM_DEFAULT"; removals += "custom_font_file" }
                     }
+                    val replacedFont = prefs.getString("custom_font_file", null)
                     publish(prefs, changes, removals)
                     withContext(Dispatchers.Main) {
                         // Invalidates older in-flight font picks before reloading Compose typography.
                         FontConfig.reloadFromPreferences(context)
+                        // Pack GC only scans theme_packs, so a displaced standalone font is removed here.
+                        FontConfig.discardReplacedFont(context, replacedFont)
                         ThemePackState.reload(context)
                     }
                 } finally {
@@ -100,6 +103,7 @@ internal object ThemePackImporter {
         withContext(NonCancellable + Dispatchers.IO) {
             runCatching {
                 val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                val replacedFont = prefs.getString("custom_font_file", null)
                 publish(prefs, mapOf(
                     "color_mode" to 0, "key_color" to 0, "color_style" to "TonalSpot",
                     "color_spec" to "SPEC_2025", "color_contrast" to "STANDARD",
@@ -109,6 +113,7 @@ internal object ThemePackImporter {
                 ), setOf(ACTIVE_PACK, ACTIVE_JSON, "custom_font_file"))
                 withContext(Dispatchers.Main) {
                     FontConfig.reloadFromPreferences(context)
+                    FontConfig.discardReplacedFont(context, replacedFont)
                     ThemePackState.reload(context)
                 }
                 cleanup(context, prefs)

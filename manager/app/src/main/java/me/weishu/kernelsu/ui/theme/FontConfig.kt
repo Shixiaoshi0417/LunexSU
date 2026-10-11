@@ -161,6 +161,11 @@ object FontConfig {
         }
     }
 
+    /** Deletes a directly imported font after a theme pack replaced it as the selection. */
+    internal fun discardReplacedFont(context: Context, filename: String?) {
+        if (filename != null && filename != customFontFilename) deleteStandaloneFont(context, filename)
+    }
+
     private fun save(context: Context) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
             putString(KEY_FONT_MODE, fontMode.name)
