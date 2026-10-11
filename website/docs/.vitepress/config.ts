@@ -3,12 +3,15 @@ import locales from './locales'
 import { readdir, writeFile } from 'fs/promises'
 import { resolve } from 'path'
 
+const base = process.env.LUNEXSU_SITE_BASE || '/LunexSU/'
+
 export default defineConfig( {
     title: 'LunexSU',
-    base: process.env.LUNEXSU_SITE_BASE || '/LunexSU/',
+    base,
     locales: locales.locales,
     head: [
-        ['link', { rel: 'icon', href: '/favicon.ico' }],
+        // head entries are not rewritten with base, unlike Markdown links.
+        ['link', { rel: 'icon', href: `${base}favicon.ico` }],
     ],
     sitemap: {
         hostname: process.env.LUNEXSU_SITE_URL || 'https://shixiaoshi0417.github.io/LunexSU/'
