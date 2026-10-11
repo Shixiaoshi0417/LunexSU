@@ -79,6 +79,9 @@ reuse. An explicit grant binds the package currently selected in Manager;
 ordinary edits preserve the existing anchor. Process hook eligibility uses
 configured membership so a busy Once reservation cannot hide the check from
 new App processes. Hook eligibility never bypasses actual admission checks.
+Module umount, by contrast, follows the active grant: an App whose temporary
+grant expired, was spent or did not survive a reboot is unmounted like an
+ordinary App (default non-root policy), while an active grant keeps modules.
 
 The v4 app_profile/UAPI layout is unchanged. New sized GET/SET_AUTH_PROFILE
 ioctls carry policy plus the complete profile in one transaction (UAPI 6).

@@ -89,6 +89,28 @@ int main(void)
     ksu_auth_invalidate(&state);
     assert(ksu_auth_available(&state, UINT64_MAX));
 
+    /* Module umount follows the active grant: a spent Once, an expired Timed
+     * and a reboot-invalidated grant are ordinary apps; Permanent stays root. */
+    assert(ksu_auth_grant(&state, KSU_AUTH_ONCE, 0, 10));
+    assert(!ksu_auth_should_umount(true, ksu_auth_available(&state, 10), true, false, true));
+    assert(ksu_auth_reserve(&state, 10, true));
+    ksu_auth_finish(&state, true);
+    assert(ksu_auth_should_umount(true, ksu_auth_available(&state, 10), true, false, true));
+    assert(ksu_auth_grant(&state, KSU_AUTH_TIMED, 300, start));
+    assert(!ksu_auth_should_umount(true, ksu_auth_available(&state, start), true, false, true));
+    assert(ksu_auth_should_umount(true, ksu_auth_available(&state, start + 300000000000ULL), true, false, true));
+    assert(ksu_auth_grant(&state, KSU_AUTH_TIMED, 300, start));
+    ksu_auth_invalidate(&state);
+    assert(ksu_auth_should_umount(true, ksu_auth_available(&state, start), true, false, true));
+    /* An inactive grant follows the default non-root policy, not stale union bytes. */
+    assert(!ksu_auth_should_umount(true, ksu_auth_available(&state, start), false, true, false));
+    assert(ksu_auth_grant(&state, KSU_AUTH_PERMANENT, 0, start));
+    assert(!ksu_auth_should_umount(true, ksu_auth_available(&state, UINT64_MAX), true, false, true));
+    /* Non-root profiles keep their own or the default policy. */
+    assert(ksu_auth_should_umount(false, false, true, false, true));
+    assert(!ksu_auth_should_umount(false, false, false, false, true));
+    assert(ksu_auth_should_umount(false, false, false, true, false));
+
     for (int round = 0; round < 20; ++round) {
         pthread_t workers[64];
         successes = 0;
@@ -101,6 +123,6 @@ int main(void)
     _Static_assert(sizeof(struct app_profile) == 784, "v4 ABI changed");
     _Static_assert(sizeof(struct ksu_auth_profile_cmd) == 824, "authorization ABI");
     assert(_IOC_SIZE(KSU_IOCTL_GET_AUTH_PROFILE) == sizeof(struct ksu_auth_profile_cmd));
-    puts("PASS: once reservation/refund, concurrency (1.28M attempts), timed boundary/renewal/reboot, validation and UAPI ABI");
+    puts("PASS: once reservation/refund, concurrency (1.28M attempts), timed boundary/renewal/reboot, umount, validation and UAPI ABI");
     return 0;
 }

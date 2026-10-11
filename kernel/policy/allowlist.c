@@ -598,23 +598,19 @@ bool ksu_uid_should_umount(uid_t uid)
         return false;
     }
 #ifdef CONFIG_KSU_DISABLE_POLICY
-    return !has_allow_uid(uid, true);
+    return !has_allow_uid(uid, false);
 #else
     rcu_read_lock();
     profile = ksu_get_app_profile(uid);
     if (!profile) {
         // no app profile found, it must be non root app
         res = default_non_root_profile.umount_modules;
-    } else if (profile->allow_su) {
-        // if found and it is granted to su, we shouldn't umount for it
-        res = false;
     } else {
-        // found an app profile
-        if (profile->nrp_config.use_default) {
-            res = default_non_root_profile.umount_modules;
-        } else {
-            res = profile->nrp_config.profile.umount_modules;
-        }
+        // only an active grant keeps modules mounted for a Root profile
+        struct perm_data *p = container_of(profile, struct perm_data, profile);
+        res = ksu_auth_should_umount(profile->allow_su, auth_available_rcu(p), profile->nrp_config.use_default,
+                                     profile->nrp_config.profile.umount_modules,
+                                     default_non_root_profile.umount_modules);
     }
     rcu_read_unlock();
 

@@ -70,6 +70,18 @@ static inline void ksu_auth_finish(struct ksu_authorization_state *s, bool succe
         KSU_AUTH_WRITE(s->once, success ? 0 : 1);
 }
 
+/* Module umount follows the active grant, not the configured profile: an app
+ * whose temporary grant expired, was spent or did not survive a reboot is an
+ * ordinary app again. A Root profile carries no non-root policy of its own.
+ */
+static inline bool ksu_auth_should_umount(bool allow_su, bool active, bool nrp_use_default, bool nrp_umount,
+                                          bool default_umount)
+{
+    if (allow_su)
+        return active ? false : default_umount;
+    return nrp_use_default ? default_umount : nrp_umount;
+}
+
 static inline void ksu_auth_invalidate(struct ksu_authorization_state *s)
 {
     KSU_AUTH_WRITE(s->once, 0);
