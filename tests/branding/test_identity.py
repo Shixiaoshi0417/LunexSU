@@ -78,13 +78,28 @@ class IdentityTests(unittest.TestCase):
             store = base / "fixture.jks"
             password = "lunexsu-test-fixture"
             subprocess.run(["keytool", "-genkeypair", "-alias", "fixture", "-keyalg", "RSA", "-keysize", "2048", "-validity", "1", "-dname", "CN=LunexSU Test", "-storetype", "JKS", "-keystore", str(store), "-storepass", password, "-keypass", password], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["keytool", "-exportcert", "-alias", "fixture", "-keystore", str(store), "-storepass", password, "-file", str(base / "fixture.der")], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            fixture = (base / "fixture.der").read_bytes()
+            kbuild = base / "kernel/Kbuild"
+            kbuild.parent.mkdir()
+
+            def write_defaults(size, digest):
+                kbuild.write_bytes(f"KSU_EXPECTED_SIZE ?= {size}\nKSU_EXPECTED_HASH ?= {digest}\n".encode())
+
+            # The step also requires the Kbuild defaults for non-CI Core builds to be this certificate.
+            write_defaults(f"0x{len(fixture):04x}", hashlib.sha256(fixture).hexdigest())
             env = dict(os.environ, PROD_KEYSTORE=base64.b64encode(store.read_bytes()).decode(), PROD_KEYSTORE_PASSWORD=password, PROD_KEY_ALIAS="fixture", GITHUB_OUTPUT=str(base / "outputs"))
             subprocess.run(["bash", "-eu", "-c", script], cwd=base, env=env, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             cert = (base / "production-cert.der").read_bytes()
+            self.assertEqual(fixture, cert)
             output = (base / "outputs").read_text()
             self.assertIn(f"expected_hash={hashlib.sha256(cert).hexdigest()}", output)
             self.assertIn(f"expected_size=0x{len(cert):04x}", output)
             (base / "outputs").unlink()
+            write_defaults(f"0x{len(fixture):04x}", "0" * 64)
+            stale = subprocess.run(["bash", "-eu", "-c", script], cwd=base, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.assertNotEqual(0, stale.returncode)
+            self.assertFalse((base / "outputs").exists())
             env["PROD_KEYSTORE"] = ""
             failure = subprocess.run(["bash", "-eu", "-c", script], cwd=base, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.assertNotEqual(0, failure.returncode)
@@ -92,6 +107,14 @@ class IdentityTests(unittest.TestCase):
         workflow = read(".github/workflows/build-manager.yml")
         self.assertIn("steps.extract_prod.outputs.expected_hash", workflow)
         self.assertIn("expected_hash: ${{ needs.generate-key.outputs.expected_hash", workflow)
+
+    def test_core_defaults_match_documented_release_certificate(self):
+        kbuild = read("kernel/Kbuild")
+        size = re.search(r"^KSU_EXPECTED_SIZE \?= (0x[0-9a-f]{4})$", kbuild, re.M)[1]
+        digest = re.search(r"^KSU_EXPECTED_HASH \?= ([0-9a-f]{64})$", kbuild, re.M)[1]
+        signing = read("docs/apk-signing.md")
+        self.assertIn(f"\n{digest}\n", signing)
+        self.assertIn(f"`{size}`", signing)
 
     def test_production_signing_steps_share_secrets_and_fail_closed(self):
         workflow = read(".github/workflows/build-manager.yml")
