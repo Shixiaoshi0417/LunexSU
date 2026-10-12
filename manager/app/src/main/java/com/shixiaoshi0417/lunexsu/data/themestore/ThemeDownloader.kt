@@ -250,18 +250,6 @@ class ThemeDownloader(private val context: Context) {
         }
     }
 
-    private fun validateDownloadedFile(file: File, isThemeFile: Boolean, expectedSize: Long) {
-        if (!file.exists() || file.length() == 0L) throw IOException("Downloaded file is empty")
-        if (expectedSize > 0 && file.length() != expectedSize) throw IOException("Size mismatch")
-        if (isThemeFile) {
-            if (file.length() < MIN_THEME_SIZE) throw IOException("Theme file too small")
-            val header = ByteArray(HEADER_SIZE)
-            file.inputStream().use { it.read(header) }
-            if (looksLikeTextBody(header)) throw IOException("Invalid theme file")
-            if (header.all { it == 0.toByte() }) throw IOException("Incomplete theme file")
-        }
-    }
-
     private fun estimateUnknownProgress(downloaded: Long): Float =
         (1.0 - 1.0 / (1.0 + downloaded / 256.0 / 1024.0)).toFloat().coerceIn(0f, 0.99f)
 
@@ -331,23 +319,10 @@ class ThemeDownloader(private val context: Context) {
         private const val MAX_RETRIES = 3
         private const val RETRY_DELAY_MS = 2000L
         private const val MAX_CONCURRENT = 3
-        private const val MIN_THEME_SIZE = 32L
-        private const val HEADER_SIZE = 16
         private const val TEMP_SUFFIX = ".tmp"
         // Mirrors FptContainer.MAX_CONTAINER; the importer rejects anything larger anyway.
         private const val MAX_THEME_BYTES = 1056L * 1024 * 1024
         private const val MAX_PREVIEW_BYTES = 32L * 1024 * 1024
-
-        /**
-         * An HTML error page or a JSON error body served instead of the package. A real `.fpt`
-         * starts with a random AES IV, so its first byte alone may well be `<` or `{`; only a
-         * header that is entirely printable text counts.
-         */
-        fun looksLikeTextBody(header: ByteArray): Boolean {
-            val first = header.firstOrNull()?.toInt() ?: return false
-            if (first != '<'.code && first != '{'.code) return false
-            return header.all { it.toInt() in 0x20..0x7e || it.toInt() in 0x09..0x0d }
-        }
 
         /** Path-safe directory/file name; never empty, never `.` or `..`. */
         fun sanitizeFilename(name: String): String {
@@ -357,5 +332,18 @@ class ThemeDownloader(private val context: Context) {
                 .trim('.')
             return cleaned.ifBlank { "unnamed" }
         }
+    }
+}
+
+// Adapted from FinaSU d869a70e: an IV has no restricted byte values.
+internal fun validateDownloadedFile(file: File, isThemeFile: Boolean, expectedSize: Long) {
+    val size = file.length()
+    if (!file.isFile || size == 0L) throw IOException("Downloaded file is empty")
+    if (expectedSize > 0 && size != expectedSize) throw IOException("Size mismatch")
+    if (isThemeFile) {
+        if (size < 32L) throw IOException("Theme file too small")
+        // FPT starts with an unrestricted 16-byte IV, followed by AES-CBC ciphertext.
+        // Only check framing here; import validates the decrypted ZIP and theme.json.
+        if ((size - 16L) % 16L != 0L) throw IOException("Invalid theme file length")
     }
 }

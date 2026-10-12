@@ -99,10 +99,14 @@ store host's own HTTP links are upgraded to HTTPS, and only HTTPS packages are o
 A download writes `<name>.fpt` and the `Theme.webp` preview to the private
 `files/themes/<author>/<name>/` directory through a `.tmp` sibling, so an interrupted
 download never looks installed. Downloads can be paused and resumed (HTTP `Range`) or
-cancelled, retry up to three times, reject HTML/JSON error bodies and stop at the
+cancelled, retry up to three times, check FPT minimum size/AES block alignment and stop at the
 importer's 1056 MiB container limit. A finished theme writes `theme_meta.json` and appears
 under My themes, which also works offline; a long press deletes it. The view model is
 application-scoped, so a download continues when the store page is closed.
+
+Download validation follows FinaSU `d869a70e`: the 16-byte IV is unrestricted,
+including all-zero or printable bytes. No IV-content heuristic is used; the
+importer checks the decrypted ZIP/configuration before anything is applied.
 
 Downloading never changes a setting. Apply hands the downloaded file to the same
 preparation and confirmation as Import FinaSU theme (.fpt): metadata, resource count and

@@ -74,18 +74,6 @@ class ThemeStoreModelsTest {
         assertEquals("_etc_passwd", ThemeDownloader.sanitizeFilename("../etc/passwd"))
     }
 
-    @Test
-    fun onlyTextualHeadersAreRejectedAsErrorPages() {
-        assertTrue(ThemeDownloader.looksLikeTextBody("<!DOCTYPE html>\n".toByteArray()))
-        assertTrue(ThemeDownloader.looksLikeTextBody("{\"error\":\"nope\"}".toByteArray()))
-        // A package whose random IV happens to start with '<' or '{' is still a package.
-        val iv = byteArrayOf('<'.code.toByte(), 0x9f.toByte(), 0x01, 0x7f, 0x00, 0x33, 0xc4.toByte(), 0x10,
-            0x55, 0x80.toByte(), 0x02, 0x41, 0xee.toByte(), 0x07, 0x6a, 0x12)
-        assertFalse(ThemeDownloader.looksLikeTextBody(iv))
-        assertFalse(ThemeDownloader.looksLikeTextBody(byteArrayOf('{'.code.toByte()) + iv.copyOfRange(1, 16)))
-        assertFalse(ThemeDownloader.looksLikeTextBody("PK\u0003\u0004 zip".toByteArray()))
-    }
-
     private fun theme(id: String, name: String, author: String, source: String, type: String = THEME_TYPE_PHONE) =
         RemoteTheme(id, name, author, "", "", "", "https://x/$id.fpt", type, source)
 }
