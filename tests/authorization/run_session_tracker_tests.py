@@ -145,8 +145,9 @@ int main(void) {
 with tempfile.TemporaryDirectory(prefix="lunexsu-session-") as tmp:
     out = Path(tmp)
     for header in ("linux/atomic.h", "linux/cred.h", "linux/hashtable.h", "linux/init.h",
-                   "linux/sched/signal.h", "linux/slab.h", "linux/spinlock.h", "linux/tracepoint.h",
-                   "trace/events/sched.h", "infra/symbol_resolver.h", "policy/allowlist.h", "klog.h"):
+                   "linux/sched.h", "linux/sched/signal.h", "linux/sched/task.h", "linux/slab.h",
+                   "linux/spinlock.h", "linux/tracepoint.h", "trace/events/sched.h",
+                   "infra/symbol_resolver.h", "policy/allowlist.h", "klog.h"):
         path = out / header
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text('#include "mock_kernel.h"\n')
