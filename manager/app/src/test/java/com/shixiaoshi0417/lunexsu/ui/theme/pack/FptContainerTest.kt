@@ -87,6 +87,13 @@ class FptContainerTest {
     @Test fun enforcesCiphertextBudget() {
         assertThrows(Exception::class.java) { read(encrypt(archive("theme.json" to config())), FptLimits(containerBytes = 16)) }
     }
+    @Test fun defaultLimitsMatchFinaSu() {
+        // Store themes reach several hundred megabytes; FinaSU accepts 1 GiB of resources.
+        assertEquals(1024L * 1024 * 1024, FptLimits().totalBytes)
+        assertEquals(1024L * 1024 * 1024 + 32L * 1024 * 1024, FptLimits().containerBytes)
+        assertEquals(1024L * 1024, FptLimits().configBytes)
+        assertEquals(128, FptLimits().entries)
+    }
     @Test fun enforcesEntryCount() {
         assertThrows(Exception::class.java) {
             read(encrypt(archive("theme.json" to config(), "a.bin" to byteArrayOf(1), "b.bin" to byteArrayOf(2))), FptLimits(entries = 2))

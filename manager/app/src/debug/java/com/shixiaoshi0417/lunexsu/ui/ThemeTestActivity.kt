@@ -17,6 +17,8 @@ import com.shixiaoshi0417.lunexsu.ui.navigation3.rememberNavigator
 import com.shixiaoshi0417.lunexsu.ui.screen.about.AboutScreen
 import com.shixiaoshi0417.lunexsu.ui.screen.colorpalette.ColorPaletteScreen
 import com.shixiaoshi0417.lunexsu.ui.screen.font.FontScreen
+import com.shixiaoshi0417.lunexsu.ui.screen.themestore.MyThemesScreen
+import com.shixiaoshi0417.lunexsu.ui.screen.themestore.ThemeStoreScreen
 import com.shixiaoshi0417.lunexsu.ui.theme.LunexSUTheme
 import com.shixiaoshi0417.lunexsu.ui.theme.LocalColorMode
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalThemePackBackground
@@ -31,7 +33,11 @@ class ThemeTestActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         ThemePackState.reload(this)
-        val initial = if (intent.getStringExtra("page") == "about") Route.About else Route.ColorPalette
+        val initial = when (intent.getStringExtra("page")) {
+            "about" -> Route.About
+            "store" -> Route.ThemeStore
+            else -> Route.ColorPalette
+        }
         setContent {
             val model = viewModel<MainActivityViewModel>()
             val state by model.uiState.collectAsStateWithLifecycle()
@@ -48,6 +54,8 @@ class ThemeTestActivity : ComponentActivity() {
                         NavDisplay(backStack = navigator.backStack, onBack = { finish() }) {
                             entry<Route.ColorPalette> { ColorPaletteScreen() }
                             entry<Route.Font> { FontScreen() }
+                            entry<Route.ThemeStore> { ThemeStoreScreen() }
+                            entry<Route.MyThemes> { MyThemesScreen() }
                             entry<Route.About> { AboutScreen() }
                         }
                     }

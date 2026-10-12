@@ -27,6 +27,7 @@ LunexSU 基于 [KernelSU](https://github.com/tiann/KernelSU)，在现有超级�
 - 本次、限时、永久三种授权模式，在真正的 Root 授权路径检查有效期。
 - Material / MIUIX 双 UI，以及来自 FinaSU 的主题配色、字体、交互动效和 Material 首页布局。
 - FinaSU FPT 主题包导入，支持配色、字体、首页布局和图片背景。
+- FinaSU 在线主题商店：浏览、搜索、筛选、下载（可暂停／续传）并应用在线主题。
 - 统一的 LunexSU 品牌资源与 Android 自适应启动器图标。
 
 ## 兼容状态
@@ -78,7 +79,7 @@ Root 有效期需要配套的 LunexSU Manager、ksud 和 Core（授权 UAPI v6�
 
 **UI 来源：[FinaSU（原 FolkSU），由 LyraVoid 开发](https://github.com/LyraVoid/FinaSU)。** 本项目移植其主题配色、字体设置、交互动效及 Circle、Grid、Focus、Dashboard、Stats 五种 Material 首页布局，并沿用 KernelSU 的 Material / MIUIX 双 UI 架构。移植参考版本为 `fa57d340`，保留原有 GPL 署名；具体范围见 [UI 移植记录](docs/lunexsu-folksu-theme.md)。
 
-主题设置支持系统/明暗模式、AMOLED、动态取色、自定义颜色、调色板样式和字体导入。可导入 FinaSU FPT 主题包中的配色、字体、首页布局和全局／分页面图片背景，应用前展示主题信息及兼容提示，并支持恢复默认主题。在线主题商店、视频／音频、卡片专属图片和自定义导航图标暂未移植，详见 [主题包导入说明](docs/lunexsu-fpt-import.md)。
+主题设置支持系统/明暗模式、AMOLED、动态取色、自定义颜色、调色板样式和字体导入。可导入 FinaSU FPT 主题包中的配色、字体、首页布局和全局／分页面图片背景，应用前展示主题信息及兼容提示，并支持恢复默认主题。主题商店可浏览和下载 FinaSU 商店中的在线主题，下载后同样经过确认才会应用。视频／音频、卡片专属图片和自定义导航图标暂未移植，详见 [主题包导入说明](docs/lunexsu-fpt-import.md)。
 
 启动器使用完整底色与留白的自适应图标，由 Android 应用设备对应的圆形或圆角遮罩；应用内、网站和文档使用同一套 LunexSU 品牌资源。
 

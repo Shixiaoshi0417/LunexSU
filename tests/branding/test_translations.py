@@ -7,7 +7,8 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[2]
 RES = ROOT / "manager/app/src/main/res"
 FORMAT = re.compile(r"%(?:\d+\$)?[a-zA-Z]")
-# Strings added by LunexSU (authorization, themes, fonts, home layouts, bundled LKMs, navigation modes).
+# Strings added by LunexSU (authorization, themes, fonts, home layouts, bundled LKMs, navigation modes,
+# theme store).
 LUNEXSU_KEYS = """about_ui_source authorization_boot_scope authorization_busy authorization_custom_minutes
 authorization_grant authorization_inactive authorization_invalid_duration authorization_minutes authorization_mode
 authorization_once authorization_permanent authorization_permanent_only authorization_read_failed
@@ -31,7 +32,15 @@ settings_floating_bar_glass settings_floating_bar_glass_summary settings_floatin
 settings_floating_auto_hide_summary settings_floating_swipe_hide settings_floating_swipe_hide_summary
 settings_navbar_glass_blur_strength settings_navbar_glass_transparency settings_navbar_glass_highlight_strength
 settings_navbar_glass_specular settings_navbar_glass_specular_summary settings_navbar_glass_inner_glow
-settings_navbar_glass_inner_glow_summary settings_navbar_glass_border settings_navbar_glass_border_summary""".split()
+settings_navbar_glass_inner_glow_summary settings_navbar_glass_border settings_navbar_glass_border_summary
+theme_store_title theme_store_subtitle theme_store_search theme_store_apply_failed theme_store_download_failed
+my_themes_title theme_store_filter_title theme_store_retry theme_store_empty theme_store_download_complete
+theme_store_download_complete_message theme_store_apply theme_store_go_my_themes theme_store_author theme_store_version
+theme_store_source_value theme_store_download theme_store_cancel theme_download_title theme_download_progress
+theme_download_file theme_download_image theme_download_paused theme_download_resume theme_download_pause
+theme_store_filter_author theme_store_filter_source theme_store_filter_all theme_source_official
+theme_source_third_party theme_store_filter_type theme_type_phone theme_type_tablet theme_store_filter_apply
+theme_store_filter_reset my_themes_empty my_themes_delete_title my_themes_delete_message my_themes_delete""".split()
 
 
 def strings(path):
@@ -44,7 +53,7 @@ class TranslationTests(unittest.TestCase):
         self.locales = sorted(RES.glob("values-*/strings.xml"))
 
     def test_lunexsu_keys_exist_in_english(self):
-        self.assertEqual(97, len(LUNEXSU_KEYS))
+        self.assertEqual(136, len(LUNEXSU_KEYS))
         self.assertFalse(set(LUNEXSU_KEYS) - set(self.english))
 
     def test_every_locale_translates_the_lunexsu_strings(self):

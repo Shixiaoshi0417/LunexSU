@@ -114,6 +114,8 @@ import com.shixiaoshi0417.lunexsu.ui.screen.settings.SettingPager
 import com.shixiaoshi0417.lunexsu.ui.screen.sulog.SulogScreen
 import com.shixiaoshi0417.lunexsu.ui.screen.superuser.SuperUserPager
 import com.shixiaoshi0417.lunexsu.ui.screen.template.AppProfileTemplateScreen
+import com.shixiaoshi0417.lunexsu.ui.screen.themestore.MyThemesScreen
+import com.shixiaoshi0417.lunexsu.ui.screen.themestore.ThemeStoreScreen
 import com.shixiaoshi0417.lunexsu.ui.screen.templateeditor.TemplateEditorScreen
 import com.shixiaoshi0417.lunexsu.ui.theme.LunexSUTheme
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalThemePackBackground
@@ -254,6 +256,8 @@ class MainActivity : ComponentActivity() {
                             entry<Route.Sulog>(swipeDismiss = swipeDismiss) { SulogScreen() }
                             entry<Route.ColorPalette>(swipeDismiss = swipeDismiss) { ColorPaletteScreen() }
                             entry<Route.Font>(swipeDismiss = swipeDismiss) { FontScreen() }
+                            entry<Route.ThemeStore>(swipeDismiss = swipeDismiss) { ThemeStoreScreen() }
+                            entry<Route.MyThemes>(swipeDismiss = swipeDismiss) { MyThemesScreen() }
                             entry<Route.AppProfileTemplate>(swipeDismiss = swipeDismiss) { AppProfileTemplateScreen() }
                             entry<Route.TemplateEditor>(swipeDismiss = swipeDismiss) { key -> TemplateEditorScreen(key.template, key.readOnly) }
                             entry<Route.AppProfile>(swipeDismiss = swipeDismiss) { key -> AppProfileScreen(key.uid) }

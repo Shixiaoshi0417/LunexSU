@@ -30,9 +30,10 @@ import javax.crypto.spec.SecretKeySpec
 internal object FptContainer {
     private const val MAX_ENTRIES = 128
     private const val MAX_CONFIG = 1024L * 1024
-    private const val MAX_TOTAL = 256L * 1024 * 1024
+    // FinaSU's current limits: store themes reach several hundred megabytes.
+    const val MAX_TOTAL = 1024L * 1024 * 1024
     // ZIP headers and the central directory add overhead to the resource budget.
-    private const val MAX_CONTAINER = MAX_TOTAL + 32L * 1024 * 1024
+    const val MAX_CONTAINER = MAX_TOTAL + 32L * 1024 * 1024
 
     private val key get() = SecretKeySpec(MessageDigest.getInstance("SHA-256")
         .digest("FolkPatchThemeSecretKey2025".toByteArray(Charsets.UTF_8)), "AES")
@@ -234,6 +235,6 @@ private class DecryptedStream(source: InputStream, private val cipher: Cipher) :
 internal data class FptLimits(
     val entries: Int = 128,
     val configBytes: Long = 1024L * 1024,
-    val totalBytes: Long = 256L * 1024 * 1024,
-    val containerBytes: Long = 288L * 1024 * 1024,
+    val totalBytes: Long = FptContainer.MAX_TOTAL,
+    val containerBytes: Long = FptContainer.MAX_CONTAINER,
 )

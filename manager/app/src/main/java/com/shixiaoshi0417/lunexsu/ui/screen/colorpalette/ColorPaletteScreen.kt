@@ -73,6 +73,7 @@ fun ColorPaletteScreen() {
         onSetStatsTopLayout = viewModel::setStatsTopLayout,
         onSetHomeHideWorkingMode = viewModel::setHomeHideWorkingMode,
         onOpenFont = dropUnlessResumed { navigator.push(Route.Font) },
+        onOpenThemeStore = dropUnlessResumed { navigator.push(Route.ThemeStore) },
         onImportTheme = themePack.onImport,
         onResetTheme = themePack.onReset,
         themeImportBusy = themePack.busy,

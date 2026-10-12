@@ -59,6 +59,7 @@ import androidx.compose.material.icons.rounded.FontDownload
 import androidx.compose.material.icons.automirrored.rounded.LabelOff
 import androidx.compose.material.icons.rounded.Pin
 import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material.icons.rounded.Style
 import androidx.compose.material.icons.rounded.Swipe
 import androidx.compose.material.icons.rounded.ViewAgenda
@@ -156,6 +157,15 @@ fun ColorPaletteScreenMaterial(
                 SegmentedColumn(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     content = listOf(
+                        {
+                            SegmentedListItem(
+                                onClick = actions.onOpenThemeStore,
+                                headlineContent = { Text(stringResource(R.string.theme_store_title)) },
+                                supportingContent = { Text(stringResource(R.string.theme_store_subtitle)) },
+                                leadingContent = { Icon(Icons.Rounded.ShoppingBag, null) },
+                                trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null) },
+                            )
+                        },
                         {
                             SegmentedListItem(
                                 onClick = { if (!actions.themeImportBusy) actions.onImportTheme() },

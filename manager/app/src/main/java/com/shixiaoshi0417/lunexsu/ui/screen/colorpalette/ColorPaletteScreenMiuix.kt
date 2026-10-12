@@ -159,6 +159,11 @@ fun ColorPaletteScreenMiuix(
                 item {
                     Card(Modifier.fillMaxWidth().padding(top = 12.dp)) {
                         ArrowPreference(
+                            title = stringResource(R.string.theme_store_title),
+                            summary = stringResource(R.string.theme_store_subtitle),
+                            onClick = actions.onOpenThemeStore,
+                        )
+                        ArrowPreference(
                             title = stringResource(R.string.fpt_import),
                             summary = stringResource(R.string.fpt_summary),
                             onClick = { if (!actions.themeImportBusy) actions.onImportTheme() },

@@ -27,6 +27,7 @@ The Manager package is `com.shixiaoshi0417.lunexsu` (`.pr` for PR builds). It in
 - Once, Timed and Permanent grants, enforced in the actual Root admission path.
 - Material / MIUIX interfaces with FinaSU palettes, fonts, interaction effects and Material home layouts.
 - FinaSU FPT theme import for colors, fonts, home layouts and image backgrounds.
+- FinaSU online theme store: browse, search, filter, download (pause/resume) and apply online themes.
 - Shared LunexSU brand assets and an Android adaptive launcher icon.
 
 ## Compatibility state
@@ -78,7 +79,7 @@ Generation checks, full UID/package/data-directory identity and fail-closed pers
 
 **UI source: [FinaSU (formerly FolkSU) by LyraVoid](https://github.com/LyraVoid/FinaSU).** LunexSU adapts its palettes, font settings, press/motion effects and five Material home layouts: Circle, Grid, Focus, Dashboard and Stats. It retains KernelSU's Material / MIUIX architecture. The reference snapshot is `fa57d340`, with original GPL attribution preserved. See [the UI port inventory](docs/lunexsu-folksu-theme.md).
 
-Theme settings include system/light/dark mode, AMOLED, dynamic colors, custom seed colors, palette styles and font import. FinaSU FPT import supports colors, fonts, home layouts and global/per-page image backgrounds, with metadata and compatibility notices before applying and a restore-default action. The online theme store, video/audio, per-card pictures and custom navigation icons are not ported yet. See [FinaSU FPT import](docs/lunexsu-fpt-import.md) for the workflow and compatibility scope.
+Theme settings include system/light/dark mode, AMOLED, dynamic colors, custom seed colors, palette styles and font import. FinaSU FPT import supports colors, fonts, home layouts and global/per-page image backgrounds, with metadata and compatibility notices before applying and a restore-default action. The theme store browses and downloads online themes from FinaSU's store; a downloaded theme goes through the same confirmation before it applies. Video/audio, per-card pictures and custom navigation icons are not ported yet. See [FinaSU FPT import](docs/lunexsu-fpt-import.md) for the workflow and compatibility scope.
 
 The adaptive launcher icon has a filled background and safe padding; Android supplies the device mask. In-app, website and documentation marks use the same LunexSU artwork.
 

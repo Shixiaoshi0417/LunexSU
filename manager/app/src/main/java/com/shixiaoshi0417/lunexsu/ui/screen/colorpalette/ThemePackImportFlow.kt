@@ -1,6 +1,7 @@
 // FPT import workflow adapted from FinaSU, formerly FolkSU (https://github.com/LyraVoid/FinaSU), GPL-3.0.
 package com.shixiaoshi0417.lunexsu.ui.screen.colorpalette
 
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -21,7 +22,13 @@ import com.shixiaoshi0417.lunexsu.ui.component.dialog.rememberConfirmDialog
 import com.shixiaoshi0417.lunexsu.ui.component.dialog.rememberLoadingDialog
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.ThemePackImporter
 
-internal data class ThemePackActions(val busy: Boolean, val onImport: () -> Unit, val onReset: () -> Unit)
+internal data class ThemePackActions(
+    val busy: Boolean,
+    val onImport: () -> Unit,
+    val onReset: () -> Unit,
+    /** Runs an already available package (e.g. a theme store download) through the same confirmation. */
+    val onImportUri: (Uri) -> Unit,
+)
 
 /** One picker/confirmation pipeline; the existing dialog host selects Material or MIUIX. */
 @Composable
@@ -44,8 +51,8 @@ internal fun rememberThemePackActions(onApplied: () -> Unit): ThemePackActions {
     fun notify(ok: Boolean) {
         Toast.makeText(context, if (ok) R.string.fpt_applied else R.string.fpt_failed, Toast.LENGTH_LONG).show()
     }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null && !busy) {
+    fun importUri(uri: Uri) {
+        if (!busy) {
             busy = true
             scope.launch {
                 try {
@@ -80,6 +87,9 @@ internal fun rememberThemePackActions(onApplied: () -> Unit): ThemePackActions {
             }
         }
     }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) importUri(uri)
+    }
     return ThemePackActions(busy,
         onImport = { if (!busy) picker.launch(arrayOf("*/*")) },
         onReset = {
@@ -96,5 +106,6 @@ internal fun rememberThemePackActions(onApplied: () -> Unit): ThemePackActions {
                 }
             }
         },
+        onImportUri = ::importUri,
     )
 }

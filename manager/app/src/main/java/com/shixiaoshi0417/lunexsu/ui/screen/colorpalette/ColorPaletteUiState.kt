@@ -43,6 +43,7 @@ data class ColorPaletteScreenActions(
     val onSetStatsTopLayout: (String) -> Unit = {},
     val onSetHomeHideWorkingMode: (Boolean) -> Unit = {},
     val onOpenFont: () -> Unit = {},
+    val onOpenThemeStore: () -> Unit = {},
     val onImportTheme: () -> Unit = {},
     val onResetTheme: () -> Unit = {},
     val themeImportBusy: Boolean = false,

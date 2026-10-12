@@ -28,8 +28,8 @@ layouts and fonts to LunexSU's current settings. Image wallpapers support the
 global background and Home/Superuser/Module/Settings page slots. Unsupported
 resources/settings are listed before applying; they cannot change Root grants,
 module behavior, update URLs, language, package identity or the UI architecture.
-The online theme store, video/audio, per-card image surfaces and custom navigation
-icons remain separate upstream systems.
+Video/audio, per-card image surfaces and custom navigation icons remain separate
+upstream systems. The online theme store is ported (see Theme store below).
 
 A field the pack leaves out takes FinaSU's import default rather than keeping the
 previous theme's value: indigo seed with system dynamic colors on, follow-system night
@@ -86,6 +86,29 @@ backgrounds cannot cover the current page. Expected preparation errors are retur
 inside the loading job before being handled; a bad package cannot cancel its dialog
 scope and prevent subsequent imports.
 
+## Theme store
+
+Settings -> Theme -> Theme store lists the online themes of FinaSU's store, which reads
+the FolkPatch-compatible index at `https://folk.mysqil.com/api/themes` (adapted from
+FinaSU's `ThemeStoreViewModel`/`ThemeDownloader`). Both UIs show a staggered grid of
+previews with search, an author filter, a source filter (official / third-party, where
+anything not official, such as `github`, counts as third-party) and a phone/tablet filter.
+The index lists duplicate ids and plain-HTTP previews: the first entry per id is kept, the
+store host's own HTTP links are upgraded to HTTPS, and only HTTPS packages are offered.
+
+A download writes `<name>.fpt` and the `Theme.webp` preview to the private
+`files/themes/<author>/<name>/` directory through a `.tmp` sibling, so an interrupted
+download never looks installed. Downloads can be paused and resumed (HTTP `Range`) or
+cancelled, retry up to three times, reject HTML/JSON error bodies and stop at the
+importer's 1056 MiB container limit. A finished theme writes `theme_meta.json` and appears
+under My themes, which also works offline; a long press deletes it. The view model is
+application-scoped, so a download continues when the store page is closed.
+
+Downloading never changes a setting. Apply hands the downloaded file to the same
+preparation and confirmation as Import FinaSU theme (.fpt): metadata, resource count and
+compatibility notices are shown, and nothing is published until the user confirms. The
+store requests carry no token: FinaSU's signature-gated API token is not used.
+
 ## Navigation
 
 The Material UI follows FinaSU's navigation modes (Settings -> Theme -> Navigation bar
@@ -103,7 +126,8 @@ rail. MIUIX keeps its own bottom bar and floating bottom bar setting.
 
 The archive is flat: directories, traversal, duplicate names, control characters
 and drive-qualified names are rejected before writing. Limits are 128 entries,
-1 MiB configuration, 256 MiB expanded resources and 288 MiB container input.
+1 MiB configuration, 1 GiB expanded resources and 1 GiB + 32 MiB container input,
+matching FinaSU's current limits (store themes reach several hundred megabytes).
 Deeply nested JSON is rejected before object parsing. Image headers and custom
 fonts are checked with Android's actual decoders before confirmation.
 
@@ -115,7 +139,8 @@ theme data disables wallpaper loading rather than following external paths.
 
 Manager wallpaper colors are scoped to MainActivity; module WebUI keeps its
 existing opaque palette. Imports use no shell commands, network downloads or Root
-calls. Theme JSON fields cannot write arbitrary preferences or authorization data.
+calls; only the theme store downloads, and it hands the file to the same importer.
+Theme JSON fields cannot write arbitrary preferences or authorization data.
 
 ## Validation
 
@@ -171,6 +196,8 @@ adb -s <emulator-serial> shell am start -n com.shixiaoshi0417.lunexsu/.ui.ThemeT
 
 - `manager/.../ui/theme/pack/`: FPT container, schema, importer, state and renderer.
 - `manager/.../ui/screen/colorpalette/`: shared import flow and UI entry points.
+- `manager/.../data/themestore/`, `ui/screen/themestore/`, `ui/viewmodel/ThemeStoreViewModel.kt`:
+  theme store index, downloader, Material/MIUIX store and My themes pages.
 - `manager/.../ui/theme/{FontConfig,MaterialTheme,MiuixTheme}.kt`: live theme integration.
 - `manager/.../ui/MainActivity.kt`: wallpaper composition for main pages.
 - `manager/.../ui/component/bottombar/`: navigation modes, floating bar and rail.
