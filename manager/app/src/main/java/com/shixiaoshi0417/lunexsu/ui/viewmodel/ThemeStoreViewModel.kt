@@ -7,15 +7,12 @@ import com.shixiaoshi0417.lunexsu.data.themestore.DownloadProgress
 import com.shixiaoshi0417.lunexsu.data.themestore.DownloadStatus
 import com.shixiaoshi0417.lunexsu.data.themestore.LocalTheme
 import com.shixiaoshi0417.lunexsu.data.themestore.RemoteTheme
-import com.shixiaoshi0417.lunexsu.data.themestore.THEME_SOURCE_THIRD_PARTY
 import com.shixiaoshi0417.lunexsu.data.themestore.THEME_STORE_URL
-import com.shixiaoshi0417.lunexsu.data.themestore.THEME_TYPE_PHONE
 import com.shixiaoshi0417.lunexsu.data.themestore.ThemeDownloader
 import com.shixiaoshi0417.lunexsu.data.themestore.ThemeStoreFilter
-import com.shixiaoshi0417.lunexsu.data.themestore.normalizeStoreUrl
+import com.shixiaoshi0417.lunexsu.data.themestore.matchesRevision
 import com.shixiaoshi0417.lunexsu.data.themestore.parseThemeStoreIndex
 import com.shixiaoshi0417.lunexsu.ksuApp
-import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +24,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.Request
-import org.json.JSONObject
 
 data class ThemeStoreUiState(
     val themes: List<RemoteTheme> = emptyList(),
@@ -41,6 +37,8 @@ data class ThemeStoreUiState(
     val errorMessage: String? = null,
 ) {
     val downloadedIds: Set<String> get() = localThemes.mapTo(HashSet()) { it.id }
+
+    fun hasCurrentRevision(theme: RemoteTheme): Boolean = localThemes.any { it.matchesRevision(theme) }
 
     val filteredLocalThemes: List<LocalTheme>
         get() {
@@ -58,7 +56,7 @@ data class ThemeStoreUiState(
  * Backs the online theme store and the local "my themes" library.
  *
  * Remote themes come from the FolkPatch-compatible index FinaSU uses; a downloaded `.fpt` lands in
- * `filesDir/themes/<author>/<name>/` and is applied through the regular FPT import confirmation,
+ * the completed private library and is applied through the regular FPT import confirmation,
  * so the store never changes a setting on its own.
  */
 class ThemeStoreViewModel : ViewModel() {
@@ -123,12 +121,15 @@ class ThemeStoreViewModel : ViewModel() {
 
     fun startDownload(theme: RemoteTheme) {
         val id = theme.id
-        if (downloadJobs.containsKey(id) || id in _uiState.value.downloadedIds) return
+        if (downloadJobs.containsKey(id) || _uiState.value.hasCurrentRevision(theme)) return
         _uiState.update { it.copy(downloading = it.downloading + id) }
         downloadJobs[id] = viewModelScope.launch {
             try {
                 themeDownloader.downloadTheme(theme).collect { progress ->
-                    if (progress.status == DownloadStatus.COMPLETED) addLocalTheme(theme)
+                    if (progress.status == DownloadStatus.COMPLETED) {
+                        val scanned = withContext(Dispatchers.IO) { themeDownloader.scanLocalThemes() }
+                        _uiState.update { it.copy(localThemes = scanned) }
+                    }
                 }
             } finally {
                 downloadJobs.remove(id)
@@ -152,13 +153,7 @@ class ThemeStoreViewModel : ViewModel() {
     fun deleteTheme(localTheme: LocalTheme) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                val root = themeDownloader.getThemesDir().canonicalFile
-                val directory = File(localTheme.localPath).parentFile?.canonicalFile
-                // Only ever remove a theme directory inside our own library.
-                if (directory != null && directory.parentFile?.parentFile == root) {
-                    directory.deleteRecursively()
-                    directory.parentFile?.takeIf { it.list().isNullOrEmpty() }?.delete()
-                }
+                themeDownloader.deleteLocalTheme(localTheme)
             }
             _uiState.update { state -> state.copy(localThemes = state.localThemes.filterNot { it.id == localTheme.id }) }
         }
@@ -167,65 +162,9 @@ class ThemeStoreViewModel : ViewModel() {
     fun loadLocalThemes() {
         _uiState.update { it.copy(isRefreshingLocal = true) }
         viewModelScope.launch {
-            val scanned = withContext(Dispatchers.IO) { runCatching { scanLocalThemes() }.getOrDefault(emptyList()) }
+            val scanned = withContext(Dispatchers.IO) { runCatching { themeDownloader.scanLocalThemes() }.getOrDefault(emptyList()) }
             _uiState.update { it.copy(localThemes = scanned, isRefreshingLocal = false) }
         }
     }
 
-    private fun scanLocalThemes(): List<LocalTheme> {
-        val themesDir = themeDownloader.getThemesDir()
-        if (!themesDir.isDirectory) return emptyList()
-        val result = mutableListOf<LocalTheme>()
-        themesDir.listFiles()?.sortedBy { it.name }?.forEach { authorDir ->
-            if (!authorDir.isDirectory) return@forEach
-            authorDir.listFiles()?.sortedBy { it.name }?.forEach { themeDir ->
-                if (!themeDir.isDirectory) return@forEach
-                val themeFile = themeDir.listFiles()
-                    ?.firstOrNull { it.isFile && it.name.endsWith(".fpt") }
-                    ?: return@forEach
-                val previewFile = File(themeDir, ThemeDownloader.PREVIEW_FILE_NAME)
-                result += readLocalTheme(themeFile, previewFile.takeIf { it.isFile }, authorDir.name)
-            }
-        }
-        return result.distinctBy { it.id }
-    }
-
-    private fun readLocalTheme(themeFile: File, previewFile: File?, author: String): LocalTheme {
-        val name = themeFile.nameWithoutExtension
-        val json = runCatching {
-            JSONObject(File(themeFile.parentFile, ThemeDownloader.META_FILE_NAME).readText())
-        }.getOrNull()
-        return LocalTheme(
-            id = json?.optString("id")?.takeIf { it.isNotBlank() } ?: "${author}_$name",
-            name = json?.optString("name")?.takeIf { it.isNotBlank() } ?: name,
-            author = json?.optString("author")?.takeIf { it.isNotBlank() } ?: author,
-            description = json?.optString("description", "").orEmpty(),
-            version = json?.optString("version", "").orEmpty(),
-            previewUrl = normalizeStoreUrl(json?.optString("previewUrl", "").orEmpty()),
-            downloadUrl = normalizeStoreUrl(json?.optString("downloadUrl", "").orEmpty()),
-            type = json?.optString("type")?.takeIf { it.isNotBlank() } ?: THEME_TYPE_PHONE,
-            source = json?.optString("source")?.takeIf { it.isNotBlank() } ?: THEME_SOURCE_THIRD_PARTY,
-            localPath = themeFile.absolutePath,
-            previewImagePath = previewFile?.absolutePath.orEmpty(),
-        )
-    }
-
-    private fun addLocalTheme(remoteTheme: RemoteTheme) {
-        val file = themeDownloader.getThemeFilePath(remoteTheme.author, remoteTheme.name)
-        val preview = themeDownloader.getPreviewImagePath(remoteTheme.author, remoteTheme.name)
-        val local = LocalTheme(
-            id = remoteTheme.id,
-            name = remoteTheme.name,
-            author = remoteTheme.author,
-            description = remoteTheme.description,
-            version = remoteTheme.version,
-            previewUrl = remoteTheme.previewUrl,
-            downloadUrl = remoteTheme.downloadUrl,
-            type = remoteTheme.type,
-            source = remoteTheme.source,
-            localPath = file.absolutePath,
-            previewImagePath = if (preview.isFile) preview.absolutePath else "",
-        )
-        _uiState.update { state -> state.copy(localThemes = state.localThemes.filterNot { it.id == local.id } + local) }
-    }
 }

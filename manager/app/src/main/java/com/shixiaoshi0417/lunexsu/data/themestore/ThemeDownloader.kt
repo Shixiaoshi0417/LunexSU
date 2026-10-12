@@ -8,6 +8,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -20,10 +21,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import okhttp3.Request
-import org.json.JSONObject
 
 /**
- * Downloads store themes into `filesDir/themes/<author>/<name>/`.
+ * Downloads store themes into private staging, then publishes a completed revision in `themes`.
  *
  * The `.fpt` payload counts for 70% of the progress and the `Theme.webp` preview for the remaining
  * 30%; a failed preview is not fatal. Downloads can be paused, resumed (HTTP `Range`) and cancelled,
@@ -31,6 +31,10 @@ import org.json.JSONObject
  * applied here: the package goes through the regular FPT import confirmation afterwards.
  */
 class ThemeDownloader(private val context: Context) {
+
+    private val library = ThemeLibrary(File(context.filesDir, "themes"))
+    internal fun scanLocalThemes(): List<LocalTheme> = library.scan()
+    internal fun deleteLocalTheme(theme: LocalTheme) = library.remove(theme)
 
     private val client = ksuApp.okhttpClient.newBuilder()
         .cache(null)
@@ -45,17 +49,6 @@ class ThemeDownloader(private val context: Context) {
     private val _downloadProgress = MutableStateFlow<Map<String, DownloadProgress>>(emptyMap())
     val downloadProgress: StateFlow<Map<String, DownloadProgress>> = _downloadProgress.asStateFlow()
 
-    fun getThemesDir(): File = File(context.filesDir, THEMES_DIR_NAME)
-
-    fun getThemePath(author: String, name: String): File =
-        File(getThemesDir(), "${sanitizeFilename(author)}/${sanitizeFilename(name)}")
-
-    fun getThemeFilePath(author: String, name: String): File =
-        File(getThemePath(author, name), "${sanitizeFilename(name)}.fpt")
-
-    fun getPreviewImagePath(author: String, name: String): File =
-        File(getThemePath(author, name), PREVIEW_FILE_NAME)
-
     fun pauseDownload(themeId: String) {
         downloadTasks[themeId]?.isPaused = true
     }
@@ -65,8 +58,7 @@ class ThemeDownloader(private val context: Context) {
         // Signal first so the running writer stops at its next chunk, then drop the partial files.
         task?.isCancelled = true
         if (task != null) {
-            val dir = getThemePath(task.theme.author, task.theme.name)
-            if (dir.exists() && !File(dir, META_FILE_NAME).exists()) dir.deleteRecursively()
+            task.stage.deleteRecursively()
         }
         _downloadProgress.update { it - themeId }
     }
@@ -78,7 +70,8 @@ class ThemeDownloader(private val context: Context) {
             emit(DownloadProgress(themeId, 0f, 0f, 0f, DownloadStatus.PENDING))
             return@flow
         }
-        val task = existing ?: DownloadTask(theme).also { downloadTasks[themeId] = it }
+        val task = existing ?: DownloadTask(File(context.filesDir, "theme_downloads/${UUID.randomUUID()}"))
+            .also { downloadTasks[themeId] = it }
         task.isPaused = false
 
         semaphore.withPermit {
@@ -94,7 +87,7 @@ class ThemeDownloader(private val context: Context) {
 
                 val themeResult = downloadFileWithRetry(
                     url = theme.downloadUrl,
-                    file = getThemeFilePath(theme.author, theme.name),
+                    file = File(task.stage, "${sanitizeFilename(theme.name)}.fpt"),
                     taskId = themeId,
                     isThemeFile = true,
                 ) { progress ->
@@ -116,7 +109,7 @@ class ThemeDownloader(private val context: Context) {
                 if (theme.previewUrl.isNotBlank() && isSafeDownloadUrl(theme.previewUrl)) {
                     val previewResult = downloadFileWithRetry(
                         url = theme.previewUrl,
-                        file = getPreviewImagePath(theme.author, theme.name),
+                        file = File(task.stage, ThemeLibrary.PREVIEW_FILE_NAME),
                         taskId = themeId,
                         isThemeFile = false,
                     ) { progress ->
@@ -131,7 +124,7 @@ class ThemeDownloader(private val context: Context) {
                 }
 
                 if (task.isCancelled) return@withPermit
-                saveThemeMetadata(theme)
+                library.publish(task.stage, theme)
                 updateProgress(themeId, 1f, 1f, 1f, DownloadStatus.COMPLETED)
                 emit(current(themeId))
                 downloadTasks.remove(themeId)
@@ -149,7 +142,7 @@ class ThemeDownloader(private val context: Context) {
     private fun fail(themeId: String, error: String?) {
         updateProgress(themeId, 0f, 0f, 0f, DownloadStatus.FAILED, error)
         // Drop the task so a later retry starts clean instead of reporting "already downloading".
-        downloadTasks.remove(themeId)
+        downloadTasks.remove(themeId)?.stage?.deleteRecursively()
     }
 
     private suspend fun downloadFileWithRetry(
@@ -266,23 +259,6 @@ class ThemeDownloader(private val context: Context) {
         }
     }
 
-    private fun saveThemeMetadata(theme: RemoteTheme) {
-        val json = JSONObject().apply {
-            put("id", theme.id)
-            put("name", theme.name)
-            put("author", theme.author)
-            put("description", theme.description)
-            put("version", theme.version)
-            put("type", theme.type)
-            put("source", theme.source)
-            put("previewUrl", theme.previewUrl)
-            put("downloadUrl", theme.downloadUrl)
-        }
-        val metaFile = File(getThemePath(theme.author, theme.name), META_FILE_NAME)
-        ensureDirectory(metaFile.parentFile ?: return)
-        metaFile.writeText(json.toString(2))
-    }
-
     private fun ensureDirectory(dir: File) {
         if (dir.isDirectory) return
         if (dir.exists()) dir.delete()
@@ -300,7 +276,7 @@ class ThemeDownloader(private val context: Context) {
         val paused: Boolean = false,
     )
 
-    private class DownloadTask(val theme: RemoteTheme) {
+    private class DownloadTask(val stage: File) {
         @Volatile var isCancelled = false
         @Volatile var isPaused = false
     }
@@ -311,9 +287,6 @@ class ThemeDownloader(private val context: Context) {
     private class FatalDownloadException(message: String) : IOException(message)
 
     companion object {
-        const val META_FILE_NAME = "theme_meta.json"
-        const val PREVIEW_FILE_NAME = "Theme.webp"
-        private const val THEMES_DIR_NAME = "themes"
         private const val DOWNLOAD_TIMEOUT_SEC = 300L
         private const val BUFFER_SIZE = 8192
         private const val MAX_RETRIES = 3

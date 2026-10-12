@@ -467,7 +467,7 @@ private fun ThemeStoreDialogsMiuix(state: ThemeStoreScreenState, actions: ThemeS
         onDismissRequest = { actions.onSelect(null) },
     ) {
         selected?.let { theme ->
-            val downloaded = theme.id in state.ui.downloadedIds
+            val downloaded = state.ui.hasCurrentRevision(theme)
             ThemeDetailsMiuix(theme.author, theme.version, theme.type, theme.source, theme.description)
             DialogButtons(
                 dismissText = stringResource(R.string.theme_store_cancel),

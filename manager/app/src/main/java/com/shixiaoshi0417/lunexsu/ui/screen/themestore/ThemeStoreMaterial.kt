@@ -453,7 +453,7 @@ private fun ThemeDetailsMaterial(author: String, version: String, type: String, 
 @Composable
 private fun ThemeStoreDialogsMaterial(state: ThemeStoreScreenState, actions: ThemeStoreScreenActions) {
     state.selected?.let { theme ->
-        val downloaded = theme.id in state.ui.downloadedIds
+        val downloaded = state.ui.hasCurrentRevision(theme)
         ExpressiveDialog(
             onDismissRequest = { actions.onSelect(null) },
             title = { Text(theme.name) },

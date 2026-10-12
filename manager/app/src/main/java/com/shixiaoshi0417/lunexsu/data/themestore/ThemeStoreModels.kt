@@ -64,6 +64,11 @@ data class LocalTheme(
     val previewImagePath: String,
 )
 
+/** Stable IDs alone cannot identify a downloaded revision; store versions are opaque strings. */
+fun LocalTheme.matchesRevision(remote: RemoteTheme): Boolean =
+    id == remote.id && version == remote.version &&
+        normalizeStoreUrl(downloadUrl) == normalizeStoreUrl(remote.downloadUrl)
+
 data class DownloadProgress(
     val themeId: String,
     val fileProgress: Float,

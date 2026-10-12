@@ -96,13 +96,21 @@ anything not official, such as `github`, counts as third-party) and a phone/tabl
 The index lists duplicate ids and plain-HTTP previews: the first entry per id is kept, the
 store host's own HTTP links are upgraded to HTTPS, and only HTTPS packages are offered.
 
-A download writes `<name>.fpt` and the `Theme.webp` preview to the private
-`files/themes/<author>/<name>/` directory through a `.tmp` sibling, so an interrupted
-download never looks installed. Downloads can be paused and resumed (HTTP `Range`) or
+A download stages `<name>.fpt` and the `Theme.webp` preview under private
+`files/theme_downloads/`, using `.tmp` siblings. Only after the metadata completion
+marker is written is the entire directory atomically renamed into
+`files/themes/<ID hash>/<revision UUID>/`. Existing completed libraries are still read,
+but directories without valid completion metadata are never listed as installed.
+Downloads can be paused and resumed (HTTP `Range`) or
 cancelled, retry up to three times, check FPT minimum size/AES block alignment and stop at the
 importer's 1056 MiB container limit. A finished theme writes `theme_meta.json` and appears
 under My themes, which also works offline; a long press deletes it. The view model is
 application-scoped, so a download continues when the store page is closed.
+
+An installed ID is current only when its version and download URL match the index.
+A changed version or URL offers Download in both UIs. The old revision stays available
+until the update is published; failure or cancellation cannot overwrite its payload or
+metadata. Publication replaces the local entry by stable ID, without duplicate entries.
 
 Download validation follows FinaSU `d869a70e`: the 16-byte IV is unrestricted,
 including all-zero or printable bytes. No IV-content heuristic is used; the
