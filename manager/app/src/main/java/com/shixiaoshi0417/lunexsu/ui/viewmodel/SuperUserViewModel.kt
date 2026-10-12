@@ -396,7 +396,7 @@ class SuperUserViewModel(
     }
 
     /**
-     * Once and Timed grants end inside Core without any UI event. Re-read only those
+     * App-run and Timed grants end inside Core without any UI event. Re-read only those
      * profiles and refresh the list once one of them changed state.
      */
     suspend fun refreshTemporaryGrants() {

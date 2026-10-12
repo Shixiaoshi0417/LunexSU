@@ -16,7 +16,7 @@
  */
 struct ksu_authorization_state {
     __u32 mode;
-    __u32 once; /* 0: spent/inactive, 1: available, 2: reserved */
+    __u32 once; /* 0: inactive, 1: granted for one App run (tracked separately) */
     __u64 deadline_ns;
     __u64 duration_seconds;
 };
@@ -59,15 +59,14 @@ static inline bool ksu_auth_reserve(struct ksu_authorization_state *s, __u64 now
 {
     if (!ksu_auth_available(s, now) || (s->mode == KSU_AUTH_ONCE && !su_exec))
         return false;
-    if (s->mode == KSU_AUTH_ONCE)
-        KSU_AUTH_WRITE(s->once, 2);
     return true;
 }
 
 static inline void ksu_auth_finish(struct ksu_authorization_state *s, bool success)
 {
-    if (s->mode == KSU_AUTH_ONCE && s->once == 2)
-        KSU_AUTH_WRITE(s->once, success ? 0 : 1);
+    /* Completion does not consume a run-scoped grant or restore a revoked one. */
+    (void)s;
+    (void)success;
 }
 
 /* Module umount follows the active grant, not the configured profile: an app

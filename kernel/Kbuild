@@ -33,6 +33,7 @@ kernelsu-objs += manager/throne_tracker.o
 endif
 
 kernelsu-objs += policy/allowlist.o
+kernelsu-objs += policy/app_session.o
 kernelsu-objs += policy/app_profile.o
 kernelsu-objs += policy/feature.o
 
@@ -87,6 +88,11 @@ endif
 endif
 
 ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include
+
+# sched_process_exit gained group_dead; vendor kernels may backport the change.
+ifneq ($(shell sed -n '/TRACE_EVENT(sched_process_exit,/,/TP_ARGS/p' $(srctree)/include/trace/events/sched.h | grep -c group_dead),0)
+ccflags-y += -DKSU_SCHED_EXIT_GROUP_DEAD
+endif
 
 obj-$(CONFIG_KSU) += kernelsu.o
 

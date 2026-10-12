@@ -47,13 +47,13 @@ int main(void)
     assert(!ksu_auth_reserve(&state, 10, false)); /* ioctl cannot bypass su */
     assert(ksu_auth_available(&state, 10));
     assert(ksu_auth_reserve(&state, 10, true));
-    assert(!ksu_auth_reserve(&state, 10, true));
-    ksu_auth_finish(&state, false); /* failed prepare/exec refunds */
+    assert(ksu_auth_reserve(&state, 10, true)); /* concurrent requests share the App run */
+    ksu_auth_finish(&state, false); /* failed exec cannot consume the run */
     assert(ksu_auth_reserve(&state, 10, true));
     ksu_auth_finish(&state, true);
-    assert(!ksu_auth_available(&state, 10));
-    ksu_auth_finish(&state, false); /* duplicate completion cannot refund */
-    assert(!ksu_auth_available(&state, 10));
+    assert(ksu_auth_available(&state, 10));
+    ksu_auth_finish(&state, false); /* duplicate completion does not change the run */
+    assert(ksu_auth_available(&state, 10));
     assert(ksu_auth_grant(&state, KSU_AUTH_ONCE, 0, 10));
     ksu_auth_invalidate(&state); /* reboot or uninstall */
     assert(state.mode == KSU_AUTH_ONCE && !ksu_auth_available(&state, 0));
@@ -95,6 +95,7 @@ int main(void)
     assert(!ksu_auth_should_umount(true, ksu_auth_available(&state, 10), true, false, true));
     assert(ksu_auth_reserve(&state, 10, true));
     ksu_auth_finish(&state, true);
+    ksu_auth_invalidate(&state); /* session tracker ends the App run, not a successful su */
     assert(ksu_auth_should_umount(true, ksu_auth_available(&state, 10), true, false, true));
     assert(ksu_auth_grant(&state, KSU_AUTH_TIMED, 300, start));
     assert(!ksu_auth_should_umount(true, ksu_auth_available(&state, start), true, false, true));
@@ -123,12 +124,12 @@ int main(void)
         assert(ksu_auth_grant(&shared, KSU_AUTH_ONCE, 0, 10));
         for (int i = 0; i < 64; ++i) assert(!pthread_create(&workers[i], NULL, request, NULL));
         for (int i = 0; i < 64; ++i) assert(!pthread_join(workers[i], NULL));
-        assert(successes == 1);
+        assert(successes == 64000);
     }
     /* The upstream profile ABI stays unchanged. New ioctls carry their size. */
     _Static_assert(sizeof(struct app_profile) == 784, "v4 ABI changed");
     _Static_assert(sizeof(struct ksu_auth_profile_cmd) == 824, "authorization ABI");
     assert(_IOC_SIZE(KSU_IOCTL_GET_AUTH_PROFILE) == sizeof(struct ksu_auth_profile_cmd));
-    puts("PASS: once reservation/refund, concurrency (1.28M attempts), timed boundary/renewal/reboot, umount, validation and UAPI ABI");
+    puts("PASS: repeated/concurrent run-scoped su (1.28M attempts), timed boundary/renewal/reboot, umount, validation and UAPI ABI");
     return 0;
 }

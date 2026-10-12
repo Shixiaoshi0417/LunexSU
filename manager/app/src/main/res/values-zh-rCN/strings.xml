@@ -355,7 +355,7 @@
     <string name="settings_color_contrast_high">高</string>
     <string name="authorization_mode">Root 授权有效期</string>
     <string name="authorization_permanent">永久</string>
-    <string name="authorization_once">本次</string>
+    <string name="authorization_once">本次运行</string>
     <string name="authorization_timed">限时</string>
     <string name="authorization_remaining">剩余有效期：%1$d 秒</string>
     <string name="authorization_minutes">%1$d 分钟</string>
@@ -364,9 +364,9 @@
     <string name="authorization_renew">从现在起续期</string>
     <string name="authorization_revoke">提前撤销</string>
     <string name="authorization_revoked">未授权</string>
-    <string name="authorization_inactive">已到期或已消耗，请重新授权</string>
+    <string name="authorization_inactive">本次运行已结束或已过期，可重新授权</string>
     <string name="authorization_busy">正在启动 su 进程</string>
-    <string name="authorization_boot_scope">本次和限时授权重启后失效，已启动的 Root 进程继续运行。共享 UID 的 App 共用此授权。</string>
+    <string name="authorization_boot_scope">单次授权覆盖应用的一次运行：可先对未启动的应用授权，应用最后一个进程退出后失效。单次与限时授权也会在重启后失效，已启动的 Root 进程会继续运行。共用 UID 的应用共用此授权。</string>
     <string name="authorization_permanent_only">当前内核或系统 UID 仅支持永久授权。</string>
     <string name="authorization_saved">授权已保存并重新读取</string>
     <string name="authorization_read_failed">无法读取授权（错误 %1$d），请刷新后再修改。</string>

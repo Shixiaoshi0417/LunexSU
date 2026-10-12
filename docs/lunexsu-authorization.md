@@ -31,14 +31,21 @@ localized strings, and `tests/authorization`. Implementation is on
 - Permanent preserves existing pre-authorization. Manager and already Root
   processes in the KSU domain retain upstream trusted behavior. Temporary
   grants are offered only to installed App UIDs, not the always-trusted Manager.
-- Once reserves its one credit under the allowlist mutex. Success means
-  **exec into ksud succeeded with the selected Root profile**, i.e. one new
-  Root `su` process has started. A later invalid shell argument, shell exec
-  error cannot refund already-obtained Root access. A required su-session fd
-  allocation failure kills the new temporary task before any userspace
-  instruction runs and refunds its reservation.
-  GRANT_ROOT cannot consume/use Once: it is not an exec into su. Failed prepare
-  or exec refunds; a failed temporary exec is SIGKILLed before it can return
+- Once now means **one App run**, not one `su` exec. Preauthorization while the
+  App is stopped binds exactly its next run; authorization while running binds
+  the current run. All ordinary tasks of the full Android UID (including threads
+  and shared-UID packages) are tracked through specialization, fork and exit.
+  Repeated and concurrent `su` calls remain allowed during that run. The last
+  ordinary App task exiting ends admission immediately, without Manager polling;
+  a new run has a different epoch and cannot inherit an old grant. Swiping away
+  a recent task does not necessarily kill background services, so a surviving
+  ordinary App process keeps the run active.
+  Root tasks admitted through su leave the ordinary-task count before returning
+  to userspace; they and their descendants do not extend the App run, but are not
+  killed when the App exits. Missing lifecycle hooks or tracking allocation failure
+  fail closed for Once (Permanent and Timed remain available).
+  GRANT_ROOT still cannot use Once: it is not an exec into su. A failed temporary
+  exec is SIGKILLed before it can return
   to userspace with changed credentials/seccomp/namespaces. A refused escape
   (for example a process that disabled re-escalation) changes nothing, so the
   App only receives the error and is not killed. Successful Root
@@ -47,11 +54,12 @@ localized strings, and `tests/authorization`. Implementation is on
   deadline. Sleep counts. Changing wall-clock time cannot extend a grant.
   Renewal starts a new duration from the current boottime (not from the old
   deadline). UI presets are 5/15/60 minutes; custom values are 1-525600 minutes.
-- Once and Timed are **boot-scoped**. Reboot (or module unload/reload) ends
-  them: the App restores as not authorized with the default non-root profile
-  and needs a new grant. Soft Android framework restart within the same kernel
-  does not reset boottime.
-- KEEP edits cannot rearm, renew, or change mode. Creating an authorized entry
+- Once is **App-run scoped** and additionally boot-scoped; Timed is boot-scoped.
+  Reboot (or module unload/reload) ends both: the App restores as not authorized
+  with the default non-root profile and needs a new grant. Soft Android framework
+  restart within the same kernel does not reset boottime, but it does end every
+  App run, so a Once grant then needs a new grant as well.
+- KEEP edits cannot rearm an ended App run, renew, or change mode. Creating an authorized entry
   or changing `allow_su` from false to true requires explicit GRANT, including
   Permanent. Legacy SET_APP_PROFILE keeps its existing Permanent semantics.
   Revocation invalidates runtime policy. Stale generation tokens fail with
@@ -127,8 +135,8 @@ UIDs after reboot. This is an availability cost rather than unintended Root.
 
 ## Validation
 
-Host tests compile the production state machine, including 64-thread Once
-contention, failure refund, exact expiry boundaries, renewal, reboot invalidation,
+Host tests compile the production state machine, including 64-thread repeated
+run-scoped admission and App-run epoch transitions, exact expiry boundaries, renewal, reboot invalidation,
 invalid durations/overflow and v4/new ioctl layout assertions:
 
 ```sh

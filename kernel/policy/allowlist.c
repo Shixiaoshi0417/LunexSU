@@ -26,6 +26,7 @@
 #include "runtime/ksud_boot.h"
 #include "selinux/selinux.h"
 #include "policy/allowlist.h"
+#include "policy/app_session.h"
 #include "manager/manager_identity.h"
 #include "infra/su_mount_ns.h"
 #include "policy/authorization_state.h"
@@ -74,6 +75,7 @@ struct perm_data {
     unsigned int in_flight;
     bool revoked;
     struct file *data_identity;
+    u64 once_epoch;
 };
 
 // protected by rcu
@@ -154,7 +156,8 @@ static bool auth_available_rcu(struct perm_data *p)
         .once = READ_ONCE(p->auth.once),
         .deadline_ns = READ_ONCE(p->auth.deadline_ns),
     };
-    return !READ_ONCE(p->revoked) && p->profile.allow_su && ksu_auth_available(&state, ktime_get_boottime_ns());
+    return !READ_ONCE(p->revoked) && p->profile.allow_su && ksu_auth_available(&state, ktime_get_boottime_ns()) &&
+           (state.mode != KSU_AUTH_ONCE || ksu_app_session_available(p->profile.curr_uid, p->once_epoch, false));
 }
 
 void ksu_show_allow_list(void)
@@ -305,6 +308,7 @@ static int set_profile(struct app_profile *profile, struct ksu_auth_profile_cmd 
             kref_init(&np->ref);
             memcpy(&np->profile, profile, sizeof(*profile));
             np->auth = p->auth;
+            np->once_epoch = p->once_epoch;
             if (p->data_identity)
                 np->data_identity = get_file(p->data_identity);
             goto publish;
@@ -366,6 +370,11 @@ publish:
                 if (np->data_identity)
                     fput(np->data_identity);
                 np->data_identity = identity;
+            }
+            if (cmd->mode == KSU_AUTH_ONCE) {
+                result = ksu_app_session_bind(profile->curr_uid, &np->once_epoch);
+                if (result)
+                    goto free_new;
             }
         } else if (cmd->mode != np->auth.mode) {
             result = -EINVAL;
@@ -466,8 +475,6 @@ int ksu_get_auth_profile(struct ksu_auth_profile_cmd *cmd)
             p->generation = ++authorization_generation;
             cmd->generation = p->generation;
         }
-        if (p->auth.mode == KSU_AUTH_ONCE && p->auth.once == 2)
-            cmd->state = KSU_AUTH_BUSY;
         if (cmd->state == KSU_AUTH_ACTIVE && p->auth.mode == KSU_AUTH_TIMED && p->auth.deadline_ns > now)
             cmd->remaining_seconds = (p->auth.deadline_ns - now + 999999999ULL) / 1000000000ULL;
         ret = 0;
@@ -493,6 +500,8 @@ int ksu_authorization_begin(uid_t uid, bool su_exec, struct ksu_auth_lease *leas
         if (p->profile.curr_uid != uid)
             continue;
         if (!auth_available_rcu(p))
+            goto out;
+        if (p->auth.mode == KSU_AUTH_ONCE && !ksu_app_session_available(uid, p->once_epoch, true))
             goto out;
         if (p->auth.mode != KSU_AUTH_PERMANENT && !same_install(p)) {
             ksu_auth_invalidate(&p->auth);
@@ -527,11 +536,13 @@ void ksu_authorization_finish(struct ksu_auth_lease *lease, bool success)
     struct perm_data *p = lease->entry;
     if (!p)
         return;
+    /* A Root session and its future descendants never extend the App run. Only an
+     * admitted lease carries a tracked ordinary App task, so bypass paths skip this. */
+    if (success)
+        ksu_app_session_leave_current();
     mutex_lock(&allowlist_mutex);
     if (!p->revoked) {
         ksu_auth_finish(&p->auth, success);
-        if (p->auth.mode == KSU_AUTH_ONCE)
-            p->generation = ++authorization_generation;
     }
     --p->in_flight;
     mutex_unlock(&allowlist_mutex);
@@ -1176,6 +1187,7 @@ void ksu_prune_allowlist(bool (*is_uid_valid)(uid_t, char *, void *), void *data
 void __init ksu_allowlist_init(void)
 {
     init_default_profiles();
+    ksu_app_session_init();
 }
 
 void __exit ksu_allowlist_exit(void)
@@ -1183,6 +1195,8 @@ void __exit ksu_allowlist_exit(void)
     struct perm_data *np = NULL;
     struct hlist_node *tmp;
     int i;
+
+    ksu_app_session_exit();
 
     // free allowlist
     mutex_lock(&allowlist_mutex);

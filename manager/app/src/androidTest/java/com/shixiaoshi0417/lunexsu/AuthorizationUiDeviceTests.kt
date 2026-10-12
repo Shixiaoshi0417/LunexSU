@@ -91,7 +91,7 @@ object AuthorizationUiDeviceTests {
                         if (ui == "miuix") click("Root authorization duration", "Root 授权有效期")
                         click(*names)
                     }
-                    select("Once", "本次")
+                    select("Once per app run", "本次运行")
                     click("Grant / apply", "授权 / 应用")
                     awaitMode(if (reject) 0 else 1, true, if (reject) -5 else 0)
                     passed++

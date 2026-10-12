@@ -7,7 +7,7 @@ import sys
 
 root = Path(__file__).resolve().parents[2]
 with tempfile.TemporaryDirectory(prefix="lunexsu-auth-") as output:
-    for name in ("state_test", "persistence_test"):
+    for name in ("state_test", "session_test", "persistence_test"):
         exe = Path(output) / name
         subprocess.run([
             os.environ.get("CC", "gcc"), "-std=c11", "-O2", "-Wall", "-Wextra", "-Werror",
@@ -20,3 +20,4 @@ with tempfile.TemporaryDirectory(prefix="lunexsu-auth-") as output:
                     str(root / "tests/authorization/compat_test.cc"), "-o", str(exe)], check=True)
     subprocess.run([str(exe)], check=True)
 subprocess.run([sys.executable, str(root / "tests/authorization/run_path_tests.py")], check=True)
+subprocess.run([sys.executable, str(root / "tests/authorization/run_session_tracker_tests.py")], check=True)

@@ -361,7 +361,7 @@
     <string name="settings_color_contrast_high">High</string>
     <string name="authorization_mode">Root authorization duration</string>
     <string name="authorization_permanent">Permanent</string>
-    <string name="authorization_once">Once</string>
+    <string name="authorization_once">Once per app run</string>
     <string name="authorization_timed">Timed</string>
     <string name="authorization_remaining">Remaining: %1$d seconds</string>
     <string name="authorization_minutes">%1$d min</string>
@@ -370,9 +370,9 @@
     <string name="authorization_renew">Renew from now</string>
     <string name="authorization_revoke">Revoke</string>
     <string name="authorization_revoked">Not authorized</string>
-    <string name="authorization_inactive">Expired or consumed — grant again to reauthorize</string>
+    <string name="authorization_inactive">Ended or expired — grant again to reauthorize</string>
     <string name="authorization_busy">A su process is starting</string>
-    <string name="authorization_boot_scope">Once and Timed expire on reboot. Existing Root processes remain running. Shared UID apps share this grant.</string>
+    <string name="authorization_boot_scope">Once covers one app run: it can be granted while the app is stopped and ends when the app’s last process exits. Once and Timed grants also expire on reboot. Existing Root processes keep running. Apps sharing a UID share this grant.</string>
     <string name="authorization_permanent_only">This kernel or system UID only supports Permanent authorization.</string>
     <string name="authorization_saved">Authorization saved and reloaded</string>
     <string name="authorization_read_failed">Unable to read authorization (error %1$d). Refresh before editing.</string>

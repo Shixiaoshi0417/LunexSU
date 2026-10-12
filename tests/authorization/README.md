@@ -29,13 +29,16 @@ For failure/ioctl coverage compile `exec_probe.c` with the NDK clang and `-I.`.
 Copy it into a location executable by `run-as your.test.app` (the fixture's own
 data directory is preferable); pass `--probe /data/user/0/your.test.app/exec_probe`.
 `fault` forces exec argv-copy failure after Root profile application. Verify the
-process dies and the next request still has its credit; `ioctl` verifies Once
+process restarts (a new App run needs a new grant); `ioctl` verifies Once
 cannot be obtained through GRANT_ROOT. Skipped probe tests are reported.
 
 Additional required release/device cases (manual to avoid destructive harness
 operations on real devices):
 
-- Grant unused Once / active Timed, hard reboot, reopen the page: the App shows
+- Grant Once while the App is stopped, start it, run several `su` commands, then stop
+  every one of its processes: the grant works for the whole run and is reverted at the
+  latest exit without any Manager polling.
+- Grant unused Once (App never started) / active Timed, hard reboot, reopen the page: the App shows
   as not authorized, and new su is denied. Permanent survives. Also unload/reload
   the module if supported; framework soft reboot preserves kernel boottime.
 - While Timed is active, move wall clock forward/backward and suspend; duration
@@ -47,7 +50,7 @@ operations on real devices):
   invalidates. An APK update retaining its directory does not invalidate.
   Also check `uninstall -k` and per-user uninstall while another user retains
   the package: retained UID/package/data inode can retain the original grant
-  until its existing deadline/credit is exhausted if global pruning does not
+  until its existing deadline/App run ends if global pruning does not
   remove the entry. No new duration or credit should appear.
 - Use another Android user with the same package/appId: grants and quotas are
   separate. Remove that user: its directory identity fails closed. Shared UID

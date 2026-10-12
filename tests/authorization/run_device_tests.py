@@ -52,6 +52,21 @@ def su(_=None):
     return call.returncode == 0 and call.stdout.strip() == "0"
 
 
+def su_count(count):
+    \"\"\"One App-run process that issues `count` sequential su commands.
+    Once is run-scoped, so they must all succeed inside a single run; leaving it ends the grant.\"\"\"
+    command = "; ".join(["/system/bin/su -c 'id -u'"] * count)
+    call = subprocess.run(adb + ["shell", "run-as", args.fixture, "--user", str(args.user), "sh", "-c", "'%s'" % command],
+        text=True, capture_output=True, timeout=120)
+    return call.returncode == 0 and call.stdout.split() == ["0"] * count
+
+
+def live_process(seconds):
+    \"\"\"Keep one ordinary App-run process alive so the run (and its grant) stays active.\"\"\"
+    return subprocess.Popen(adb + ["shell", "run-as", args.fixture, "--user", str(args.user), "sleep", str(seconds)],
+        text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+
 original = control("inspect")
 if original[4] != "false":
     raise SystemExit("Refusing a fixture with existing authorization. Revoke it explicitly first.")
@@ -64,25 +79,46 @@ try:
     control("reject_identity")
     control("grant", mode=1)
     assert control("inspect")[1:3] == ("1", "1"), "Permanent-to-Once did not save/read back"
-    with ThreadPoolExecutor(max_workers=32) as pool:
-        successes = sum(pool.map(su, range(32)))
-    assert successes == 1, f"Once admitted {successes} successful Root processes"
-    assert not su()
+    # Run-scoped: repeated and concurrent su succeed while the App has live processes.
+    assert su_count(4), "Once did not sustain repeated su inside one App run"
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        successes = sum(pool.map(su, range(16)))
+    assert successes == 16, f"Once admitted {successes} of 16 concurrent Root processes"
+    assert not su(), "Once survived the end of the App run"
+    control("grant", mode=1)
+    alive = live_process(20)
+    try:
+        assert su(), "pregrant was not bound to the running App"
+        assert su(), "second su inside the same App run was denied"
+    finally:
+        alive.terminate()
+        alive.wait(timeout=30)
+    assert not su(), "Once survived after the last App process exited"
     control("edit")
-    assert not su(), "metadata edit restored a consumed Once grant"
+    assert not su(), "metadata edit restored an ended Once grant"
     control("stale")
-    assert not su(), "stale writer restored a consumed Once grant"
+    assert not su(), "stale writer restored an ended Once grant"
     if args.probe:
         control("grant", mode=1)
         attempt = subprocess.run(adb + ["shell", "run-as", args.fixture, "--user", str(args.user), args.probe, "ioctl"],
             text=True, capture_output=True, timeout=30)
         assert attempt.returncode != 0 and "denied:" in attempt.stdout
-        assert control("inspect")[2] == "1", "ioctl consumed Once"
+        assert control("inspect")[2] == "1", "ioctl consumed the Once grant"
         attempt = subprocess.run(adb + ["shell", "run-as", args.fixture, "--user", str(args.user), args.probe, "fault"],
             text=True, capture_output=True, timeout=30)
         assert attempt.returncode != 0 and "unexpected return" not in attempt.stderr
-        assert control("inspect")[2] == "1", "failed exec did not refund"
-        assert su() and not su()
+        assert control("inspect")[2] == "1", "failed exec consumed the Once grant"
+        assert su_count(2)
+    control("grant", mode=1)
+    suspended = live_process(30)
+    try:
+        assert su(), "Once not usable while the App runs"
+        suspended.kill()
+        suspended.wait(timeout=30)
+        assert not su(), "Once survived a killed App run"
+    finally:
+        if suspended.poll() is None:
+            suspended.kill()
     control("grant", mode=2, seconds=3)
     assert su() and su(), "Timed did not permit repeated su"
     time.sleep(3.2)
@@ -100,6 +136,7 @@ try:
     control("revoke")
     control("keep_grant")
     assert not su(), "KEEP restored a revoked Permanent authorization"
-    print("PASS: actual su contention, expiry/renew/revoke/KEEP/stale writes, Permanent" + (", failed exec/ioctl" if args.probe else " (probe tests skipped)"))
+    print("PASS: run-scoped repeated/concurrent su, App-run end, expiry/renew/revoke/KEEP/stale writes, Permanent"
+          + (", failed exec/ioctl" if args.probe else " (probe tests skipped)"))
 finally:
     control("revoke")
