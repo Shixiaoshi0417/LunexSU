@@ -90,7 +90,10 @@ endif
 ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include
 
 # sched_process_exit gained group_dead; vendor kernels may backport the change.
-ifneq ($(shell sed -n '/TRACE_EVENT(sched_process_exit,/,/TP_ARGS/p' $(srctree)/include/trace/events/sched.h | grep -c group_dead),0)
+# Plain-name grep only: parentheses or commas here would break make's parsing of
+# the function call, and the assignment keeps the value out of ifneq's arguments.
+KSU_SCHED_EXIT_GROUP_DEAD := $(shell grep -A2 sched_process_exit $(srctree)/include/trace/events/sched.h 2>/dev/null | grep -c group_dead)
+ifneq ($(KSU_SCHED_EXIT_GROUP_DEAD),0)
 ccflags-y += -DKSU_SCHED_EXIT_GROUP_DEAD
 endif
 
