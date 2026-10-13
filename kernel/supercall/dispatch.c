@@ -399,6 +399,10 @@ static int do_set_app_profile(void __user *arg)
 
 static int do_get_auth_profile(void __user *arg)
 {
+#ifdef CONFIG_KSU_DISABLE_POLICY
+    /* Mirror SET: Manager reads EOPNOTSUPP as "no authorization API", not as an empty store. */
+    return -EOPNOTSUPP;
+#else
     struct ksu_auth_profile_cmd cmd;
     int ret;
     if (copy_from_user(&cmd, arg, sizeof(cmd)))
@@ -409,6 +413,7 @@ static int do_get_auth_profile(void __user *arg)
     if (!ret && copy_to_user(arg, &cmd, sizeof(cmd)))
         return -EFAULT;
     return ret;
+#endif
 }
 
 static int do_set_auth_profile(void __user *arg)
