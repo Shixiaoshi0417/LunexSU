@@ -1,6 +1,6 @@
 package com.shixiaoshi0417.lunexsu.ui.screen.flash
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-import com.shixiaoshi0417.lunexsu.ui.theme.miuixBarColor
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -73,7 +73,7 @@ fun FlashScreenMiuix(
     val scrollState = rememberScrollState()
     val backdrop = rememberBlurBackdrop(enableBlur)
     val blurActive = backdrop != null
-    val barColor = miuixBarColor(blurActive)
+    val barColor = if (blurActive) Color.Transparent else MiuixTheme.colorScheme.surface
 
     if (state.showJailbreakWarning) {
         JailbreakFlashWarningDialog(

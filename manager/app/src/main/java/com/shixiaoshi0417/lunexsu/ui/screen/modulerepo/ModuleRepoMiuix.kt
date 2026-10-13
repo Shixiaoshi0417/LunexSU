@@ -1,6 +1,6 @@
 package com.shixiaoshi0417.lunexsu.ui.screen.modulerepo
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-import com.shixiaoshi0417.lunexsu.ui.theme.miuixBarColor
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
@@ -153,7 +153,7 @@ fun ModuleRepoScreenMiuix(
     val enableBlur = LocalEnableBlur.current
     val backdrop = rememberBlurBackdrop(enableBlur)
     val blurActive = backdrop != null
-    val barColor = miuixBarColor(blurActive)
+    val barColor = if (blurActive) Color.Transparent else MiuixTheme.colorScheme.surface
 
     Scaffold(
         topBar = {
@@ -1047,7 +1047,7 @@ fun ModuleRepoDetailScreenMiuix(
 
     val backdrop = rememberBlurBackdrop(enableBlur)
     val blurActive = backdrop != null
-    val detailBarColor = miuixBarColor(blurActive)
+    val detailBarColor = if (blurActive) Color.Transparent else MiuixTheme.colorScheme.surface
 
     val tabs = listOf(
         stringResource(R.string.tab_readme), stringResource(R.string.tab_releases), stringResource(R.string.tab_info)
@@ -1102,7 +1102,7 @@ fun ModuleRepoDetailScreenMiuix(
                                 }
                             },
                             colors = TabRowDefaults.tabRowColors(
-                                backgroundColor = miuixBarColor(blurActive)
+                                backgroundColor = if (blurActive) Color.Transparent else MiuixTheme.colorScheme.surface
                             ),
                             height = tabRowHeight,
                         )

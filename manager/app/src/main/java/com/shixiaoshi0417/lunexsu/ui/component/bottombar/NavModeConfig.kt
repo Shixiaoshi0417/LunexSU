@@ -9,10 +9,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import com.shixiaoshi0417.lunexsu.ksuApp
 
 /**
- * Material navigation form, aligned with the FolkPatch `nav_mode` preference.
+ * Dedicated theme UI navigation, aligned with the FolkPatch `nav_mode` preference.
  *
  * [Auto] follows the window size (large windows get the side rail), while the other values force a
- * form. The MIUIX UI keeps its own floating bottom bar setting.
+ * form. Ordinary M3E and MIUIX keep their native navigation policy.
  */
 enum class NavMode {
     Auto, Bottom, Rail, Floating;
@@ -34,6 +34,13 @@ fun NavMode.usesRail(largeWindow: Boolean): Boolean = when (this) {
     NavMode.Bottom, NavMode.Floating -> false
     NavMode.Auto -> largeWindow
 }
+
+internal fun navigationRailEnabled(
+    themeUi: Boolean,
+    largeWindow: Boolean,
+    enableFloatingBottomBar: Boolean,
+    themeMode: NavMode,
+): Boolean = if (themeUi) themeMode.usesRail(largeWindow) else largeWindow && !enableFloatingBottomBar
 
 /**
  * Persisted navigation mode. [revision] bumps on every write so the navigation chrome

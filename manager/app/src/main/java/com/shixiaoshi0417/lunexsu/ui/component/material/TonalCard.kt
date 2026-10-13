@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFolkWallpaperTokens
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.currentFinaWallpaperTokens
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.WallpaperSurfaceRole
 
 /**
@@ -70,7 +70,7 @@ fun TonalCard(
     } else {
         Modifier
     }
-    if (wallpaperRole != null && LocalFolkWallpaperTokens.current != null) {
+    if (wallpaperRole != null && currentFinaWallpaperTokens() != null) {
         FolkWallpaperSurface(
             role = wallpaperRole,
             shape = shape,

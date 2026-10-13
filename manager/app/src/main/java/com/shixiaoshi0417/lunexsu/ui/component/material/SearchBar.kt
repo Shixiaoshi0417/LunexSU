@@ -1,6 +1,6 @@
 package com.shixiaoshi0417.lunexsu.ui.component.material
 
-import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFolkWallpaperTokens
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.currentFinaWallpaperTokens
 import androidx.compose.ui.graphics.Color
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -183,7 +183,7 @@ fun SearchAppBar(
 
     // The scaffold's chrome zone draws the reading platform over a wallpaper, so this container
     // stays transparent instead of painting an opaque band. (Adapted from FinaSU, GPL-3.0.)
-    val wallpaperActive = LocalFolkWallpaperTokens.current != null
+    val wallpaperActive = currentFinaWallpaperTokens() != null
     Surface(color = if (wallpaperActive) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer) {
         Column(
             modifier = Modifier.fillMaxWidth()

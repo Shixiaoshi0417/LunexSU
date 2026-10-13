@@ -3,6 +3,7 @@ package com.shixiaoshi0417.lunexsu.ui.theme.pack
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 
@@ -38,8 +39,13 @@ data class FolkWallpaperTokens(
     }
 }
 
-/** Null outside wallpaper mode; the Material theme provides it while a pack wallpaper is shown. */
+/** Provided only by the dedicated Fina theme UI, never by ordinary M3E or MIUIX. */
 val LocalFolkWallpaperTokens = compositionLocalOf<FolkWallpaperTokens?> { null }
+
+/** Shared primitives must ignore pack materials outside the dedicated presentation. */
+@Composable
+fun currentFinaWallpaperTokens(): FolkWallpaperTokens? =
+    if (LocalFinaThemeUi.current) LocalFolkWallpaperTokens.current else null
 
 /** Bars keep this much of their tint even at opacity 0: their labels sit over scrolling content. */
 internal const val CHROME_ALPHA_FLOOR = 0.10f
@@ -53,7 +59,7 @@ internal const val RAISED_ALPHA_STEP = 0.12f
 /** A fully collapsed top bar is at least this opaque, whatever the panels' opacity. */
 internal const val COLLAPSED_CHROME_FLOOR = 0.85f
 
-/** The alpha of each role for the pack's `backgroundOpacity` (shared by Material and MIUIX). */
+/** The alpha of each role for the dedicated theme UI's `backgroundOpacity`. */
 @Immutable
 data class WallpaperAlphas(val group: Float, val raised: Float, val overlay: Float, val chrome: Float)
 

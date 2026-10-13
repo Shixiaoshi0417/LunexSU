@@ -12,7 +12,7 @@ import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFolkWallpaperTokens
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.currentFinaWallpaperTokens
 
 /**
  * Over a pack wallpaper the page canvas is transparent so the wallpaper stays continuous, and the
@@ -31,7 +31,7 @@ fun ExpressiveScaffold(
     contentWindowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     content: @Composable (PaddingValues) -> Unit,
 ) {
-    val wallpaperActive = LocalFolkWallpaperTokens.current != null
+    val wallpaperActive = currentFinaWallpaperTokens() != null
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -56,7 +56,7 @@ fun expressiveTopAppBarColors(
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
     scrolledContainerColor: Color = containerColor,
 ): TopAppBarColors {
-    val tokens = LocalFolkWallpaperTokens.current
+    val tokens = currentFinaWallpaperTokens()
     if (tokens != null) {
         return TopAppBarDefaults.topAppBarColors(
             containerColor = Color.Transparent,

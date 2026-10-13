@@ -61,7 +61,7 @@ maximum dimension of 2048 pixels for rendering.
 The black scrim follows FinaSU's dual dim: `backgroundDim` (default 0.2) applies to
 both themes, or with `isDualBackgroundDimEnabled` the light theme uses
 `backgroundDayDim` (0.2) and the dark theme `backgroundNightDim` (0.4). In the
-Material UI a light theme also follows the visible page's wallpaper brightness,
+dedicated theme UI a light theme also follows the visible page's wallpaper brightness,
 measured once per image from a 64 px decode: when brightness × (1 − dim) is below
 0.5, the neutral roles switch to a dark neutral palette (light text, light system
 bar icons) and the painted scrim is raised to the smallest value that keeps that
@@ -77,7 +77,7 @@ pinned tab row) keeps a 0.10 floor and strengthens to at least 0.85 as a large
 top bar collapses. Only fills are translucent: each material pairs an opaque
 surface tint with opaque content colors, and no `Modifier.alpha` is involved.
 A container inside another material draws no second fill, and the rows of a
-list group share one group fill. In the Material UI the theme keeps every
+list group share one group fill. In the dedicated theme UI the theme keeps every
 surface role opaque (only the canvas is transparent), so components without a
 material, such as dialogs, sheets and the theme preview, stay readable. Active packs
 no longer use the native MIUIX wallpaper path; without a pack, both original UI
@@ -115,7 +115,10 @@ navigation and wallpaper materials, even if the saved UI preference is MIUIX. It
 theme-only home ports FinaSU's compact title toolbar, install/music/reboot actions,
 and Circle/Grid/Focus/Dashboard/Stats boards. Root policy and module controllers are
 still LunexSU's. Removing the pack restores the saved Material/MIUIX interface;
-the import never writes `ui_mode`. Non-theme MIUIX cards and bars are unchanged.
+the import never writes `ui_mode`. Ordinary M3E and MIUIX do not render pack wallpapers,
+card images, custom navigation icons, translucent materials or pack-specific palettes.
+These effects are scoped to the dedicated Fina theme provider; shared primitives ignore
+pack materials outside that presentation. Ordinary MIUIX retains its native cards and bars.
 Images retain bounded native decoding and lifecycle-aware animation.
 
 Sound-effect playback, arbitrary unknown surface IDs and layouts without a LunexSU
@@ -162,7 +165,7 @@ store requests carry no token: FinaSU's signature-gated API token is not used.
 
 ## Navigation
 
-The Material UI follows FinaSU's navigation modes (Settings -> Theme -> Navigation bar
+Only the dedicated theme UI follows FinaSU's navigation modes (Settings -> Theme -> Navigation bar
 mode): Automatic (side rail in a large window, bottom bar otherwise), Always bottom bar,
 Always side rail, and Floating bottom bar, which is the default. The floating bar comes
 in the Drawer form (the selected page expands into a labelled pill) or the Standard
@@ -171,7 +174,9 @@ and pages reserve its height so content and the module install button never sit 
 it. The optional glass effect uses the Liquid library's real-time blur on Android 13+.
 Over a pack wallpaper the docked bar and the rail are transparent with the chrome scrim,
 while the floating bar carries the Raised material. The rail is FinaSU's fixed icon-only
-rail. Without an active pack, MIUIX keeps its own bottom bar and floating bottom bar setting.
+rail. Without an active pack, M3E uses its opaque bottom bar and expandable wide side rail;
+MIUIX keeps its own bottom bar and floating bottom bar setting. Theme navigation preferences
+do not affect either ordinary interface, and the theme navigation controls are hidden there.
 
 ## Import boundaries and persistence
 
@@ -196,6 +201,14 @@ calls; only the theme store downloads, and it hands the file to the same importe
 Theme JSON fields cannot write arbitrary preferences or authorization data.
 
 ## Validation
+
+### Native UI isolation (2026-10-13)
+
+The clean Release build, all 124 JVM tests and Android test APK compilation passed
+after separating the Fina theme provider and navigation from ordinary M3E/MIUIX.
+Navigation regressions cover every theme mode, native window-size/floating preferences,
+and restoration after leaving the theme presentation. Theme-only assets and materials
+have explicit presentation guards. Device rendering was not tested; no ADB was used.
 
 ### Theme-only UI expansion (2026-10-13)
 
@@ -266,7 +279,8 @@ adb -s <emulator-serial> shell am start -n com.shixiaoshi0417.lunexsu/.ui.ThemeT
 - `manager/.../ui/screen/colorpalette/`: shared import flow and UI entry points.
 - `manager/.../data/themestore/`, `ui/screen/themestore/`, `ui/viewmodel/ThemeStoreViewModel.kt`:
   theme store index, downloader, Material/MIUIX store and My themes pages.
-- `manager/.../ui/theme/{FontConfig,MaterialTheme,MiuixTheme}.kt`: live theme integration.
+- `manager/.../ui/theme/{MaterialTheme,MiuixTheme}.kt`: ordinary UI palettes, without pack overrides.
+- `manager/.../ui/theme/pack/FinaTheme.kt`: isolated pack palette, materials, dim and ripple provider.
 - `manager/.../ui/MainActivity.kt`: wallpaper composition for main pages.
 - `manager/.../ui/component/bottombar/`: navigation modes, floating bar and rail.
 - `manager/.../ui/theme/FptPalette.kt`: FolkPatch classic palette table.

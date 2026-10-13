@@ -1,6 +1,6 @@
 package com.shixiaoshi0417.lunexsu.ui.screen.appprofile
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-import com.shixiaoshi0417.lunexsu.ui.theme.miuixBarColor
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -102,7 +102,7 @@ fun AppProfileScreenMiuix(
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop(enableBlur)
     val blurActive = backdrop != null
-    val barColor = miuixBarColor(blurActive)
+    val barColor = if (blurActive) Color.Transparent else MiuixTheme.colorScheme.surface
     Scaffold(
         topBar = {
             TopBar(

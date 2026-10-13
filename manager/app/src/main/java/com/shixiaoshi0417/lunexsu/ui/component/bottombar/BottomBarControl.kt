@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.FolkWallpaperTokens
-import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFolkWallpaperTokens
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.currentFinaWallpaperTokens
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.WallpaperMaterial
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.WallpaperSurfaceRole
 
@@ -51,7 +51,7 @@ data class BottomBarStyle(
 object BottomBarControl {
     @Composable
     fun style(layout: BottomBarLayout): BottomBarStyle {
-        val tokens = LocalFolkWallpaperTokens.current
+        val tokens = currentFinaWallpaperTokens()
         return when (layout) {
             BottomBarLayout.Docked -> dockedStyle(tokens)
             BottomBarLayout.Floating -> floatingStyle(tokens)

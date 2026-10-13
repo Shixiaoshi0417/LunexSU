@@ -1,6 +1,6 @@
 package com.shixiaoshi0417.lunexsu.ui.component.material
 
-import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFolkWallpaperTokens
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.currentFinaWallpaperTokens
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -31,7 +31,7 @@ fun ExpressiveTabRow(
     onTabClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
     // Pinned under the top bar over scrolling content: over a wallpaper it is part of the chrome.
-    containerColor: Color = LocalFolkWallpaperTokens.current?.chrome?.fill ?: MaterialTheme.colorScheme.surfaceContainer,
+    containerColor: Color = currentFinaWallpaperTokens()?.chrome?.fill ?: MaterialTheme.colorScheme.surfaceContainer,
 ) {
     val safeIndex = selectedTabIndex.coerceIn(0, (tabs.size - 1).coerceAtLeast(0))
     PrimaryTabRow(

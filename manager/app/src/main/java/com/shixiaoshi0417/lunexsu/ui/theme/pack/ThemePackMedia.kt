@@ -32,7 +32,7 @@ private object PackMusic {
 /** One music player for the activity, never one player per precomposed pager page. */
 @Composable
 internal fun ThemePackMusic() {
-    val pack = ThemePackState.active
+    val pack = ThemePackState.active.takeIf { LocalFinaThemeUi.current }
     val media = pack?.plan?.media
     val file = media?.music?.let { File(pack.directory, it) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -80,6 +80,7 @@ private object MusicPlayback { var update: (() -> Unit)? = null }
 
 @Composable
 internal fun PackMusicButton() {
+    if (!LocalFinaThemeUi.current) return
     val name = ThemePackState.active?.plan?.media?.music ?: return
     Box(Modifier.size(48.dp).toggleable(PackMusic.requested, role = Role.Switch,
         onValueChange = { PackMusic.requested = it }), contentAlignment = Alignment.Center) {

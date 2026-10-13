@@ -196,7 +196,8 @@ fun ColorPaletteScreenMaterial(
                     paletteStyle = colorStyle,
                     colorSpec = colorSpec,
                     contrastLevel = contrastLevel,
-                    generationMode = uiState.colorGenerationMode,
+                    generationMode = if (com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFinaThemeUi.current)
+                        uiState.colorGenerationMode else ColorGenerationMode.CUSTOM,
                 )
             }
 
@@ -463,7 +464,7 @@ fun ColorPaletteScreenMaterial(
             }
 
             item {
-                NavModeSectionMaterial()
+                if (com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFinaThemeUi.current) NavModeSectionMaterial()
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {

@@ -1,7 +1,7 @@
 package com.shixiaoshi0417.lunexsu.ui.screen.modulerepo
 
 import androidx.compose.ui.graphics.Color
-import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFolkWallpaperTokens
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.currentFinaWallpaperTokens
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
@@ -526,7 +526,7 @@ private fun ReadmePage(
                                 content = readmeHtml,
                                 onLoadingChange = { loaded = !it },
                                 // The README stays on the wallpaper canvas, as before the material system.
-                                containerColor = if (LocalFolkWallpaperTokens.current != null) Color.Transparent else MaterialTheme.colorScheme.surface,
+                                containerColor = if (currentFinaWallpaperTokens() != null) Color.Transparent else MaterialTheme.colorScheme.surface,
                             )
                         }
                     }

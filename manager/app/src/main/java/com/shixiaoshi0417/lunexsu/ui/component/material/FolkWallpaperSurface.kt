@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.FolkWallpaperTokens
-import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFolkWallpaperTokens
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.currentFinaWallpaperTokens
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.WallpaperMaterial
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.WallpaperSurfaceRole
 
@@ -38,7 +38,7 @@ internal fun wallpaperMaterialFor(
  * popups readable whatever the panels' opacity; otherwise [fallback] unchanged.
  */
 @Composable
-fun wallpaperOverlayColor(fallback: Color): Color = LocalFolkWallpaperTokens.current?.overlay?.fill ?: fallback
+fun wallpaperOverlayColor(fallback: Color): Color = currentFinaWallpaperTokens()?.overlay?.fill ?: fallback
 
 /**
  * The single owner of a container's wallpaper fill. Cards ([TonalCard]), list groups
@@ -56,7 +56,7 @@ fun FolkWallpaperSurface(
     fallbackContentColor: Color = Color.Unspecified,
     content: @Composable () -> Unit,
 ) {
-    val tokens = LocalFolkWallpaperTokens.current
+    val tokens = currentFinaWallpaperTokens()
     val material = wallpaperMaterialFor(tokens, LocalWallpaperMaterialRole.current, role)
     if (material == null) {
         if (tokens == null && fallbackColor != Color.Unspecified) {

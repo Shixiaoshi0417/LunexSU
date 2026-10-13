@@ -11,6 +11,8 @@ import com.shixiaoshi0417.lunexsu.data.repository.SettingsRepository
 import com.shixiaoshi0417.lunexsu.data.repository.SettingsRepositoryImpl
 import com.shixiaoshi0417.lunexsu.ui.LocalUiMode
 import com.shixiaoshi0417.lunexsu.ui.UiMode
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.FinaTheme
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFinaThemeUi
 
 enum class ColorMode(val value: Int) {
     SYSTEM(0),
@@ -183,7 +185,10 @@ fun LunexSUTheme(
     uiMode: UiMode = LocalUiMode.current,
     content: @Composable () -> Unit
 ) {
-
+    if (LocalFinaThemeUi.current) {
+        FinaTheme(appSettings, content)
+        return
+    }
     when (uiMode) {
         UiMode.Miuix -> MiuixLunexSUTheme(
             appSettings = appSettings,

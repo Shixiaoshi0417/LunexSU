@@ -7,8 +7,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import com.shixiaoshi0417.lunexsu.ui.theme.MiuixWallpaperContent
-import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFolkWallpaperTokens
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.currentFinaWallpaperTokens
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
@@ -219,7 +218,7 @@ class MainActivity : ComponentActivity() {
                 LocalModuleDescriptionMaxLines provides uiState.moduleDescriptionMaxLines,
                 LocalUiMode provides uiMode,
                 LocalFinaThemeUi provides finaThemeUi,
-                LocalThemePackBackground provides ThemePackState.hasBackground,
+                LocalThemePackBackground provides (finaThemeUi && ThemePackState.hasBackground),
                 LocalHomeLayoutOptions provides uiState.homeLayout,
             ) {
                 LunexSUTheme(appSettings = appSettings, uiMode = uiMode) {
@@ -296,15 +295,14 @@ class MainActivity : ComponentActivity() {
                     }
 
                     Box(Modifier.fillMaxSize().clipToBounds()) {
-                        ThemePackWallpaper(isCurrentPage = navigator.current() !is Route.Main)
+                        if (finaThemeUi) ThemePackWallpaper(isCurrentPage = navigator.current() !is Route.Main)
                         when (uiMode) {
                             UiMode.Material -> androidx.compose.material3.Scaffold(
                                 containerColor = if (LocalThemePackBackground.current) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer
                             ) { navDisplay() }
 
-                            // The root Scaffold hosts MIUIX overlay dialogs and popups (opaque); the
-                            // pages inside it get the translucent wallpaper card material.
-                            UiMode.Miuix -> Scaffold { MiuixWallpaperContent { navDisplay() } }
+                            // Ordinary MIUIX keeps its native scaffold, including overlay dialogs.
+                            UiMode.Miuix -> Scaffold { navDisplay() }
                         }
                     }
                     SideEffect { contentReady = true }
@@ -415,7 +413,7 @@ fun MainScreen(
     val uiMode = LocalUiMode.current
     val surfaceColor = when (uiMode) {
         // Blur is not used in Material, this is just a placeholder; it never covers a pack wallpaper.
-        UiMode.Material -> if (LocalFolkWallpaperTokens.current != null) Color.Transparent else MaterialTheme.colorScheme.surface
+        UiMode.Material -> if (currentFinaWallpaperTokens() != null) Color.Transparent else MaterialTheme.colorScheme.surface
         UiMode.Miuix -> MiuixTheme.colorScheme.surface
     }
     val blurBackdrop = rememberBlurBackdrop(enableBlur)
@@ -441,9 +439,9 @@ fun MainScreen(
         LocalMainPagerState provides mainPagerState
     ) {
         val contentReady = rememberContentReady()
-        // Material navigation follows FinaSU's navigation mode; the floating bar is its default.
-        val navMode = rememberNavMode()
-        val floatingBarEnabled = uiMode == UiMode.Material && !useNavigationRail && navMode == NavMode.Floating
+        // FinaSU navigation is exclusive to the dedicated theme presentation.
+        val navMode = if (LocalFinaThemeUi.current) rememberNavMode() else NavMode.Auto
+        val floatingBarEnabled = LocalFinaThemeUi.current && !useNavigationRail && navMode == NavMode.Floating
         val floatingBarRevision by FloatingBarConfig.revision.collectAsStateWithLifecycle()
         val floatingBarStyle = remember(floatingBarRevision) { FloatingBarConfig.style }
         val floatingBarCompact = remember(floatingBarRevision) { FloatingBarConfig.compact }
@@ -490,7 +488,7 @@ fun MainScreen(
                 ) { page ->
                     val isCurrentPage = page == settledPage
                     Box(Modifier.fillMaxSize().clipToBounds()) {
-                        ThemePackWallpaper(page, isCurrentPage)
+                        if (LocalFinaThemeUi.current) ThemePackWallpaper(page, isCurrentPage)
                         when (page) {
                             0 -> if (contentReady || isCurrentPage) HomePager(
                                 navigator = navController,

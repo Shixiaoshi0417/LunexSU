@@ -65,7 +65,7 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.runtime.staticCompositionLocalOf
-import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFolkWallpaperTokens
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.currentFinaWallpaperTokens
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.WallpaperSurfaceRole
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextLayoutResult
@@ -102,7 +102,7 @@ private val LocalWallpaperGroupActive = staticCompositionLocalOf { false }
 
 @Composable
 private fun WallpaperGroupBackground(content: @Composable () -> Unit) {
-    val tokens = LocalFolkWallpaperTokens.current
+    val tokens = currentFinaWallpaperTokens()
     val material = wallpaperMaterialFor(tokens, LocalWallpaperMaterialRole.current, WallpaperSurfaceRole.Group)
     if (tokens == null) {
         content()
@@ -135,7 +135,7 @@ internal fun segmentedRowFill(group: WallpaperMaterial, insideMaterial: Boolean)
 @Composable
 private fun defaultSegmentedColors(): ListItemColors {
     // Over a wallpaper the group background carries the material; rows inside it are transparent.
-    val material = LocalFolkWallpaperTokens.current?.group
+    val material = currentFinaWallpaperTokens()?.group
     if (material != null) {
         val fill = segmentedRowFill(material, LocalWallpaperGroupActive.current || LocalWallpaperMaterialRole.current != null)
         return ListItemDefaults.segmentedColors(
@@ -155,7 +155,7 @@ private fun defaultSegmentedColors(): ListItemColors {
 @Composable
 private fun defaultSingleSegmentedShape(index: Int, count: Int): ListItemShapes {
     val base = ListItemDefaults.segmentedShapes(index, count)
-    if (LocalFolkWallpaperTokens.current != null) {
+    if (currentFinaWallpaperTokens() != null) {
         // Over a wallpaper standalone rows tile into one continuous group: only the ends stay rounded.
         return base.copy(
             shape = RoundedCornerShape(
@@ -339,7 +339,7 @@ fun SegmentedItem(
     count: Int,
     content: @Composable () -> Unit,
 ) {
-    val wallpaper = LocalFolkWallpaperTokens.current != null
+    val wallpaper = currentFinaWallpaperTokens() != null
     CompositionLocalProvider(
         LocalListItemShapes provides defaultSingleSegmentedShape(index, count),
     ) {
@@ -369,7 +369,7 @@ fun SegmentedItemContainer(
     content: @Composable () -> Unit,
 ) {
     val shapes = LocalListItemShapes.current ?: ListItemDefaults.segmentedShapes(0, 1)
-    if (LocalFolkWallpaperTokens.current != null) {
+    if (currentFinaWallpaperTokens() != null) {
         FolkWallpaperSurface(
             role = WallpaperSurfaceRole.Group,
             shape = shapes.shape,

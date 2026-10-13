@@ -73,7 +73,6 @@ import com.shixiaoshi0417.lunexsu.data.themestore.THEME_SOURCE_OFFICIAL
 import com.shixiaoshi0417.lunexsu.data.themestore.THEME_SOURCE_THIRD_PARTY
 import com.shixiaoshi0417.lunexsu.data.themestore.ThemeStoreFilter
 import com.shixiaoshi0417.lunexsu.ui.theme.LocalEnableBlur
-import com.shixiaoshi0417.lunexsu.ui.theme.miuixBarColor
 import com.shixiaoshi0417.lunexsu.ui.util.BlurredBar
 import com.shixiaoshi0417.lunexsu.ui.util.rememberBlurBackdrop
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -236,7 +235,7 @@ private fun ThemeGridPageMiuix(
 ) {
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop(LocalEnableBlur.current)
-    val barColor = miuixBarColor(backdrop != null)
+    val barColor = if (backdrop != null) Color.Transparent else MiuixTheme.colorScheme.surface
 
     Scaffold(
         topBar = {

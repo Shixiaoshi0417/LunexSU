@@ -20,7 +20,8 @@ import com.shixiaoshi0417.lunexsu.R
 import java.io.File
 
 @Composable
-internal fun packSurface(id: String?): PackSurface? = id?.let { ThemePackState.active?.plan?.visuals?.surfaces?.get(it) }
+internal fun packSurface(id: String?): PackSurface? = if (LocalFinaThemeUi.current)
+    id?.let { ThemePackState.active?.plan?.visuals?.surfaces?.get(it) } else null
 
 @Composable
 internal fun packSurfaceColor(id: String?, fallback: Color): Color {
@@ -34,6 +35,7 @@ internal fun packSurfaceColor(id: String?, fallback: Color): Color {
 
 @Composable
 internal fun PackSurfaceBackground(id: String, modifier: Modifier = Modifier) {
+    if (!LocalFinaThemeUi.current) return
     val pack = ThemePackState.active ?: return
     val surface = pack.plan.visuals.surfaces[id]?.takeIf { it.enabled } ?: return
     val name = surface.image ?: return
@@ -50,6 +52,7 @@ internal fun PackSurfaceBackground(id: String, modifier: Modifier = Modifier) {
 
 @Composable
 internal fun PackHomeTitle(fallback: @Composable () -> Unit) {
+    if (!LocalFinaThemeUi.current) { fallback(); return }
     val pack = ThemePackState.active
     val title = pack?.plan?.visuals?.title
     val name = title?.image
@@ -67,6 +70,7 @@ internal fun PackHomeTitle(fallback: @Composable () -> Unit) {
 @Composable
 internal fun PackNavIcon(index: Int, description: String, modifier: Modifier = Modifier,
     fallback: @Composable () -> Unit) {
+    if (!LocalFinaThemeUi.current) { fallback(); return }
     val pack = ThemePackState.active
     val name = pack?.plan?.visuals?.navIcons?.get(index)
     if (pack == null || name == null) { fallback(); return }

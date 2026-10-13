@@ -22,6 +22,7 @@ import com.shixiaoshi0417.lunexsu.ui.screen.themestore.ThemeStoreScreen
 import com.shixiaoshi0417.lunexsu.ui.theme.LunexSUTheme
 import com.shixiaoshi0417.lunexsu.ui.theme.LocalColorMode
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalThemePackBackground
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFinaThemeUi
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.ThemePackState
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.ThemePackWallpaper
 import com.shixiaoshi0417.lunexsu.ui.viewmodel.MainActivityViewModel
@@ -41,16 +42,19 @@ class ThemeTestActivity : ComponentActivity() {
         setContent {
             val model = viewModel<MainActivityViewModel>()
             val state by model.uiState.collectAsStateWithLifecycle()
+            val themeUi = ThemePackState.active != null
+            val uiMode = effectiveUiMode(state.uiMode, themeUi)
             val navigator = rememberNavigator(initial)
             CompositionLocalProvider(
                 LocalNavigator provides navigator,
-                LocalUiMode provides state.uiMode,
+                LocalUiMode provides uiMode,
+                LocalFinaThemeUi provides themeUi,
                 LocalColorMode provides state.appSettings.colorMode.value,
-                LocalThemePackBackground provides ThemePackState.hasBackground,
+                LocalThemePackBackground provides (themeUi && ThemePackState.hasBackground),
             ) {
-                LunexSUTheme(appSettings = state.appSettings, uiMode = state.uiMode) {
+                LunexSUTheme(appSettings = state.appSettings, uiMode = uiMode) {
                     Box(Modifier.fillMaxSize()) {
-                        ThemePackWallpaper(page = 3)
+                        if (themeUi) ThemePackWallpaper(page = 3)
                         NavDisplay(backStack = navigator.backStack, onBack = { finish() }) {
                             entry<Route.ColorPalette> { ColorPaletteScreen() }
                             entry<Route.Font> { FontScreen() }

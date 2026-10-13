@@ -13,7 +13,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFolkWallpaperTokens
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.currentFinaWallpaperTokens
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.WallpaperMaterial
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.chromePlatformAlpha
 
@@ -35,7 +35,7 @@ fun WallpaperChromeZone(
     material: WallpaperMaterial? = null,
     content: @Composable () -> Unit,
 ) {
-    val tokens = LocalFolkWallpaperTokens.current
+    val tokens = currentFinaWallpaperTokens()
     if (tokens == null) {
         content()
         return

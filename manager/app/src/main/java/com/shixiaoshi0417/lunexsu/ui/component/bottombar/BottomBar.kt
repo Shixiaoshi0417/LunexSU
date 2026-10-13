@@ -33,6 +33,7 @@ import kotlinx.coroutines.launch
 import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.ui.LocalUiMode
 import com.shixiaoshi0417.lunexsu.ui.UiMode
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFinaThemeUi
 import com.shixiaoshi0417.lunexsu.ui.util.shouldShowSplitPane
 import top.yukonga.miuix.kmp.blur.Backdrop
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
@@ -145,14 +146,16 @@ fun rememberNavMode(): NavMode {
 }
 
 /**
- * Material follows the navigation mode setting (as in FinaSU). MIUIX shows the rail in a large
- * window unless its own floating bottom bar is enabled.
+ * Only the dedicated theme UI follows FinaSU's navigation modes. Ordinary UIs keep their native
+ * window-size policy and do not consult the theme navigation preference.
  */
 @Composable
-fun useNavigationRail(enableFloatingBottomBar: Boolean): Boolean = when (LocalUiMode.current) {
-    UiMode.Material -> rememberNavMode().usesRail(shouldShowSplitPane())
-    UiMode.Miuix -> shouldShowSplitPane() && !enableFloatingBottomBar
-}
+fun useNavigationRail(enableFloatingBottomBar: Boolean): Boolean = navigationRailEnabled(
+    themeUi = LocalFinaThemeUi.current,
+    largeWindow = shouldShowSplitPane(),
+    enableFloatingBottomBar = enableFloatingBottomBar,
+    themeMode = if (LocalFinaThemeUi.current) rememberNavMode() else NavMode.Auto,
+)
 
 @Composable
 fun BottomBar(
@@ -163,7 +166,8 @@ fun BottomBar(
 ) {
     when (LocalUiMode.current) {
         UiMode.Miuix -> BottomBarMiuix(blurBackdrop, backdrop, navigationBadge, modifier)
-        UiMode.Material -> BottomBarMaterial(navigationBadge)
+        UiMode.Material -> if (LocalFinaThemeUi.current) FinaBottomBar(navigationBadge)
+            else BottomBarMaterial(navigationBadge)
     }
 }
 
@@ -174,6 +178,7 @@ fun SideRail(
 ) {
     when (LocalUiMode.current) {
         UiMode.Miuix -> NavigationRailMiuix(navigationBadge, modifier)
-        UiMode.Material -> NavigationRailMaterial(navigationBadge, modifier)
+        UiMode.Material -> if (LocalFinaThemeUi.current) FinaNavigationRail(navigationBadge, modifier)
+            else NavigationRailMaterial(navigationBadge, modifier)
     }
 }

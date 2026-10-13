@@ -1,9 +1,5 @@
 package com.shixiaoshi0417.lunexsu.ui.theme
 
-import com.shixiaoshi0417.lunexsu.ui.theme.pack.wallpaperAlphas
-import top.yukonga.miuix.kmp.theme.Colors
-import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.runtime.Immutable
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -18,8 +14,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.core.view.WindowInsetsControllerCompat
 import com.materialkolor.dynamiccolor.ColorSpec
 import com.shixiaoshi0417.lunexsu.ui.webui.MonetColorsProvider
-import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalThemePackBackground
-import com.shixiaoshi0417.lunexsu.ui.theme.pack.ThemePackState
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.LocalContentColor
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -72,9 +66,6 @@ fun MiuixLunexSUTheme(
     }
 
     val resolvedKeyColor: Color? = when {
-        // A classic (theme pack) catalog seed uses FolkPatch's protocol primary, as in Material.
-        appSettings.keyColor != 0 && appSettings.colorGenerationMode == ColorGenerationMode.CLASSIC ->
-            FptPalette.seed(Color(appSettings.keyColor), darkTheme)
         appSettings.keyColor != 0 -> Color(appSettings.keyColor)
         appSettings.colorMode.isMonet ->
             if (darkTheme) dynamicDarkColorScheme(context).primary
@@ -114,19 +105,7 @@ fun MiuixLunexSUTheme(
                     isAppearanceLightNavigationBars = !darkTheme
                 }
             }
-            val packBackground = ThemePackState.active?.plan?.background
-            if (LocalThemePackBackground.current && packBackground != null) {
-                val wallpaper = miuixWallpaperColors(MiuixTheme.colorScheme, packBackground.opacity, textStyles)
-                // The root Scaffold hosts MIUIX's overlay dialogs and popups. They are drawn with the
-                // background and surfaceContainer roles, so this outer scheme keeps the background
-                // opaque and the container at the near-opaque overlay alpha; the page content gets
-                // the group alpha from MiuixWallpaperContent.
-                MiuixTheme(colors = wallpaper.host, textStyles = textStyles) {
-                    CompositionLocalProvider(LocalMiuixWallpaper provides wallpaper) {
-                        MiuixThemeContent(content)
-                    }
-                }
-            } else if (amoledMode) {
+            if (amoledMode) {
                 // MIUIX has no AMOLED palette of its own: only the page canvas turns black, the
                 // cards keep their container color so they stay distinguishable from the page.
                 MiuixTheme(
@@ -154,58 +133,3 @@ private fun MiuixThemeContent(content: @Composable () -> Unit) {
         content()
     }
 }
-
-/**
- * MIUIX colors over a pack wallpaper. MIUIX draws cards and list popups with the same
- * `surfaceContainer` role, so the materials are split by where they render: [host] (root Scaffold,
- * which shows overlay dialogs and popups) and [page] (screen content, see [MiuixWallpaperContent]).
- * Bars use [chrome]. Only container fills are translucent; content colors stay opaque.
- */
-@Immutable
-internal data class MiuixWallpaperColors(
-    val host: Colors,
-    val page: Colors,
-    val chrome: Color,
-    val textStyles: TextStyles,
-)
-
-internal val LocalMiuixWallpaper = staticCompositionLocalOf<MiuixWallpaperColors?> { null }
-
-internal fun miuixWallpaperColors(base: Colors, opacity: Float, textStyles: TextStyles): MiuixWallpaperColors {
-    val alphas = wallpaperAlphas(opacity)
-    return MiuixWallpaperColors(
-        host = base.copy(
-            surface = Color.Transparent,
-            surfaceContainer = base.surfaceContainer.copy(alpha = alphas.overlay),
-        ),
-        page = base.copy(
-            surface = Color.Transparent,
-            surfaceContainer = base.surfaceContainer.copy(alpha = alphas.group),
-            surfaceVariant = base.surfaceVariant.copy(alpha = alphas.group),
-        ),
-        chrome = base.surface.copy(alpha = alphas.chrome),
-        textStyles = textStyles,
-    )
-}
-
-/** Screen content over a pack wallpaper: MIUIX cards at the group alpha. A no-op otherwise. */
-@Composable
-fun MiuixWallpaperContent(content: @Composable () -> Unit) {
-    val wallpaper = LocalMiuixWallpaper.current
-    if (wallpaper == null) {
-        content()
-        return
-    }
-    MiuixTheme(colors = wallpaper.page, textStyles = wallpaper.textStyles) { content() }
-}
-
-/**
- * A MIUIX top or bottom bar color: transparent under an active blur backdrop, the chrome material over
- * a pack wallpaper, otherwise the opaque surface exactly as before.
- */
-@Composable
-fun miuixBarColor(blurActive: Boolean): Color = when {
-    blurActive -> Color.Transparent
-    else -> LocalMiuixWallpaper.current?.chrome ?: MiuixTheme.colorScheme.surface
-}
-

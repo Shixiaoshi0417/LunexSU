@@ -1,6 +1,6 @@
 package com.shixiaoshi0417.lunexsu.ui.screen.about
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-import com.shixiaoshi0417.lunexsu.ui.theme.miuixBarColor
 import android.os.Build
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
@@ -114,7 +114,7 @@ fun AboutScreenMiuix(
     val barColor = if (blurActive) {
         Color.Transparent
     } else {
-        if (scrollProgress == 1f) miuixBarColor(blurActive = false) else Color.Transparent
+        if (scrollProgress == 1f) MiuixTheme.colorScheme.surface else Color.Transparent
     }
 
     Scaffold(

@@ -1,6 +1,5 @@
 package com.shixiaoshi0417.lunexsu.ui.component.bottombar
 
-import com.shixiaoshi0417.lunexsu.ui.theme.miuixBarColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -44,7 +43,7 @@ fun NavigationRailMiuix(
     NavigationRail(
         modifier = modifier,
         state = state,
-        color = miuixBarColor(blurActive = false),
+        color = MiuixTheme.colorScheme.surface,
         expandContentDescription = stringResource(R.string.nav_rail_expand),
         collapseContentDescription = stringResource(R.string.nav_rail_collapse),
     ) {
