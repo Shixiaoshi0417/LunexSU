@@ -44,9 +44,11 @@ internal fun HomeCard(
     val foreground = packSurfaceColor(surfaceId, contentColor)
     val onForeground = if (foreground.luminance() > 0.5f) Color(0xFF161616) else Color.White
     if (hasImage) {
-        TonalCard(modifier = modifier, containerColor = containerColor, contentColor = foreground,
+        // The photo is the surface: transparent pixels/opacity must reveal the wallpaper,
+        // not an unrelated semantic status color underneath it.
+        TonalCard(modifier = modifier, containerColor = Color.Transparent, contentColor = foreground,
             shape = FolkShape.Corner20, onClick = onClick, wallpaperRole = null) {
-            Box {
+            Box(propagateMinConstraints = true) {
                 PackSurfaceBackground(requireNotNull(surfaceId), Modifier.matchParentSize())
                 MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(
                     onSurface = foreground,

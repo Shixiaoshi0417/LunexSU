@@ -97,6 +97,7 @@ import com.shixiaoshi0417.lunexsu.ui.navigation3.LocalNavigator
 import com.shixiaoshi0417.lunexsu.ui.navigation3.Navigator
 import com.shixiaoshi0417.lunexsu.ui.navigation3.Route
 import com.shixiaoshi0417.lunexsu.ui.navigation3.rememberNavigator
+import com.shixiaoshi0417.lunexsu.ui.navigation3.themeEntry
 import com.shixiaoshi0417.lunexsu.ui.screen.about.AboutScreen
 import com.shixiaoshi0417.lunexsu.ui.screen.appprofile.AppProfileScreen
 import com.shixiaoshi0417.lunexsu.ui.screen.colorpalette.ColorPaletteScreen
@@ -260,20 +261,20 @@ class MainActivity : ComponentActivity() {
                                     else -> navigator.pop()
                                 }
                             }) {
-                            entry<Route.Main>(swipeDismiss = swipeDismiss) { mainScreenEntry() }
-                            entry<Route.About>(swipeDismiss = swipeDismiss) { AboutScreen() }
-                            entry<Route.Sulog>(swipeDismiss = swipeDismiss) { SulogScreen() }
-                            entry<Route.ColorPalette>(swipeDismiss = swipeDismiss) { ColorPaletteScreen() }
-                            entry<Route.Font>(swipeDismiss = swipeDismiss) { FontScreen() }
-                            entry<Route.ThemeStore>(swipeDismiss = swipeDismiss) { ThemeStoreScreen() }
-                            entry<Route.MyThemes>(swipeDismiss = swipeDismiss) { MyThemesScreen() }
-                            entry<Route.AppProfileTemplate>(swipeDismiss = swipeDismiss) { AppProfileTemplateScreen() }
-                            entry<Route.TemplateEditor>(swipeDismiss = swipeDismiss) { key -> TemplateEditorScreen(key.template, key.readOnly) }
-                            entry<Route.AppProfile>(swipeDismiss = swipeDismiss) { key -> AppProfileScreen(key.uid) }
-                            entry<Route.ModuleRepo>(swipeDismiss = swipeDismiss) { ModuleRepoScreen() }
-                            entry<Route.ModuleRepoDetail>(swipeDismiss = swipeDismiss) { key -> ModuleRepoDetailScreen(key.module) }
-                            entry<Route.Install>(swipeDismiss = swipeDismiss) { InstallScreen() }
-                            entry<Route.Flash>(swipeDismiss = if (flashBackEnabled) swipeDismiss else NavSwipeDirection.None) { key ->
+                            themeEntry<Route.Main>(swipeDismiss = swipeDismiss) { mainScreenEntry() }
+                            themeEntry<Route.About>(swipeDismiss = swipeDismiss) { AboutScreen() }
+                            themeEntry<Route.Sulog>(swipeDismiss = swipeDismiss) { SulogScreen() }
+                            themeEntry<Route.ColorPalette>(swipeDismiss = swipeDismiss) { ColorPaletteScreen() }
+                            themeEntry<Route.Font>(swipeDismiss = swipeDismiss) { FontScreen() }
+                            themeEntry<Route.ThemeStore>(swipeDismiss = swipeDismiss) { ThemeStoreScreen() }
+                            themeEntry<Route.MyThemes>(swipeDismiss = swipeDismiss) { MyThemesScreen() }
+                            themeEntry<Route.AppProfileTemplate>(swipeDismiss = swipeDismiss) { AppProfileTemplateScreen() }
+                            themeEntry<Route.TemplateEditor>(swipeDismiss = swipeDismiss) { key -> TemplateEditorScreen(key.template, key.readOnly) }
+                            themeEntry<Route.AppProfile>(swipeDismiss = swipeDismiss) { key -> AppProfileScreen(key.uid) }
+                            themeEntry<Route.ModuleRepo>(swipeDismiss = swipeDismiss) { ModuleRepoScreen() }
+                            themeEntry<Route.ModuleRepoDetail>(swipeDismiss = swipeDismiss) { key -> ModuleRepoDetailScreen(key.module) }
+                            themeEntry<Route.Install>(swipeDismiss = swipeDismiss) { InstallScreen() }
+                            themeEntry<Route.Flash>(swipeDismiss = if (flashBackEnabled) swipeDismiss else NavSwipeDirection.None) { key ->
                                 FlashScreen(
                                     key.flashIt,
                                     onBackEnabledChange = { enabled ->
@@ -281,21 +282,20 @@ class MainActivity : ComponentActivity() {
                                     },
                                 )
                             }
-                            entry<Route.ExecuteModuleAction>(swipeDismiss = swipeDismiss) { key ->
+                            themeEntry<Route.ExecuteModuleAction>(swipeDismiss = swipeDismiss) { key ->
                                 ExecuteModuleActionScreen(
                                     key.moduleId,
                                     key.fromShortcut
                                 )
                             }
-                            entry<Route.Home>(swipeDismiss = swipeDismiss) { mainScreenEntry() }
-                            entry<Route.SuperUser>(swipeDismiss = swipeDismiss) { mainScreenEntry() }
-                            entry<Route.Module>(swipeDismiss = swipeDismiss) { mainScreenEntry() }
-                            entry<Route.Settings>(swipeDismiss = swipeDismiss) { mainScreenEntry() }
+                            themeEntry<Route.Home>(swipeDismiss = swipeDismiss) { mainScreenEntry() }
+                            themeEntry<Route.SuperUser>(swipeDismiss = swipeDismiss) { mainScreenEntry() }
+                            themeEntry<Route.Module>(swipeDismiss = swipeDismiss) { mainScreenEntry() }
+                            themeEntry<Route.Settings>(swipeDismiss = swipeDismiss) { mainScreenEntry() }
                         }
                     }
 
                     Box(Modifier.fillMaxSize().clipToBounds()) {
-                        if (finaThemeUi) ThemePackWallpaper(isCurrentPage = navigator.current() !is Route.Main)
                         when (uiMode) {
                             UiMode.Material -> androidx.compose.material3.Scaffold(
                                 containerColor = if (LocalThemePackBackground.current) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer

@@ -202,6 +202,18 @@ Theme JSON fields cannot write arbitrary preferences or authorization data.
 
 ## Validation
 
+### Hidden status photos and route isolation (2026-10-13)
+
+The clean Release build, all 125 JVM tests and Android test APK compilation passed.
+Photo-backed status cards now have a transparent base and retain their image layout
+when the icon, title and mode are all hidden. Ordinary status-card colors are unchanged.
+Every secondary theme route owns an opaque backing and its own wallpaper, so transparent
+controls cannot expose the covered page's controls. Covered routes pause animated images
+and video; native M3E/MIUIX routes keep their existing rendering and navigation behavior.
+An optional debug-only pixel suite covers hidden cards at three opacity values, secondary
+routes with/without wallpaper, and native presentation. It was compiled, not executed;
+no ADB or device validation was performed for these fixes.
+
 ### Native UI isolation (2026-10-13)
 
 The clean Release build, all 124 JVM tests and Android test APK compilation passed

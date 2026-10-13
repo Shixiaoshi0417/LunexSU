@@ -24,7 +24,8 @@ import com.shixiaoshi0417.lunexsu.ui.theme.LocalColorMode
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalThemePackBackground
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFinaThemeUi
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.ThemePackState
-import com.shixiaoshi0417.lunexsu.ui.theme.pack.ThemePackWallpaper
+import com.shixiaoshi0417.lunexsu.ui.navigation3.themeEntry
+import top.yukonga.miuix.kmp.nav.transition.NavSwipeDirection
 import com.shixiaoshi0417.lunexsu.ui.viewmodel.MainActivityViewModel
 import top.yukonga.miuix.kmp.nav.core.NavDisplay
 
@@ -54,13 +55,12 @@ class ThemeTestActivity : ComponentActivity() {
             ) {
                 LunexSUTheme(appSettings = state.appSettings, uiMode = uiMode) {
                     Box(Modifier.fillMaxSize()) {
-                        if (themeUi) ThemePackWallpaper(page = 3)
                         NavDisplay(backStack = navigator.backStack, onBack = { finish() }) {
-                            entry<Route.ColorPalette> { ColorPaletteScreen() }
-                            entry<Route.Font> { FontScreen() }
-                            entry<Route.ThemeStore> { ThemeStoreScreen() }
-                            entry<Route.MyThemes> { MyThemesScreen() }
-                            entry<Route.About> { AboutScreen() }
+                            themeEntry<Route.ColorPalette>(NavSwipeDirection.None) { ColorPaletteScreen() }
+                            themeEntry<Route.Font>(NavSwipeDirection.None) { FontScreen() }
+                            themeEntry<Route.ThemeStore>(NavSwipeDirection.None) { ThemeStoreScreen() }
+                            themeEntry<Route.MyThemes>(NavSwipeDirection.None) { MyThemesScreen() }
+                            themeEntry<Route.About>(NavSwipeDirection.None) { AboutScreen() }
                         }
                     }
                 }

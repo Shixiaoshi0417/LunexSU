@@ -6,6 +6,7 @@ import android.graphics.drawable.AnimatedImageDrawable
 import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -88,17 +89,19 @@ internal fun ThemePackWallpaper(page: Int = 0, isCurrentPage: Boolean = true) {
     val config = pack.plan.background
     val name = config.image(page)
     val file = name?.let { File(pack.directory, it) }
-    LaunchedEffect(page, isCurrentPage) {
-        if (isCurrentPage) ThemePackState.visiblePage = page
+    val routeVisible = LocalThemeRouteVisible.current
+    val playing = isCurrentPage && routeVisible
+    LaunchedEffect(page, playing) {
+        if (playing) ThemePackState.visiblePage = page
     }
     val dark = isInDarkTheme()
     val dim = LocalWallpaperDim.current ?: effectiveWallpaperDim(config, dark)
     Box(Modifier.fillMaxSize().background(if (dark) Color(0xFF17171A) else Color(0xFFF5F5FA))) {
         file?.let {
-            PackFileImage(it, Modifier.fillMaxSize().blur(config.blur.dp), isCurrentPage = isCurrentPage)
+            PackFileImage(it, Modifier.fillMaxSize().blur(config.blur.dp), isCurrentPage = playing)
         }
         pack.plan.media.video?.let {
-            PackVideoBackground(File(pack.directory, it), pack.plan.media.videoVolume, Modifier.fillMaxSize(), isCurrentPage)
+            PackVideoBackground(File(pack.directory, it), pack.plan.media.videoVolume, Modifier.fillMaxSize(), playing)
         }
         if (file != null || pack.plan.media.video != null) {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = dim)))
@@ -114,6 +117,7 @@ internal fun PackFileImage(file: File, modifier: Modifier = Modifier, fit: Boole
         value = withContext(Dispatchers.IO) {
             try {
                 ImageDecoder.decodeDrawable(ImageDecoder.createSource(file)) { decoder, info, _ ->
+                    decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
                     val longest = maxOf(info.size.width, info.size.height)
                     if (longest > 2048) decoder.setTargetSize(
                         (info.size.width.toLong() * 2048 / longest).toInt().coerceAtLeast(1),
@@ -122,6 +126,7 @@ internal fun PackFileImage(file: File, modifier: Modifier = Modifier, fit: Boole
                 }
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
+                Log.w("ThemePackImage", "Cannot decode ${file.name}", error)
                 null
             }
         }
@@ -142,10 +147,11 @@ internal fun PackFileImage(file: File, modifier: Modifier = Modifier, fit: Boole
         }
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    DisposableEffect(drawable, lifecycle, isCurrentPage) {
+    val playing = isCurrentPage && LocalThemeRouteVisible.current
+    DisposableEffect(drawable, lifecycle, playing) {
         fun update() {
             (drawable as? AnimatedImageDrawable)?.let {
-                if (isCurrentPage && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) it.start() else it.stop()
+                if (playing && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) it.start() else it.stop()
             }
         }
         val observer = LifecycleEventObserver { _, _ -> update() }
@@ -153,9 +159,11 @@ internal fun PackFileImage(file: File, modifier: Modifier = Modifier, fit: Boole
         update()
         onDispose { lifecycle.removeObserver(observer); (drawable as? AnimatedImageDrawable)?.stop() }
     }
-    drawable?.let { image ->
-        // Draw through Compose's canvas so pager/route clipping also applies to native drawables.
-        Canvas(modifier.clipToBounds()) {
+    // Keep the image's layout node even while decoding. Otherwise an all-hidden status tile
+    // can give its match-parent image a zero-sized target during intrinsic measurement.
+    Canvas(modifier.clipToBounds()) {
+        drawable?.let { image ->
+            // Draw through Compose's canvas so pager/route clipping applies to native drawables.
             // Observe animated-drawable invalidations during draw, without recomposing the UI.
             frame.let {
                 drawIntoCanvas { canvas ->

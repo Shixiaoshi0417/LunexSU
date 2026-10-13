@@ -30,6 +30,23 @@ class ThemePackVisualsTest {
         assertTrue(plan.warnings.isEmpty())
     }
 
+    @Test fun fullyHiddenGridStillRetainsItsPhotoAtEveryOpacity() {
+        for (opacity in listOf(0f, 0.5f, 1f)) {
+            val plan = ThemePackSchema.parse(JSONObject()
+                .put("isGridWorkingCardBackgroundEnabled", true)
+                .put("gridWorkingCardBackgroundOpacity", opacity.toDouble())
+                .put("gridWorkingCardBackgroundDim", 0)
+                .put("isGridWorkingCardCheckHidden", true)
+                .put("isGridWorkingCardModeHidden", true)
+                .put("isGridWorkingCardTextHidden", true), setOf("grid_working_card_background.png"))
+            val surface = plan.visuals.surfaces.getValue(PackSurfaceId.GRID)
+            assertTrue(surface.enabled && surface.hideIcon && surface.hideText && surface.hideMode)
+            assertEquals(opacity, surface.opacity(false))
+            assertEquals(setOf("grid_working_card_background.png"), plan.imageAssets)
+            assertTrue(plan.warnings.isEmpty())
+        }
+    }
+
     @Test fun dashboardPresenceAndEnableAreIndependent() {
         val plan = parse("""{"hasDashboardCardBg":true,"isDashboardCardBackgroundEnabled":true,
             "dashboardCardBgOpacity":0.8,"isDashboardCardDualOpacityEnabled":true,

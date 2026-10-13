@@ -2,6 +2,7 @@
 package com.shixiaoshi0417.lunexsu.ui.screen.home
 
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.PackSurfaceId
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.currentFinaWallpaperTokens
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.packSurface
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.packSurfaceColor
 
@@ -94,7 +95,10 @@ private fun GridStatusCard(
     modifier: Modifier = Modifier,
 ) {
     val ksuActive = state.ksuVersion != null
-    val containerColor = statusContainerColor(ksuActive)
+    // Wallpaper-backed status cards use the same neutral surface as the other theme tiles.
+    // Keep the semantic status fill in the ordinary (non-theme) home UI.
+    val containerColor = if (currentFinaWallpaperTokens() != null) MaterialTheme.colorScheme.surfaceBright
+        else statusContainerColor(ksuActive)
     val contentColor = contentColorFor(containerColor)
     val statusTitle = state.statusTitle()
     val workingMode = workingModeLabel(state)

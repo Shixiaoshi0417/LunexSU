@@ -20,6 +20,10 @@ class AuthorizationTestRunner : Instrumentation() {
     override fun onStart() {
         val result = Bundle()
         try {
+            if (arguments.getString("suite") == "theme_rendering") {
+                finish(Activity.RESULT_OK, ThemeRenderingDeviceTests.run(this))
+                return
+            }
             if (arguments.getString("suite") == "kmi_ui") {
                 finish(Activity.RESULT_OK, KmiUiDeviceTests.run(this))
                 return
