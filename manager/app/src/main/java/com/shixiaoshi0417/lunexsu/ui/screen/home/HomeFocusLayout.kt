@@ -22,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.data.HomeMetrics
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.PackSurfaceId
 import kotlin.math.roundToInt
 
 /**
@@ -41,6 +42,7 @@ internal fun FocusHomeContent(
             title = stringResource(R.string.app_name),
             icon = Icons.Outlined.AdminPanelSettings,
             modifier = modifier,
+            surfaceId = PackSurfaceId.focus("app"),
         )
     }
     val deviceTile = @Composable { modifier: Modifier -> FocusDeviceTile(metrics, modifier) }
@@ -114,6 +116,7 @@ private fun FocusStatusTile(
         icon = Icons.Outlined.VerifiedUser,
         modifier = modifier.fillMaxWidth(),
         action = cardAction,
+        surfaceId = PackSurfaceId.focus("kernel"),
     ) {
         HomeFactRow(
             label = stringResource(R.string.home_running_status),
@@ -142,6 +145,7 @@ private fun FocusDeviceTile(
         title = stringResource(R.string.home_tile_device),
         icon = Icons.Outlined.Memory,
         modifier = modifier.fillMaxWidth(),
+        surfaceId = PackSurfaceId.focus("device"),
     ) {
         Row(
             modifier = Modifier
@@ -184,6 +188,7 @@ private fun FocusStorageTile(
         title = stringResource(R.string.home_tile_storage),
         icon = Icons.Outlined.SdStorage,
         modifier = modifier.fillMaxWidth(),
+        surfaceId = PackSurfaceId.focus("storage"),
     ) {
         StorageBar(
             label = stringResource(R.string.home_metric_storage_internal),

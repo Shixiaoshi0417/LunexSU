@@ -9,7 +9,7 @@ class ThemePackSchemaTest {
         /** Every preference an import may write; anything else in a pack is ignored. */
         val THEME_PREFERENCES = setOf("key_color", "color_mode", "use_dynamic_color", "miuix_monet",
             "color_generation_mode", "color_style", "color_spec", "color_contrast", "stats_top_layout",
-            "home_layout_style", "home_hide_working_mode")
+            "home_layout_style", "home_hide_working_mode", "fpt_app_language")
     }
     private fun parse(text: String, vararg names: String) = ThemePackSchema.parse(JSONObject(text), names.toSet())
 
@@ -20,7 +20,8 @@ class ThemePackSchemaTest {
         assertEquals(0xFF0061A4.toInt(), plan.settings["key_color"])
         assertEquals("stats", plan.settings["home_layout_style"])
         assertEquals(THEME_PREFERENCES, plan.settings.keys)
-        assertTrue(plan.warnings.containsAll(listOf("allowSu", "authorizationMode", "ui_mode", "intent_token", "auto_jailbreak", "check_update", "appLanguage")))
+        assertEquals("en-US", plan.settings["fpt_app_language"])
+        assertTrue(plan.warnings.containsAll(listOf("allowSu", "authorizationMode", "ui_mode", "intent_token", "auto_jailbreak", "check_update")))
     }
     @Test fun dynamicColorsRemoveOldCustomSeedAndEnableMiuixMonet() {
         val plan = parse("""{"customColor":"red","folksu_keyColor":123,"useSystemDynamicColor":true}""")
@@ -106,7 +107,7 @@ class ThemePackSchemaTest {
     }
     @Test fun missingFieldsTakeFinaSuImportDefaults() {
         val settings = parse("{}").settings
-        assertEquals(THEME_PREFERENCES, settings.keys)
+        assertEquals(THEME_PREFERENCES - "fpt_app_language", settings.keys)
         assertEquals("classic", settings["color_generation_mode"])
         assertEquals(0, settings["color_mode"]) // follow system
         assertEquals(true, settings["use_dynamic_color"])
@@ -149,9 +150,11 @@ class ThemePackSchemaTest {
             ThemePackSchema.parse(JSONObject().put("meta_description", "x".repeat(4097)), emptySet())
         }
     }
-    @Test fun optionalUnsupportedAssetsAreListedAndNeverActivated() {
+    @Test fun mediaAssetsAreActivatedOnlyByExplicitSettingsAndExactFilenames() {
         val plan = parse("""{"isVideoBackgroundEnabled":true,"isMusicEnabled":true}""", "video_background.mp4", "music.mp3")
         assertFalse(plan.background.enabled)
-        assertTrue(plan.warnings.containsAll(listOf("isVideoBackgroundEnabled", "isMusicEnabled", "video_background.mp4", "music.mp3")))
+        assertEquals("video_background.mp4", plan.media.video)
+        assertNull(plan.media.music)
+        assertTrue(plan.warnings.containsAll(listOf("musicFilename: audio missing", "music.mp3")))
     }
 }

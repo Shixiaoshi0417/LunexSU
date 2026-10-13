@@ -118,8 +118,11 @@ import com.shixiaoshi0417.lunexsu.ui.screen.themestore.MyThemesScreen
 import com.shixiaoshi0417.lunexsu.ui.screen.themestore.ThemeStoreScreen
 import com.shixiaoshi0417.lunexsu.ui.screen.templateeditor.TemplateEditorScreen
 import com.shixiaoshi0417.lunexsu.ui.theme.LunexSUTheme
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFinaThemeUi
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalThemePackBackground
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.ThemePackState
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.ThemePackLanguage
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.ThemePackMusic
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.ThemePackWallpaper
 import com.shixiaoshi0417.lunexsu.ui.theme.LocalColorMode
 import com.shixiaoshi0417.lunexsu.ui.theme.LocalEnableBlur
@@ -150,6 +153,10 @@ import top.yukonga.miuix.kmp.utils.pagerGestureOverride
 
 class MainActivity : ComponentActivity() {
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(ThemePackLanguage.wrap(newBase))
+    }
+
     private val intentChannel = Channel<Intent>(capacity = Channel.BUFFERED)
     private var contentReady = false
     private var splashStartedAt = 0L
@@ -176,7 +183,8 @@ class MainActivity : ComponentActivity() {
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             val selectedMainPage by viewModel.selectedMainPage.collectAsStateWithLifecycle()
             val appSettings = uiState.appSettings
-            val uiMode = uiState.uiMode
+            val finaThemeUi = ThemePackState.active != null
+            val uiMode = effectiveUiMode(uiState.uiMode, finaThemeUi)
             val darkMode = appSettings.colorMode.isDark || (appSettings.colorMode.isSystem && isSystemInDarkTheme())
 
             DisposableEffect(darkMode) {
@@ -210,10 +218,12 @@ class MainActivity : ComponentActivity() {
                 LocalEnableNavigationBadge provides uiState.enableNavigationBadge,
                 LocalModuleDescriptionMaxLines provides uiState.moduleDescriptionMaxLines,
                 LocalUiMode provides uiMode,
+                LocalFinaThemeUi provides finaThemeUi,
                 LocalThemePackBackground provides ThemePackState.hasBackground,
                 LocalHomeLayoutOptions provides uiState.homeLayout,
             ) {
                 LunexSUTheme(appSettings = appSettings, uiMode = uiMode) {
+                    ThemePackMusic()
                     IntentDispatcher(intentChannel = intentChannel)
                     val swipeDismiss = if (uiState.enableSwipeDismiss) {
                         if (LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl) {

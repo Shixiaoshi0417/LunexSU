@@ -1,6 +1,10 @@
 // Adapted from FinaSU, formerly FolkSU (https://github.com/LyraVoid/FinaSU), GPL-3.0.
 package com.shixiaoshi0417.lunexsu.ui.screen.home
 
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.PackSurfaceId
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.packSurface
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.packSurfaceColor
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -94,9 +98,11 @@ private fun GridStatusCard(
     val contentColor = contentColorFor(containerColor)
     val statusTitle = state.statusTitle()
     val workingMode = workingModeLabel(state)
-    val hideMode = LocalHomeLayoutOptions.current.hideWorkingMode
+    val surface = packSurface(PackSurfaceId.GRID)
+    val hideMode = LocalHomeLayoutOptions.current.hideWorkingMode || surface?.hideMode == true
 
     HomeCard(
+        surfaceId = PackSurfaceId.GRID,
         modifier = modifier,
         containerColor = containerColor,
         contentColor = contentColor,
@@ -117,7 +123,7 @@ private fun GridStatusCard(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
+                if (surface?.hideText != true) Text(
                     text = statusTitle,
                     style = FolkType.Title
                 )
@@ -133,10 +139,10 @@ private fun GridStatusCard(
                     StatusJailbreakButton(onClick = actions.onJailbreakClick)
                 }
             }
-            Icon(
+            if (surface?.hideIcon != true) Icon(
                 imageVector = state.statusIcon(),
                 contentDescription = statusTitle,
-                tint = contentColor,
+                tint = packSurfaceColor(PackSurfaceId.GRID, contentColor),
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(16.dp)

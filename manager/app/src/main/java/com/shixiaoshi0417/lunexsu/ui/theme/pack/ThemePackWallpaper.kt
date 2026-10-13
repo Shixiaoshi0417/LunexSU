@@ -70,6 +70,11 @@ private object ThemePackLuminance {
 internal fun rememberThemePackLuminance(): Float {
     val pack = ThemePackState.active
     val file = pack?.plan?.background?.image(ThemePackState.visiblePage)?.let { File(pack.directory, it) }
+    return rememberPackImageLuminance(file)
+}
+
+@Composable
+internal fun rememberPackImageLuminance(file: File?): Float {
     val luminance by produceState(ThemePackLuminance.cached(file) ?: -1f, file) {
         value = file?.let { ThemePackLuminance.measure(it) } ?: -1f
     }
@@ -83,8 +88,30 @@ internal fun ThemePackWallpaper(page: Int = 0, isCurrentPage: Boolean = true) {
     val config = pack.plan.background
     val name = config.image(page)
     val file = name?.let { File(pack.directory, it) }
+    LaunchedEffect(page, isCurrentPage) {
+        if (isCurrentPage) ThemePackState.visiblePage = page
+    }
+    val dark = isInDarkTheme()
+    val dim = LocalWallpaperDim.current ?: effectiveWallpaperDim(config, dark)
+    Box(Modifier.fillMaxSize().background(if (dark) Color(0xFF17171A) else Color(0xFFF5F5FA))) {
+        file?.let {
+            PackFileImage(it, Modifier.fillMaxSize().blur(config.blur.dp), isCurrentPage = isCurrentPage)
+        }
+        pack.plan.media.video?.let {
+            PackVideoBackground(File(pack.directory, it), pack.plan.media.videoVolume, Modifier.fillMaxSize(), isCurrentPage)
+        }
+        if (file != null || pack.plan.media.video != null) {
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = dim)))
+        }
+    }
+}
+
+/** One bounded native decoder for wallpapers, surfaces, titles and navigation images (including GIF). */
+@Composable
+internal fun PackFileImage(file: File, modifier: Modifier = Modifier, fit: Boolean = false,
+    isCurrentPage: Boolean = true) {
     val drawable by produceState<Drawable?>(null, file) {
-        value = if (file == null) null else withContext(Dispatchers.IO) {
+        value = withContext(Dispatchers.IO) {
             try {
                 ImageDecoder.decodeDrawable(ImageDecoder.createSource(file)) { decoder, info, _ ->
                     val longest = maxOf(info.size.width, info.size.height)
@@ -126,31 +153,24 @@ internal fun ThemePackWallpaper(page: Int = 0, isCurrentPage: Boolean = true) {
         update()
         onDispose { lifecycle.removeObserver(observer); (drawable as? AnimatedImageDrawable)?.stop() }
     }
-    LaunchedEffect(page, isCurrentPage) {
-        if (isCurrentPage) ThemePackState.visiblePage = page
-    }
-    val dark = isInDarkTheme()
-    val dim = LocalWallpaperDim.current ?: effectiveWallpaperDim(config, dark)
-    Box(Modifier.fillMaxSize().background(if (dark) Color(0xFF17171A) else Color(0xFFF5F5FA))) {
-        drawable?.let { image ->
-            // Draw through Compose's canvas so pager/route clipping also applies to native drawables.
-            Canvas(Modifier.fillMaxSize().clipToBounds().blur(config.blur.dp)) {
-                // Observe animated-drawable invalidations during draw, without recomposing the UI.
-                frame.let {
-                    drawIntoCanvas { canvas ->
-                        val width = image.intrinsicWidth.coerceAtLeast(1)
-                        val height = image.intrinsicHeight.coerceAtLeast(1)
-                        val scale = maxOf(size.width / width, size.height / height)
-                        canvas.save()
-                        canvas.translate((size.width - width * scale) / 2, (size.height - height * scale) / 2)
-                        canvas.scale(scale, scale)
-                        image.setBounds(0, 0, width, height)
-                        image.draw(canvas.nativeCanvas)
-                        canvas.restore()
-                    }
+    drawable?.let { image ->
+        // Draw through Compose's canvas so pager/route clipping also applies to native drawables.
+        Canvas(modifier.clipToBounds()) {
+            // Observe animated-drawable invalidations during draw, without recomposing the UI.
+            frame.let {
+                drawIntoCanvas { canvas ->
+                    val width = image.intrinsicWidth.coerceAtLeast(1)
+                    val height = image.intrinsicHeight.coerceAtLeast(1)
+                    val scale = if (fit) minOf(size.width / width, size.height / height)
+                        else maxOf(size.width / width, size.height / height)
+                    canvas.save()
+                    canvas.translate((size.width - width * scale) / 2, (size.height - height * scale) / 2)
+                    canvas.scale(scale, scale)
+                    image.setBounds(0, 0, width, height)
+                    image.draw(canvas.nativeCanvas)
+                    canvas.restore()
                 }
             }
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = dim)))
         }
     }
 }

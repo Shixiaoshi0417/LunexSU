@@ -17,3 +17,7 @@ enum class UiMode(val value: String) {
 }
 
 val LocalUiMode = staticCompositionLocalOf { UiMode.Miuix }
+
+/** A theme changes presentation, not the user's persisted choice. */
+internal fun effectiveUiMode(preferred: UiMode, hasThemePack: Boolean): UiMode =
+    if (hasThemePack) UiMode.Material else preferred

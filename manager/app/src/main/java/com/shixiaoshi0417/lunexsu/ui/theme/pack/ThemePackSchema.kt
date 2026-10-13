@@ -28,8 +28,12 @@ internal data class ThemePackPlan(
     val fontMode: String?,
     val font: String?,
     val background: PackBackground,
+    val visuals: PackVisuals,
+    val media: PackMedia,
     val warnings: List<String>,
-)
+) {
+    val imageAssets: Set<String> get() = background.images.values.toSet() + visuals.images
+}
 
 /** FPT fields are translated explicitly; arbitrary JSON keys never become preferences. */
 internal object ThemePackSchema {
@@ -163,7 +167,7 @@ internal object ThemePackSchema {
         }
 
         val groups = names.groupBy { it.substringBefore('.') }
-        (imageStems + "font").forEach { stem ->
+        (imageStems + ThemePackVisualSchema.imageStems + "font").forEach { stem ->
             require((groups[stem]?.size ?: 0) <= 1) { "Ambiguous resource: $stem" }
             groups[stem]?.firstOrNull()?.let { name ->
                 val extension = name.substringAfterLast('.').lowercase()
@@ -203,9 +207,15 @@ internal object ThemePackSchema {
             scalar("backgroundBlur", 0f, 100.0), scalar("backgroundDim", 0.2f),
             boolean("isDualBackgroundDimEnabled"), scalar("backgroundDayDim", 0.2f),
             scalar("backgroundNightDim", 0.4f), images)
+        val reader = PackFieldReader(json, used)
+        if (json.has("appLanguage")) {
+            settings[ThemePackLanguage.KEY] = ThemePackLanguage.validate(reader.text("appLanguage"))
+        }
+        val visuals = ThemePackVisualSchema.parse(reader, names, warnings)
+        val media = ThemePackMediaSchema.parse(reader, names, warnings)
         json.keys().asSequence().filter { it !in used }.forEach { warnings += it }
-        names.filter { it !in images.values && !(fontMode == "custom" && it == fontFile) }
+        names.filter { it !in images.values && it !in visuals.images && it !in media.assets && !(fontMode == "custom" && it == fontFile) }
             .forEach { warnings += it }
-        return ThemePackPlan(metadata, settings, fontMode, fontFile, background, warnings.distinct())
+        return ThemePackPlan(metadata, settings, fontMode, fontFile, background, visuals, media, warnings.distinct())
     }
 }

@@ -1,6 +1,8 @@
 // Adapted from FinaSU, formerly FolkSU (https://github.com/LyraVoid/FinaSU), GPL-3.0.
 package com.shixiaoshi0417.lunexsu.ui.screen.home
 
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.PackSurfaceId
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -63,16 +65,17 @@ private fun DashboardHeroCard(
     val ksuActive = state.ksuVersion != null
     val jailbreak = state.isNotInstalled() && state.isSELinuxPermissive
     val statusTitle = state.statusTitle()
-    val subColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     HomeCard(
         modifier = modifier.fillMaxWidth(),
+        surfaceId = PackSurfaceId.DASHBOARD,
         onClick = {
             if (!state.isLateLoadMode) {
                 actions.onInstallClick()
             }
         },
     ) {
+        val subColor = MaterialTheme.colorScheme.onSurfaceVariant
         Column(
             modifier = Modifier
                 .fillMaxWidth()

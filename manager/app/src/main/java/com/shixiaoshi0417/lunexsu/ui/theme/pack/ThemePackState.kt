@@ -15,7 +15,7 @@ internal data class ActiveThemePack(val directory: File, val plan: ThemePackPlan
 internal object ThemePackState {
     var active: ActiveThemePack? by mutableStateOf(null)
         private set
-    val hasBackground: Boolean get() = active?.plan?.background?.enabled == true
+    val hasBackground: Boolean get() = active?.plan?.let { it.background.enabled || it.media.video != null } == true
 
     /** Pager page whose wallpaper is on screen; content polarity follows it, as in FinaSU. */
     var visiblePage by mutableIntStateOf(0)
@@ -34,6 +34,9 @@ internal object ThemePackState {
 
 // Only MainActivity enables transparent wallpaper surfaces; module WebUI retains opaque colors.
 internal val LocalThemePackBackground = staticCompositionLocalOf { false }
+
+/** FinaSU's Material presentation is scoped to the active imported pack, never saved as a UI preference. */
+internal val LocalFinaThemeUi = staticCompositionLocalOf { false }
 
 /**
  * The dim actually painted over the wallpaper. The Material theme may raise it above the pack's

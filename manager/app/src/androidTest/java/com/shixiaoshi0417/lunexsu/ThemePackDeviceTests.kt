@@ -48,7 +48,15 @@ internal object ThemePackDeviceTests {
         listOf("background_home" to Color.rgb(124, 93, 184),
             "background_superuser" to Color.rgb(52, 130, 154),
             "background_system_module" to Color.rgb(97, 152, 91),
-            "background_settings" to Color.rgb(165, 111, 153)).forEach { (name, color) ->
+            "background_settings" to Color.rgb(165, 111, 153),
+            "grid_working_card_background" to Color.rgb(66, 88, 110),
+            "dashboard_card_bg" to Color.rgb(72, 95, 65),
+            "focus_card_kernel_bg" to Color.rgb(55, 72, 110),
+            "focus_card_app_bg" to Color.rgb(75, 55, 110),
+            "focus_card_device_bg" to Color.rgb(55, 100, 110),
+            "focus_card_storage_bg" to Color.rgb(110, 80, 55),
+            "title_image" to Color.rgb(124, 93, 184),
+            "nav_icon_Home" to Color.rgb(52, 130, 154)).forEach { (name, color) ->
             val file = File(context.cacheDir, "$name.png")
             val bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
             bitmap.eraseColor(color)
@@ -68,6 +76,13 @@ internal object ThemePackDeviceTests {
             .put("nightModeFollowSys", false).put("nightModeEnabled", false)
             .put("isBackgroundEnabled", true).put("isMultiBackgroundEnabled", true)
             .put("backgroundOpacity", 0.65).put("backgroundDim", 0.15)
+            .put("statsTopLayout", "grid").put("isGridWorkingCardBackgroundEnabled", true)
+            .put("isGridWorkingCardModeHidden", true).put("isDashboardCardBackgroundEnabled", true)
+            .put("hasDashboardCardBg", true).put("isFocusCardBackgroundEnabled", true)
+            .put("hasFocusCardKernelBg", true).put("hasFocusCardAppBg", true)
+            .put("hasFocusCardDeviceBg", true).put("hasFocusCardStorageBg", true)
+            .put("isAdvancedTitleStyleEnabled", true).put("navIconCustomEnabled", true)
+            .put("navIcons", JSONObject().put("Home", "nav_icon_Home.png"))
             .put("ui_mode", "evil").put("intent_token", "evil").put("auto_jailbreak", true)
             .put("allowSu", true).put("authorizationMode", 0)
         if (withFont) json.put("fontMode", "custom")
@@ -115,6 +130,11 @@ internal object ThemePackDeviceTests {
             passed += "android_font_decode_and_live_reload"
             check(ThemePackState.active?.plan?.background?.image(3) == "background_settings.png")
             passed += "private_per_page_assets"
+            check(ThemePackState.active?.plan?.visuals?.title?.image == "title_image.png")
+            check(ThemePackState.active?.plan?.visuals?.navIcons?.get(0) == "nav_icon_Home.png")
+            check(ThemePackState.active?.plan?.imageAssets?.size == 12)
+            ThemePackState.active?.let { pack -> check(pack.plan.imageAssets.all { File(pack.directory, it).isFile }) }
+            passed += "private_card_title_and_navigation_assets"
             instrumentation.runOnMainSync { ThemePackState.reload(context) }
             check(ThemePackState.hasBackground)
             passed += "persisted_selection_reload"
@@ -137,6 +157,19 @@ internal object ThemePackDeviceTests {
             check(runCatching { ThemePackImporter.prepare(context, Uri.fromFile(badImage)) }.isFailure)
             check(prefs.all == current)
             passed += "invalid_android_image_keeps_current_theme"
+            for ((name, json) in listOf(
+                "grid_working_card_background.png" to JSONObject().put("isGridWorkingCardBackgroundEnabled", true),
+                "title_image.png" to JSONObject().put("isAdvancedTitleStyleEnabled", true),
+                "nav_icon_Home.png" to JSONObject().put("navIconCustomEnabled", true)
+                    .put("navIcons", JSONObject().put("Home", "nav_icon_Home.png")),
+                "song.mp3" to JSONObject().put("isMusicEnabled", true).put("musicFilename", "song.mp3"),
+                "video_background.mp4" to JSONObject().put("isVideoBackgroundEnabled", true),
+            )) {
+                val invalid = invalidAsset(name, json)
+                check(runCatching { ThemePackImporter.prepare(context, Uri.fromFile(invalid)) }.isFailure)
+                check(prefs.all == current)
+            }
+            passed += "invalid_visual_and_media_assets_keep_current_theme"
             val badFont = invalidAsset("font.ttf", JSONObject().put("fontMode", "custom"))
             check(runCatching { ThemePackImporter.prepare(context, Uri.fromFile(badFont)) }.isFailure)
             check(prefs.all == current)

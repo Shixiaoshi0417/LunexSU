@@ -36,11 +36,13 @@ internal fun HomeFactsTile(
     title: String,
     icon: ImageVector,
     modifier: Modifier = Modifier,
+    surfaceId: String? = null,
 ) {
     HomeTileCard(
         title = title,
         icon = icon,
         modifier = modifier.fillMaxWidth(),
+        surfaceId = surfaceId,
     ) {
         HomeFactRow(
             label = stringResource(R.string.home_manager_version),

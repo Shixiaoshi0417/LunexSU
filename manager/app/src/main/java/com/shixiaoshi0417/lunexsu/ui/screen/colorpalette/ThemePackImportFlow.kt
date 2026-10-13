@@ -33,7 +33,9 @@ internal data class ThemePackActions(
 /** One picker/confirmation pipeline; the existing dialog host selects Material or MIUIX. */
 @Composable
 internal fun rememberThemePackActions(onApplied: () -> Unit): ThemePackActions {
-    val context = LocalContext.current.applicationContext
+    // Keep the activity context for pre-Android-13 locale recreation after publication.
+    // This scope belongs to the screen; no activity is retained by a singleton or view model.
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val confirm = rememberConfirmDialog()
     val loading = rememberLoadingDialog()

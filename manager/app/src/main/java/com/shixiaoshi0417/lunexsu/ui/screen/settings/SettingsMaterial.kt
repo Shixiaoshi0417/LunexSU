@@ -33,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
@@ -59,6 +60,7 @@ import com.shixiaoshi0417.lunexsu.ui.component.material.SendLogBottomSheet
 import com.shixiaoshi0417.lunexsu.ui.component.material.SnackBarHost
 import com.shixiaoshi0417.lunexsu.ui.component.material.expressiveTopAppBarColors
 import com.shixiaoshi0417.lunexsu.ui.component.uninstalldialog.UninstallDialog
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFinaThemeUi
 
 /**
  * @author weishu
@@ -373,6 +375,14 @@ fun SettingPagerMaterial(
 private fun TopBar(
     scrollBehavior: TopAppBarScrollBehavior? = null
 ) {
+    if (LocalFinaThemeUi.current) {
+        TopAppBar(
+            title = { Text(stringResource(R.string.settings)) },
+            colors = expressiveTopAppBarColors(),
+            windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+        )
+        return
+    }
     LargeFlexibleTopAppBar(
         title = { Text(stringResource(R.string.settings)) },
         colors = expressiveTopAppBarColors(),

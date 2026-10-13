@@ -1,6 +1,8 @@
 // Adapted from FinaSU, formerly FolkSU (https://github.com/LyraVoid/FinaSU), GPL-3.0.
 package com.shixiaoshi0417.lunexsu.ui.component.bottombar
 
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.PackNavIcon
+
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
@@ -84,12 +86,14 @@ fun NavBarIcon(
         MaterialTheme.colorScheme.onSurfaceVariant
     },
 ) {
-    Icon(
-        imageVector = if (isSelected) destination.iconSelected else destination.iconNotSelected,
-        contentDescription = stringResource(destination.label),
-        tint = tint,
-        modifier = modifier,
-    )
+    PackNavIcon(destination.ordinal, stringResource(destination.label), modifier) {
+        Icon(
+            imageVector = if (isSelected) destination.iconSelected else destination.iconNotSelected,
+            contentDescription = stringResource(destination.label),
+            tint = tint,
+            modifier = modifier,
+        )
+    }
 }
 
 @Composable

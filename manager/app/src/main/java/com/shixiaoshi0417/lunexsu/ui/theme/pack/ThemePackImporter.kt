@@ -2,10 +2,11 @@
 package com.shixiaoshi0417.lunexsu.ui.theme.pack
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.graphics.BitmapFactory
 import android.graphics.Typeface
+import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.content.SharedPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
@@ -39,8 +40,7 @@ internal object ThemePackImporter {
                 FptContainer.read(it, directory)
             } ?: error("Cannot read theme")
             val plan = ThemePackSchema.parse(json, files.keys)
-            val backgrounds = plan.background.images.values.toSet()
-            files.filterKeys { it in backgrounds }.forEach { (name, file) ->
+            files.filterKeys { it in plan.imageAssets }.forEach { (name, file) ->
                 val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                 BitmapFactory.decodeFile(file.path, bounds)
                 require(bounds.outWidth in 1..16384 && bounds.outHeight in 1..16384 &&
@@ -50,6 +50,24 @@ internal object ThemePackImporter {
                 val font = files.getValue(requireNotNull(plan.font))
                 require(font.length() <= FontConfig.MAX_FONT_BYTES) { "Font exceeds size limit" }
                 require(Typeface.Builder(font).build() != null) { "Invalid font" }
+            }
+            plan.media.assets.forEach { name ->
+                val retriever = MediaMetadataRetriever()
+                try {
+                    retriever.setDataSource(files.getValue(name).path)
+                    val duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+                    require(duration != null && duration > 0) { "Invalid media: $name" }
+                    val key = if (name == plan.media.video) MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO
+                        else MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO
+                    require(retriever.extractMetadata(key) == "yes") { "Missing media track: $name" }
+                    if (name == plan.media.video) {
+                        val width = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull()
+                        val height = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull()
+                        require(width != null && height != null && width in 1..4096 && height in 1..4096) {
+                            "Video resolution exceeds limit: $name"
+                        }
+                    }
+                } finally { retriever.release() }
             }
             PreparedThemePack(directory, json.toString(), files.toMap(), plan)
         } catch (error: Exception) {
@@ -64,11 +82,12 @@ internal object ThemePackImporter {
             runCatching {
                 check(theme.directory.isDirectory) { "Prepared theme has expired" }
                 val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                val previousLanguage = prefs.getString(ThemePackLanguage.KEY, "").orEmpty()
                 val id = UUID.randomUUID().toString()
                 val directory = packDirectory(context, id) ?: error("Invalid pack directory")
                 check(directory.mkdirs()) { "Cannot create theme directory" }
                 try {
-                    val selected = theme.plan.background.images.values.toMutableSet()
+                    val selected = (theme.plan.imageAssets + theme.plan.media.assets).toMutableSet()
                     if (theme.plan.fontMode == "custom") selected += requireNotNull(theme.plan.font)
                     selected.forEach { name -> theme.files.getValue(name).copyTo(File(directory, name)) }
                     val changes = theme.plan.settings.toMutableMap()
@@ -90,6 +109,7 @@ internal object ThemePackImporter {
                         // Pack GC only scans theme_packs, so a displaced standalone font is removed here.
                         FontConfig.discardReplacedFont(context, replacedFont)
                         ThemePackState.reload(context)
+                        ThemePackLanguage.refresh(context, previousLanguage)
                     }
                 } finally {
                     // commit() can update in-memory preferences even when disk persistence fails.
@@ -104,6 +124,7 @@ internal object ThemePackImporter {
         withContext(NonCancellable + Dispatchers.IO) {
             runCatching {
                 val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                val previousLanguage = prefs.getString(ThemePackLanguage.KEY, "").orEmpty()
                 val replacedFont = prefs.getString("custom_font_file", null)
                 publish(prefs, mapOf(
                     "color_mode" to 0, "key_color" to 0, "color_style" to "TonalSpot",
@@ -112,11 +133,13 @@ internal object ThemePackImporter {
                     "use_dynamic_color" to true, "miuix_monet" to false, "amoled_black" to false,
                     "home_layout_style" to "circle", "stats_top_layout" to HomeLayoutStyle.STATS_TOP_STATUS,
                     "home_hide_working_mode" to false, "font_mode" to "SYSTEM_DEFAULT",
+                    ThemePackLanguage.KEY to "",
                 ), setOf(ACTIVE_PACK, ACTIVE_JSON, "custom_font_file"))
                 withContext(Dispatchers.Main) {
                     FontConfig.reloadFromPreferences(context)
                     FontConfig.discardReplacedFont(context, replacedFont)
                     ThemePackState.reload(context)
+                    ThemePackLanguage.refresh(context, previousLanguage)
                 }
                 cleanup(context, prefs)
             }

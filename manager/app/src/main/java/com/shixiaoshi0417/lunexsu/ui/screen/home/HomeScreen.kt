@@ -32,6 +32,7 @@ import com.shixiaoshi0417.lunexsu.ui.component.dialog.rememberLoadingDialog
 import com.shixiaoshi0417.lunexsu.ui.navigation3.Navigator
 import com.shixiaoshi0417.lunexsu.ui.navigation3.Route
 import com.shixiaoshi0417.lunexsu.ui.viewmodel.HomeViewModel
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFinaThemeUi
 import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
@@ -46,8 +47,6 @@ fun HomePager(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val uiMode = LocalUiMode.current
     val mainPagerState = LocalMainPagerState.current
-    // The sampler runs only while this page is on screen and only for a Material layout that draws
-    // live metrics; every other case leaves it idle. The lifecycle also stops it in the background.
     val metrics = if (
         uiMode == UiMode.Material && isCurrentPage &&
         HomeLayoutStyle.usesMetrics(LocalHomeLayoutOptions.current.style)
@@ -99,7 +98,9 @@ fun HomePager(
         onOpenModule = { mainPagerState.animateToPage(BottomBarDestination.Module.ordinal) },
     )
 
-    when (uiMode) {
+    if (LocalFinaThemeUi.current) {
+        FinaThemeHome(uiState, actions, bottomInnerPadding, superuserCount, moduleEnabledCount, metrics)
+    } else when (uiMode) {
         UiMode.Miuix -> HomePagerMiuix(
             state = uiState,
             actions = actions,

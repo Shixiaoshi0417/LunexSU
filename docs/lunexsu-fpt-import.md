@@ -18,18 +18,21 @@
 ## Compatibility scope
 
 The format is taken from [FinaSU by LyraVoid](https://github.com/LyraVoid/FinaSU),
-snapshot `fa57d340f4da3f42fc422eae4994c0b3be7f027c`. Its FPT container consists of a
+snapshot `fa57d340f4da3f42fc422eae4994c0b3be7f027c`; the expanded surface mapping and
+theme-only home follow `8ba5a6c`. Its FPT container consists of a
 16-byte IV followed by an AES-CBC encrypted flat ZIP, containing `theme.json`
 and optional assets. The format's shared key is compatibility encoding, not
 proof that a theme is trusted.
 
-This port maps colors, night mode, palette style/spec/contrast, the existing home
-layouts and fonts to LunexSU's current settings. Image wallpapers support the
-global background and Home/Superuser/Module/Settings page slots. Unsupported
-resources/settings are listed before applying; they cannot change Root grants,
-module behavior, update URLs, language, package identity or the UI architecture.
-Video/audio, per-card image surfaces and custom navigation icons remain separate
-upstream systems. The online theme store is ported (see Theme store below).
+This port maps colors, night mode, palette style/spec/contrast, home layouts,
+fonts and `appLanguage` to LunexSU's allowlisted theme settings. Wallpapers support
+global and Home/Superuser/Module/Settings images, including GIF/animated WebP,
+and a global video background. Grid working cards, Dashboard heroes and all four
+Focus cards support image surfaces. Title images and custom navigation icons use
+the theme-only FinaSU Material presentation. Background music has a toolbar playback switch. Unsupported
+resources/settings remain listed before applying; no theme can change Root grants,
+module behavior, update URLs, package identity or the saved UI preference.
+The online theme store is ported (see Theme store below).
 
 A field the pack leaves out takes FinaSU's import default rather than keeping the
 previous theme's value: indigo seed with system dynamic colors on, follow-system night
@@ -40,14 +43,15 @@ light/dark table for the 20 catalog seeds, and no contrast boost on any regenera
 scheme, so a pack cannot end up in a high-contrast regeneration it never asked for.
 Picking a palette style, spec or contrast afterwards switches to `custom`, which
 regenerates the scheme with those choices; restoring the default theme also returns to
-`custom`. In MIUIX a classic catalog seed is mapped to the table's primary color.
+`custom`. Language is the exception: an omitted `appLanguage` retains the user's locale;
+an explicitly empty value follows the system.
 
 ## Usage
 
 Open Settings -> Theme -> Import FinaSU theme (.fpt), choose a local package and
 review the name, author, version, resource count and compatibility notices. Apply
 uses the same prepared payload that was reviewed. Cancel leaves the current theme
-unchanged. Restore default theme resets colors, font, home layout and backgrounds
+unchanged. Restore default theme resets colors, font, home layout, language and backgrounds
 while retaining the selected UI and unrelated settings.
 
 GIF and animated WebP images use Android's drawable decoder; animation stops when
@@ -63,7 +67,7 @@ measured once per image from a 64 px decode: when brightness × (1 − dim) is b
 bar icons) and the painted scrim is raised to the smallest value that keeps that
 text at WCAG AA 4.5:1 over a white wallpaper. The pack's dim values are never
 rewritten. A dark theme never flips; its readability is left to the night dim, as
-in FinaSU. MIUIX applies the dual dim without the brightness adaptation.
+in FinaSU. Active packs use this Material presentation even with a saved MIUIX preference.
 
 Containers follow FinaSU's wallpaper materials. `backgroundOpacity` is the panel
 alpha (0 shows the wallpaper fully, 1 is opaque; a pack without it imports as
@@ -75,16 +79,51 @@ surface tint with opaque content colors, and no `Modifier.alpha` is involved.
 A container inside another material draws no second fill, and the rows of a
 list group share one group fill. In the Material UI the theme keeps every
 surface role opaque (only the canvas is transparent), so components without a
-material, such as dialogs, sheets and the theme preview, stay readable. MIUIX
-draws cards and list popups with the same `surfaceContainer` role, so the root
-Scaffold, which hosts its overlay dialogs and popups, keeps an opaque background
-and the 0.96 overlay alpha, while page content gets the group alpha; MIUIX bars
-use the chrome material unless their blur backdrop is active. Without a pack
-wallpaper both UIs render exactly as before.
+material, such as dialogs, sheets and the theme preview, stay readable. Active packs
+no longer use the native MIUIX wallpaper path; without a pack, both original UI
+implementations remain available.
 Drawables render through Compose's canvas with page clipping, so preloaded pager
 backgrounds cannot cover the current page. Expected preparation errors are returned
 inside the loading job before being handled; a bad package cannot cancel its dialog
 scope and prevent subsequent imports.
+
+### Additional FinaSU assets
+
+- `grid_working_card_background.*`: working-card image, opacity/day/night opacity,
+  dim, and independent check-icon/status-text/working-mode visibility switches.
+- `dashboard_card_bg.*`: Dashboard hero image with independent presence/enable,
+  dual opacity and dual dim.
+- `focus_card_{kernel,app,device,storage}_bg.*`: Focus card images with shared
+  opacity/dim and per-child overrides. Legacy keys and modern
+  `surface.<id>.*` fields are accepted; modern fields take precedence.
+- `title_image.*`: Home title image, day/night opacity, dim and horizontal offset.
+- `navIcons`: Home/SuperUser/AModule/Settings images, enabled by
+  `navIconCustomEnabled` or `nav_icon_custom_enabled`. Badges and page actions
+   remain unchanged. The theme's rail, docked bar and floating bar use the same assets.
+- `video_background.*`: a looping global video with `videoVolume`, allocated only
+  for the visible page while the activity is resumed.
+- `musicFilename`: an exact archive-local audio name, with `isMusicEnabled`,
+  `musicVolume`, `isAutoPlayEnabled` and `isLoopingEnabled`. One activity-scoped
+   player is shared across pages; playback pauses in the background. The play/pause
+  button toggles playback even when autoplay is disabled.
+- `appLanguage`: validated BCP-47 tags; empty follows the system. Android 13+
+  uses application locales, while older supported versions recreate the activity
+  with a locale-specific context.
+
+With an active pack, the entire Manager uses the FinaSU-derived Material scaffold,
+navigation and wallpaper materials, even if the saved UI preference is MIUIX. Its
+theme-only home ports FinaSU's compact title toolbar, install/music/reboot actions,
+and Circle/Grid/Focus/Dashboard/Stats boards. Root policy and module controllers are
+still LunexSU's. Removing the pack restores the saved Material/MIUIX interface;
+the import never writes `ui_mode`. Non-theme MIUIX cards and bars are unchanged.
+Images retain bounded native decoding and lifecycle-aware animation.
+
+Sound-effect playback, arbitrary unknown surface IDs and layouts without a LunexSU
+equivalent are not implemented. Active unsupported sound effects remain a warning;
+disabled media defaults do not produce misleading unsupported-key warnings.
+Enabled features with missing optional assets also remain warnings. Audio/video
+codec availability depends on the device; this does not guarantee pixel-identical
+rendering of every store pack or support for every FinaSU extension.
 
 ## Theme store
 
@@ -132,7 +171,7 @@ and pages reserve its height so content and the module install button never sit 
 it. The optional glass effect uses the Liquid library's real-time blur on Android 13+.
 Over a pack wallpaper the docked bar and the rail are transparent with the chrome scrim,
 while the floating bar carries the Raised material. The rail is FinaSU's fixed icon-only
-rail. MIUIX keeps its own bottom bar and floating bottom bar setting.
+rail. Without an active pack, MIUIX keeps its own bottom bar and floating bottom bar setting.
 
 ## Import boundaries and persistence
 
@@ -141,7 +180,9 @@ and drive-qualified names are rejected before writing. Limits are 128 entries,
 1 MiB configuration, 1 GiB expanded resources and 1 GiB + 32 MiB container input,
 matching FinaSU's current limits (store themes reach several hundred megabytes).
 Deeply nested JSON is rejected before object parsing. Image headers and custom
-fonts are checked with Android's actual decoders before confirmation.
+fonts are checked with Android's actual decoders before confirmation. Every selected
+card/title/navigation image is validated too. Audio/video must contain a non-empty
+matching media track; video dimensions are limited to 4096 pixels per axis.
 
 Validated assets are copied to a new private `theme_packs/<UUID>/` directory. The
 complete preference batch is committed only after all copies succeed. A failed
@@ -155,6 +196,21 @@ calls; only the theme store downloads, and it hands the file to the same importe
 Theme JSON fields cannot write arbitrary preferences or authorization data.
 
 ## Validation
+
+### Theme-only UI expansion (2026-10-13)
+
+The clean Release build, all 124 JVM unit tests and Android test APK compilation passed.
+Nine downloaded store samples passed schema/asset-selection checks, including GIF
+working cards and Dashboard resources. The remaining sample notices identify missing
+fonts or unused legacy Kernel-page images, rather than supported card fields.
+Regression tests cover modern/legacy precedence, day/night surfaces, visibility
+flags, title/navigation assets, exact media filenames, locale handling and restoring
+the saved UI preference after reset. Android decoder/storage cases were extended
+for these assets and compiled, but not executed: no ADB or device validation was
+performed for this expansion. Visual fidelity, playback and codec compatibility
+still require user testing on a device.
+
+### Earlier validation (2026-10-11)
 
 On 2026-10-11 the clean Manager release/debug/test APK build passed (157 tasks).
 All 45 JVM tests passed: 30 container/schema regressions and 15 existing home,
