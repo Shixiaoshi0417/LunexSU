@@ -16,7 +16,6 @@ import com.shixiaoshi0417.lunexsu.ksuApp
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -63,10 +62,12 @@ class ThemeStoreViewModel : ViewModel() {
 
     private val themeDownloader = ThemeDownloader(ksuApp)
     private var allThemes: List<RemoteTheme> = emptyList()
-    private val downloadJobs = mutableMapOf<String, Job>()
 
     private val _uiState = MutableStateFlow(ThemeStoreUiState())
     val uiState: StateFlow<ThemeStoreUiState> = _uiState.asStateFlow()
+    private val downloadJobs = ThemeDownloadJobs(viewModelScope) { activeIds ->
+        _uiState.update { it.copy(downloading = activeIds) }
+    }
 
     val downloadProgress: StateFlow<Map<String, DownloadProgress>> = themeDownloader.downloadProgress
 
@@ -121,27 +122,21 @@ class ThemeStoreViewModel : ViewModel() {
 
     fun startDownload(theme: RemoteTheme) {
         val id = theme.id
-        if (downloadJobs.containsKey(id) || _uiState.value.hasCurrentRevision(theme)) return
-        _uiState.update { it.copy(downloading = it.downloading + id) }
-        downloadJobs[id] = viewModelScope.launch {
-            try {
-                themeDownloader.downloadTheme(theme).collect { progress ->
-                    if (progress.status == DownloadStatus.COMPLETED) {
-                        val scanned = withContext(Dispatchers.IO) { themeDownloader.scanLocalThemes() }
+        if (_uiState.value.hasCurrentRevision(theme)) return
+        downloadJobs.start(id) {
+            themeDownloader.downloadTheme(theme).collect { progress ->
+                if (progress.status == DownloadStatus.COMPLETED) {
+                    val scanned = withContext(Dispatchers.IO) { themeDownloader.scanLocalThemes() }
+                    downloadJobs.updateIfCurrent(id) {
                         _uiState.update { it.copy(localThemes = scanned) }
                     }
                 }
-            } finally {
-                downloadJobs.remove(id)
-                _uiState.update { it.copy(downloading = it.downloading - id) }
             }
         }
     }
 
     fun cancelDownload(id: String) {
-        downloadJobs.remove(id)?.cancel()
-        themeDownloader.cancelDownload(id)
-        _uiState.update { it.copy(downloading = it.downloading - id) }
+        downloadJobs.cancel(id) { themeDownloader.cancelDownload(id) }
     }
 
     fun pauseDownload(id: String) {
