@@ -1,6 +1,8 @@
 # Diferenças com Magisk
 
-Embora os módulos do KernelSU e do Magisk tenham muitas semelhanças, existem inevitavelmente algumas diferenças devido aos seus mecanismos de implementação completamente diferentes. Se você deseja que seu módulo funcione tanto no Magisk quanto no KernelSU, é essencial compreender essas diferenças.
+> Adapted from the upstream [KernelSU](https://github.com/tiann/KernelSU) guides. See the [LunexSU README](https://github.com/Shixiaoshi0417/LunexSU#readme) for package identity, authorization expiry and migration details.
+
+Embora os módulos do LunexSU e do Magisk tenham muitas semelhanças, existem inevitavelmente algumas diferenças devido aos seus mecanismos de implementação completamente diferentes. Se você deseja que seu módulo funcione tanto no Magisk quanto no LunexSU, é essencial compreender essas diferenças.
 
 ## Semelhanças
 
@@ -15,15 +17,15 @@ Embora os módulos do KernelSU e do Magisk tenham muitas semelhanças, existem i
 
 ## Diferenças
 
-Antes de entender as diferenças, é importante saber como identificar se o seu módulo está sendo executado no KernelSU ou no Magisk. Você pode usar a variável de ambiente `KSU` para diferenciá-lo em todos os locais onde você pode executar os scripts do módulo (`customize.sh`, `post-fs-data.sh`, `service.sh`). No KernelSU, essa variável de ambiente será definida como `true`.
+Antes de entender as diferenças, é importante saber como identificar se o seu módulo está sendo executado no LunexSU ou no Magisk. Você pode usar a variável de ambiente `KSU` para diferenciá-lo em todos os locais onde você pode executar os scripts do módulo (`customize.sh`, `post-fs-data.sh`, `service.sh`). No LunexSU, essa variável de ambiente será definida como `true`.
 
 Aqui estão algumas diferenças:
 
-- Os módulos KernelSU não podem ser instalados no modo Recovery.
-- Os módulos KernelSU não oferece suporte nativo ao Zygisk, mas você pode usar módulos Zygisk através do [ZygiskNext](https://github.com/Dr-TSNG/ZygiskNext).
-- **Arquitetura de montagem de módulos**: KernelSU usa um [sistema metamodule](metamodule.md), delegando a montagem a metamodules plugáveis (por exemplo, `meta-overlayfs`), enquanto o Magisk tem a montagem integrada em seu núcleo. KernelSU requer instalar um metamodule para habilitar a montagem de módulos.
-- O método para substituir ou excluir arquivos nos módulos do KernelSU é completamente diferente do Magisk. O KernelSU não suporta o método `.replace`. Em vez disso, você deve criar um arquivo com o comando `mknod filename c 0 0` para excluir o arquivo correspondente.
-- Os diretórios do BusyBox são diferentes. O BusyBox integrado no KernelSU está localizado em `/data/adb/ksu/bin/busybox`, enquanto no Magisk está em `/data/adb/magisk/busybox`. **Observe que este é um comportamento interno do KernelSU e pode mudar no futuro!**
-- O KernelSU não suporta arquivos `.replace`, mas oferece suporte às variáveis ​​`REMOVE` e `REPLACE` para remover ou substituir arquivos e pastas.
-- O KernelSU adiciona um script `boot-completed.sh` para executar tarefas após a conclusão da inicialização do sistema Android.
-- O KernelSU adiciona um script `post-mount.sh` para executar tarefas após a conclusão da montagem do módulo.
+- Os módulos LunexSU não podem ser instalados no modo Recovery.
+- Os módulos LunexSU não oferece suporte nativo ao Zygisk, mas você pode usar módulos Zygisk através do [ZygiskNext](https://github.com/Dr-TSNG/ZygiskNext).
+- **Arquitetura de montagem de módulos**: LunexSU usa um [sistema metamodule](metamodule.md), delegando a montagem a metamodules plugáveis (por exemplo, `meta-overlayfs`), enquanto o Magisk tem a montagem integrada em seu núcleo. LunexSU requer instalar um metamodule para habilitar a montagem de módulos.
+- O método para substituir ou excluir arquivos nos módulos do LunexSU é completamente diferente do Magisk. O LunexSU não suporta o método `.replace`. Em vez disso, você deve criar um arquivo com o comando `mknod filename c 0 0` para excluir o arquivo correspondente.
+- Os diretórios do BusyBox são diferentes. O BusyBox integrado no LunexSU está localizado em `/data/adb/ksu/bin/busybox`, enquanto no Magisk está em `/data/adb/magisk/busybox`. **Observe que este é um comportamento interno do LunexSU e pode mudar no futuro!**
+- O LunexSU não suporta arquivos `.replace`, mas oferece suporte às variáveis ​​`REMOVE` e `REPLACE` para remover ou substituir arquivos e pastas.
+- O LunexSU adiciona um script `boot-completed.sh` para executar tarefas após a conclusão da inicialização do sistema Android.
+- O LunexSU adiciona um script `post-mount.sh` para executar tarefas após a conclusão da montagem do módulo.

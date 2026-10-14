@@ -25,9 +25,9 @@ jobs:
                 echo "----- Rename $dir -----"
                 ksud_platform_name=$(basename "$dir")
                 if [ -f "$dir/ksud" ]; then
-                  mv "$dir/ksud" "ksud/$ksud_platform_name"
+                  mv "$dir/ksud" "ksud/LunexSU-$ksud_platform_name"
                 elif [ -f "$dir/ksud.exe" ]; then
-                  mv "$dir/ksud.exe" "ksud/$ksud_platform_name.exe"
+                  mv "$dir/ksud.exe" "ksud/LunexSU-$ksud_platform_name.exe"
                 fi
             fi
           done
@@ -40,7 +40,7 @@ jobs:
                 echo "----- Rename $dir -----"
                 ksuinit_platform_name=$(basename "$dir")
                 if [ -f "$dir/ksuinit" ]; then
-                  mv "$dir/ksuinit" "ksuinit/$ksuinit_platform_name"
+                  mv "$dir/ksuinit" "ksuinit/LunexSU-$ksuinit_platform_name"
                 fi
             fi
           done
@@ -52,8 +52,8 @@ jobs:
             if [ -d "$dir" ]; then
                 echo "----- Rename $dir -----"
                 lkm_platform_name=$(basename "$dir")
-                lkm_platform_name="lkm-${lkm_platform_name%-lkm}_kernelsu.ko"
-                KO="$(ls $dir/*_kernelsu.ko)"
+                lkm_platform_name="LunexSU-lkm-${lkm_platform_name%-lkm}.ko"
+                KO="$(ls $dir/*_lunexsu.ko)"
                 mv "$KO" "lkm/$lkm_platform_name"
             fi
           done
@@ -64,8 +64,11 @@ jobs:
       - name: release
         uses: softprops/action-gh-release@v3
         with:
+          draft: true
+          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'Beta') }}
+          fail_on_unmatched_files: true
           files: |
             manager/*.apk
-            lkm/lkm-*_kernelsu.ko
-            ksud/ksud-*
+            lkm/LunexSU-lkm-*.ko
+            ksud/LunexSU-ksud-*
             ksuinit/*

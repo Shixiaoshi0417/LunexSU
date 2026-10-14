@@ -1,10 +1,12 @@
 # Cứu khỏi bootloop (Vòng lặp khởi động)
 
+> Adapted from the upstream [KernelSU](https://github.com/tiann/KernelSU) guides. See the [LunexSU README](https://github.com/Shixiaoshi0417/LunexSU#readme) for package identity, authorization expiry and migration details.
+
 Khi flash một thiết bị, chúng ta có thể gặp phải tình trạng máy "bị brick". Về lý thuyết, nếu bạn chỉ sử dụng fastboot để flash phân vùng boot hoặc cài đặt các mô-đun không phù hợp khiến máy không khởi động được thì điều này có thể được khắc phục bằng các thao tác thích hợp. Tài liệu này nhằm mục đích cung cấp một số phương pháp khẩn cấp để giúp bạn khôi phục từ thiết bị "bị brick".
 
 ## Brick bởi flash vào phân vùng boot
 
-Trong KernelSU, các tình huống sau có thể gây ra lỗi khởi động khi flash phân vùng khởi động:
+Trong LunexSU, các tình huống sau có thể gây ra lỗi khởi động khi flash phân vùng khởi động:
 
 1. Bạn flash image boot sai định dạng. Ví dụ: nếu định dạng khởi động điện thoại của bạn là `gz`, nhưng bạn flash image định dạng `lz4` thì điện thoại sẽ không thể khởi động.
 2. Điện thoại của bạn cần tắt xác minh AVB để khởi động bình thường (thường yêu cầu xóa tất cả dữ liệu trên điện thoại).
@@ -18,7 +20,7 @@ Việc cài đặt mô-đun có thể là nguyên nhân phổ biến hơn khiế
 
 ### Mô-đun bình thường
 
-Nếu bạn đã flash một mô-đun đã được chứng minh là an toàn nhưng khiến thiết bị của bạn không khởi động được thì tình huống này có thể dễ dàng phục hồi trong KernelSU mà không phải lo lắng gì. KernelSU tích hợp Chế độ an toàn để giải cứu thiết bị của bạn:
+Nếu bạn đã flash một mô-đun đã được chứng minh là an toàn nhưng khiến thiết bị của bạn không khởi động được thì tình huống này có thể dễ dàng phục hồi trong LunexSU mà không phải lo lắng gì. LunexSU tích hợp Chế độ an toàn để giải cứu thiết bị của bạn:
 
 #### Cứu bằng cách nhấn Giảm âm lượng {#volume-down}
 
@@ -26,15 +28,15 @@ Bạn có thể thử sử dụng **Chế độ an toàn** để giải cứu th
 
 Có hai cách để vào Chế độ an toàn:
 
-1. Chế Độ An Toàn tích hợp (built-in Safe Mode) của một số hệ thống; một số hệ thống có Chế độ an toàn tích hợp có thể được truy cập bằng cách nhấn và giữ nút giảm âm lượng, trong khi những hệ thống khác (chẳng hạn như MIUI/HyperOS) có thể bật Chế Độ An Toàn trong Recovery. Khi vào Chế Độ An Toàn của hệ thống, KernelSU cũng sẽ vào Chế Độ An Toàn và tự động tắt các mô-đun.
-2. Chế Độ An Toàn tích hợp (built-in Safe Mode) của KernelSU; phương pháp thao tác là **nhấn phím giảm âm lượng liên tục hơn ba lần** sau màn hình khởi động đầu tiên. Lưu ý là nhấn-thả, nhấn-thả, nhấn-thả chứ không phải nhấn giữ.
+1. Chế Độ An Toàn tích hợp (built-in Safe Mode) của một số hệ thống; một số hệ thống có Chế độ an toàn tích hợp có thể được truy cập bằng cách nhấn và giữ nút giảm âm lượng, trong khi những hệ thống khác (chẳng hạn như MIUI/HyperOS) có thể bật Chế Độ An Toàn trong Recovery. Khi vào Chế Độ An Toàn của hệ thống, LunexSU cũng sẽ vào Chế Độ An Toàn và tự động tắt các mô-đun.
+2. Chế Độ An Toàn tích hợp (built-in Safe Mode) của LunexSU; phương pháp thao tác là **nhấn phím giảm âm lượng liên tục hơn ba lần** sau màn hình khởi động đầu tiên. Lưu ý là nhấn-thả, nhấn-thả, nhấn-thả chứ không phải nhấn giữ.
 
-Sau khi vào chế độ an toàn, tất cả các mô-đun trên trang mô-đun của KernelSU Manager đều bị tắt nhưng bạn có thể thực hiện thao tác "gỡ cài đặt" để gỡ cài đặt bất kỳ mô-đun nào có thể gây ra sự cố.
+Sau khi vào chế độ an toàn, tất cả các mô-đun trên trang mô-đun của LunexSU Manager đều bị tắt nhưng bạn có thể thực hiện thao tác "gỡ cài đặt" để gỡ cài đặt bất kỳ mô-đun nào có thể gây ra sự cố.
 
 Chế độ an toàn tích hợp được triển khai trong kernel, do đó không có khả năng thiếu các sự kiện chính do bị chặn. Tuy nhiên, đối với các hạt nhân không phải GKI, có thể cần phải tích hợp mã thủ công và bạn có thể tham khảo tài liệu chính thức để được hướng dẫn.
 
 ::: warning
-KernelSU đăng ký bộ lắng nghe phím âm lượng trong quá trình khởi tạo mô-đun hạt nhân (được tải khi hạt nhân thực thi quy trình init ở chế độ LKM), và hủy đăng ký ở giai đoạn `on_post_fs_data` (trước hoạt ảnh khởi động). Bạn cần nắm bắt thời gian và nhanh chóng nhấn phím giảm âm lượng ba lần sau màn hình khởi động đầu tiên. Nếu thiết bị khởi động nhanh hoặc thao tác không kịp thời, chế độ an toàn có thể không được kích hoạt.
+LunexSU đăng ký bộ lắng nghe phím âm lượng trong quá trình khởi tạo mô-đun hạt nhân (được tải khi hạt nhân thực thi quy trình init ở chế độ LKM), và hủy đăng ký ở giai đoạn `on_post_fs_data` (trước hoạt ảnh khởi động). Bạn cần nắm bắt thời gian và nhanh chóng nhấn phím giảm âm lượng ba lần sau màn hình khởi động đầu tiên. Nếu thiết bị khởi động nhanh hoặc thao tác không kịp thời, chế độ an toàn có thể không được kích hoạt.
 
 Nếu mô-đun viết mã không hợp lý trong initrc khiến thiết bị không thể khởi động, những mã này vẫn sẽ được thực thi ngay cả trong chế độ an toàn.
 :::
@@ -50,7 +52,7 @@ Nếu thiết bị có thể lấy root shell thông qua ADB, bạn có thể s�
 ::: tip
 Sau khi gắn kết các phân vùng `metadata` và `data`, bạn có thể chạy lệnh `/data/adb/ksud` dưới chế độ Recovery để quản lý các mô-đun.
 
-Vì các thiết bị GKI chia sẻ `init`, mô-đun hạt nhân KernelSU vẫn sẽ được tải dưới chế độ Recovery, bạn sẽ có thể sử dụng hầu hết các tính năng của `ksud` (như cài đặt tính năng) một cách bình thường.
+Vì các thiết bị GKI chia sẻ `init`, mô-đun hạt nhân LunexSU vẫn sẽ được tải dưới chế độ Recovery, bạn sẽ có thể sử dụng hầu hết các tính năng của `ksud` (như cài đặt tính năng) một cách bình thường.
 :::
 
 ```
@@ -66,7 +68,7 @@ reboot
 
 Nếu bạn không thể vào hệ thống (ngay cả ADB cũng không thể kết nối), bạn cần một Recovery của bên thứ ba (chẳng hạn như TWRP) trên thiết bị.
 
-Việc tải mô-đun của KernelSU phụ thuộc vào tệp chèn init.rc ở phía hạt nhân và tiến trình ksud trong không gian người dùng. Sau khi xóa các tệp này và khởi động lại, KernelSU sẽ không tải bất kỳ mô-đun nào.
+Việc tải mô-đun của LunexSU phụ thuộc vào tệp chèn init.rc ở phía hạt nhân và tiến trình ksud trong không gian người dùng. Sau khi xóa các tệp này và khởi động lại, LunexSU sẽ không tải bất kỳ mô-đun nào.
 
 **Các bước thao tác:**
 
@@ -91,7 +93,7 @@ Việc tải mô-đun của KernelSU phụ thuộc vào tệp chèn init.rc ở 
    reboot
    ```
 
-KernelSU sẽ bỏ qua việc tải tất cả các mô-đun sau khi khởi động lại. Sau khi vào hệ thống, bạn có thể mở lại trình quản lý KernelSU để xử lý các vấn đề của mô-đun.
+LunexSU sẽ bỏ qua việc tải tất cả các mô-đun sau khi khởi động lại. Sau khi vào hệ thống, bạn có thể mở lại trình quản lý LunexSU để xử lý các vấn đề của mô-đun.
 
 ### Định dạng dữ liệu hoặc các mô-đun độc hại khác
 

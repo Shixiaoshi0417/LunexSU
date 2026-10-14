@@ -27,8 +27,16 @@ jobs:
     - name: Prepare LKM files
       if: ${{ inputs.pack_lkm }}
       run: |
-        cp aarch64-android*-lkm/*_kernelsu.ko ./userspace/ksud/bin/aarch64/
-        cp x86_64-android*-lkm/*_kernelsu.ko ./userspace/ksud/bin/x86_64/
+        # Public names are LunexSU; the embedded name is a ramdisk/daemon ABI.
+        for ko in aarch64-android*-lkm/*_lunexsu.ko; do
+          name=$(basename "$ko")
+          cp "$ko" "./userspace/ksud/bin/aarch64/${name%_lunexsu.ko}_kernelsu.ko"
+        done
+        # Public names are LunexSU; the embedded name is a ramdisk/daemon ABI.
+        for ko in x86_64-android*-lkm/*_lunexsu.ko; do
+          name=$(basename "$ko")
+          cp "$ko" "./userspace/ksud/bin/x86_64/${name%_lunexsu.ko}_kernelsu.ko"
+        done
     
     - name: Prepare ksuinit
       if: ${{ inputs.pack_ksuinit }}
@@ -37,6 +45,11 @@ jobs:
         mv ksuinit-x86_64/ksuinit ./userspace/ksud/bin/x86_64/
         mv ksuinit-riscv64/ksuinit ./userspace/ksud/bin/riscv64/
         
+    - name: Verify bundled boot assets
+      if: ${{ inputs.pack_lkm && inputs.pack_ksuinit }}
+      run: |
+        python3 .github/scripts/check-bundled-assets.py --arch aarch64 --arch x86_64 --kmi android12-5.10
+
     - name: Setup rustup
       run: |
         if [ "${{ inputs.target }}" = riscv64-linux-android ]; then
@@ -56,12 +69,24 @@ jobs:
       with:
         ndk-version: r29
 
+    - name: Check Android Rust compilation, lints and formatting
+      if: ${{ inputs.target == 'aarch64-linux-android' }}
+      working-directory: userspace/ksud
+      env:
+        ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+      run: |
+        cargo install cargo-ndk --locked
+        cargo ndk -t arm64-v8a check
+        cargo ndk -t arm64-v8a clippy -- -D warnings
+        cargo fmt
+        git diff --exit-code -- '*.rs'
+
     - name: Build ksud
       env:
         ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
       run: |
         if [ "${{ github.event_name }}" = "pull_request" ]; then
-          export KSU_PACKAGE_NAME="me.weishu.kernelsu.pr"
+          export KSU_PACKAGE_NAME="com.shixiaoshi0417.lunexsu.pr"
         fi
         if [ "${{ inputs.target }}" = riscv64-linux-android ]; then
           source .github/scripts/setup-rust-build.sh riscv64-linux-android 35

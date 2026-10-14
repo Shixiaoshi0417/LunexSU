@@ -1,0 +1,122 @@
+// Adapted from FinaSU, formerly FolkSU (https://github.com/LyraVoid/FinaSU), GPL-3.0.
+package com.shixiaoshi0417.lunexsu.ui.screen.home
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.contentColorFor
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
+import com.shixiaoshi0417.lunexsu.ui.component.material.TonalCard
+import com.shixiaoshi0417.lunexsu.ui.theme.FolkShape
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.PackSurfaceBackground
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.packSurface
+import com.shixiaoshi0417.lunexsu.ui.theme.pack.packSurfaceColor
+
+/** A full-width tonal surface, the one shape every card on the home screen shares. */
+@Composable
+internal fun HomeCard(
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceBright,
+    contentColor: Color = contentColorFor(containerColor),
+    onClick: (() -> Unit)? = null,
+    surfaceId: String? = null,
+    content: @Composable () -> Unit,
+) {
+    val surface = packSurface(surfaceId)
+    val hasImage = surface?.let { it.enabled && it.image != null } == true
+    val foreground = packSurfaceColor(surfaceId, contentColor)
+    val onForeground = if (foreground.luminance() > 0.5f) Color(0xFF161616) else Color.White
+    if (hasImage) {
+        // The photo is the surface: transparent pixels/opacity must reveal the wallpaper,
+        // not an unrelated semantic status color underneath it.
+        TonalCard(modifier = modifier, containerColor = Color.Transparent, contentColor = foreground,
+            shape = FolkShape.Corner20, onClick = onClick, wallpaperRole = null) {
+            Box(propagateMinConstraints = true) {
+                PackSurfaceBackground(requireNotNull(surfaceId), Modifier.matchParentSize())
+                MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(
+                    onSurface = foreground,
+                    onSurfaceVariant = foreground.copy(alpha = 0.85f),
+                    primary = foreground,
+                    onPrimary = onForeground,
+                    secondary = foreground,
+                    onSecondary = onForeground,
+                    tertiary = foreground,
+                    onTertiary = onForeground,
+                    outlineVariant = foreground.copy(alpha = 0.5f),
+                )) { content() }
+            }
+        }
+        return
+    }
+    TonalCard(
+        modifier = modifier,
+        containerColor = containerColor,
+        contentColor = contentColor,
+        shape = FolkShape.Corner20,
+        onClick = onClick,
+        content = content,
+    )
+}
+
+/**
+ * One card of the Focus and Stats boards: the icon-and-title header, a hairline, then the rows. The
+ * action in the header is the card's only control.
+ */
+@Composable
+internal fun HomeTileCard(
+    title: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    action: (@Composable () -> Unit)? = null,
+    surfaceId: String? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    HomeCard(modifier = modifier, surfaceId = surfaceId) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.width(16.dp))
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLargeEmphasized,
+                    modifier = Modifier.weight(1f),
+                )
+                if (action != null) {
+                    action()
+                }
+            }
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 16.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                content()
+            }
+        }
+    }
+}

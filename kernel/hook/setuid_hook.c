@@ -13,6 +13,7 @@
 #include <linux/uidgid.h>
 
 #include "policy/allowlist.h"
+#include "policy/app_session.h"
 #include "hook/setuid_hook.h"
 #include "klog.h" // IWYU pragma: keep
 #include "manager/manager_identity.h"
@@ -26,6 +27,7 @@ int ksu_handle_setresuid(uid_t old_uid, uid_t new_uid)
     // we rely on the fact that zygote always call setresuid(3) with same uids
 
     pr_info("handle_setresuid from %d to %d\n", old_uid, new_uid);
+    ksu_app_session_update_current();
 
     if (unlikely(is_uid_manager(new_uid))) {
         spin_lock_irq(&current->sighand->siglock);
@@ -38,7 +40,7 @@ int ksu_handle_setresuid(uid_t old_uid, uid_t new_uid)
         return 0;
     }
 
-    if (ksu_is_allow_uid_for_current(new_uid)) {
+    if (ksu_has_root_profile(new_uid)) {
         if (current->seccomp.mode == SECCOMP_MODE_FILTER && current->seccomp.filter) {
             spin_lock_irq(&current->sighand->siglock);
             ksu_seccomp_allow_cache(current->seccomp.filter, __NR_reboot);

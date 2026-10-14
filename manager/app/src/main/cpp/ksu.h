@@ -37,6 +37,8 @@ using p_key_t = char[KSU_MAX_PACKAGE_NAME];
 bool set_app_profile(const app_profile *profile);
 
 int get_app_profile(app_profile *profile);
+int get_auth_profile(ksu_auth_profile_cmd *cmd);
+int set_auth_profile(const ksu_auth_profile_cmd *cmd);
 
 // Su compat
 bool set_su_enabled(bool enabled);

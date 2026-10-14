@@ -1,9 +1,9 @@
 {
-  "name": "KernelSU_website",
+  "name": "lunexsu-website",
   "version": "1.0.0",
-  "description": "KernelSU official website: https://kernelsu.org",
+  "description": "LunexSU documentation, adapted from KernelSU",
   "main": "index.js",
-  "repository": "https://kernelsu.org",
+  "repository": "https://github.com/Shixiaoshi0417/LunexSU",
   "author": "weishu",
   "license": "MIT",
   "devDependencies": {

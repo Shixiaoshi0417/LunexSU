@@ -1,12 +1,14 @@
 # Suporte a x86_64
 
-O KernelSU oferece suporte completo à arquitetura `x86_64`. No entanto, devido a mudanças recentes de segurança no kernel upstream, integrar o KernelSU em kernels `x86_64` modernos exige um tratamento adicional para que nosso dispatcher unificado de syscall funcione corretamente.
+> Adapted from the upstream [KernelSU](https://github.com/tiann/KernelSU) guides. See the [LunexSU README](https://github.com/Shixiaoshi0417/LunexSU#readme) for package identity, authorization expiry and migration details.
+
+O LunexSU oferece suporte completo à arquitetura `x86_64`. No entanto, devido a mudanças recentes de segurança no kernel upstream, integrar o LunexSU em kernels `x86_64` modernos exige um tratamento adicional para que nosso dispatcher unificado de syscall funcione corretamente.
 
 ## Por que isso quebrou?
 
 Em versões mais novas do kernel, um [commit](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/commit/?id=1e3ad78334a69b36e107232e337f9d693dcc9df2) foi introduzido para reforçar a proteção da syscall table. Essa mudança converteu desvios indiretos no caminho de system call em uma série de desvios condicionais diretos.
 
-O mecanismo `syscall_hook` do KernelSU depende da modificação de entradas na syscall table para que syscalls interceptadas possam ser encaminhadas ao dispatcher unificado. Como o novo hardening muda o caminho das system calls, o kernel ignora essas modificações na syscall table. Se o KernelSU tentar carregar e aplicar hook na syscall table sem tratar corretamente essa limitação, ele não conseguirá encaminhar as chamadas e abortará a inicialização para evitar um kernel panic.
+O mecanismo `syscall_hook` do LunexSU depende da modificação de entradas na syscall table para que syscalls interceptadas possam ser encaminhadas ao dispatcher unificado. Como o novo hardening muda o caminho das system calls, o kernel ignora essas modificações na syscall table. Se o LunexSU tentar carregar e aplicar hook na syscall table sem tratar corretamente essa limitação, ele não conseguirá encaminhar as chamadas e abortará a inicialização para evitar um kernel panic.
 
 ## Como corrigir?
 
@@ -19,20 +21,20 @@ Você só precisa usar uma delas. Não aplique ambas ao mesmo tempo.
 
 ### Opção 1: Ativar `KSU_X86_PATCH_SYSCALL_DISPATCHER`
 
-O KernelSU 3.3.0 introduziu um novo mecanismo oficial para `x86_64`: a opção de build `KSU_X86_PATCH_SYSCALL_DISPATCHER`.
+O LunexSU 3.3.0 introduziu um novo mecanismo oficial para `x86_64`: a opção de build `KSU_X86_PATCH_SYSCALL_DISPATCHER`.
 
-Quando essa opção está ativada, o KernelSU aplica um patch dinâmico no dispatcher hardened de syscall em tempo de execução, permitindo que o syscall hook funcione sem exigir o conjunto anterior de patches no código-fonte do kernel. Essa é a abordagem recomendada se você estiver compilando um kernel com KernelSU 3.3.0 ou mais recente.
+Quando essa opção está ativada, o LunexSU aplica um patch dinâmico no dispatcher hardened de syscall em tempo de execução, permitindo que o syscall hook funcione sem exigir o conjunto anterior de patches no código-fonte do kernel. Essa é a abordagem recomendada se você estiver compilando um kernel com LunexSU 3.3.0 ou mais recente.
 
 ### Opção 2: Aplicar os patches originais no código-fonte do kernel
 
 Se você não quiser ativar `KSU_X86_PATCH_SYSCALL_DISPATCHER`, ainda pode continuar usando a abordagem original com patches no kernel.
 
-Para fazer o KernelSU funcionar nesses kernels mais novos, aplique um patch que permita contornar esse hardening específico de syscall.
+Para fazer o LunexSU funcionar nesses kernels mais novos, aplique um patch que permita contornar esse hardening específico de syscall.
 
 ::: danger AVISO DE SEGURANÇA
 Ao usar qualquer uma dessas duas soluções, você está intencionalmente contornando ou enfraquecendo uma mitigação projetada para proteger contra vulnerabilidades de execução especulativa.
 
-Isso reabre a superfície de ataque de desvios indiretos para system calls. **Não use nenhuma dessas soluções se você estiver executando um servidor de produção ou um sistema em que a segurança contra side-channel seja crítica.** Essas abordagens se destinam a ambientes de teste, onde o acesso root via KernelSU é priorizado em relação a essa mitigação específica de vulnerabilidade de hardware.
+Isso reabre a superfície de ataque de desvios indiretos para system calls. **Não use nenhuma dessas soluções se você estiver executando um servidor de produção ou um sistema em que a segurança contra side-channel seja crítica.** Essas abordagens se destinam a ambientes de teste, onde o acesso root via LunexSU é priorizado em relação a essa mitigação específica de vulnerabilidade de hardware.
 :::
 
 Escolha e aplique os patches correspondentes à versão do seu kernel abaixo. Esses patches criam um recurso chamado `X86_FEATURE_INDIRECT_SAFE` e podem ser ativados com o parâmetro de linha de comando do kernel `syscall_hardening=off`.
@@ -53,5 +55,5 @@ https://github.com/android-generic/kernel-zenith/commit/f5813e10b7630e1ccd86fc2c
 
 ## Qual método devo escolher?
 
-- Se você estiver usando KernelSU 3.3.0 ou mais recente e puder alterar a configuração de build do KernelSU, ative `KSU_X86_PATCH_SYSCALL_DISPATCHER`.
+- Se você estiver usando LunexSU 3.3.0 ou mais recente e puder alterar a configuração de build do LunexSU, ative `KSU_X86_PATCH_SYSCALL_DISPATCHER`.
 - Se preferir manter seu fluxo atual baseado em patches no kernel, continue usando os patches de código-fonte acima.

@@ -38,7 +38,7 @@ pub fn grant_root(global_mnt: bool) -> Result<()> {
 }
 
 fn print_usage(program: &str, opts: &Options) {
-    let brief = format!("KernelSU\n\nUsage: {program} [options] [-] [user [argument...]]");
+    let brief = format!("LunexSU\n\nUsage: {program} [options] [-] [user [argument...]]");
     print!("{}", opts.usage(&brief));
 }
 
@@ -113,7 +113,7 @@ pub fn root_shell() -> Result<()> {
     // A su-session driver fd deliberately survives the exec into ksud. Claim
     // it before handling any arguments and restore FD_CLOEXEC so it cannot
     // leak into the target shell, including when fd wrapping is disabled.
-    ksucalls::claim_inherited_driver_fd().context("claim inherited KernelSU driver fd")?;
+    ksucalls::claim_inherited_driver_fd().context("claim inherited LunexSU driver fd")?;
 
     let env_args: Vec<String> = env::args().collect();
     let program = env_args[0].clone();
@@ -194,7 +194,7 @@ pub fn root_shell() -> Result<()> {
     opts.optflag(
         "",
         "ksu-no-new-privs",
-        "Prevent this process (and its children) from privilege re-escalation via KernelSU",
+        "Prevent this process (and its children) from privilege re-escalation via LunexSU",
     );
     opts.optopt("Z", "context", "Specify the SELinux context", "CONTEXT");
 

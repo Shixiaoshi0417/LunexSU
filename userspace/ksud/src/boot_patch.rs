@@ -510,7 +510,7 @@ pub struct BootPatchArgs {
     ramdisk: bool,
 }
 
-/// KernelSU module params, stored in ramdisk `/ksu_config` (boot-patch) or the
+/// LunexSU module params, stored in ramdisk `/ksu_config` (boot-patch) or the
 /// injected capsule (boot-patch-v2).
 #[derive(clap::Args, Debug, Default)]
 pub struct KsuConfigArgs {
@@ -811,7 +811,7 @@ pub fn patch(args: BootPatchArgs) -> Result<()> {
                 "Cannot work with Magisk patched image"
             );
 
-            println!("- Adding KernelSU LKM");
+            println!("- Adding LunexSU LKM");
             let is_kernelsu_patched = cpio.exists("kernelsu.ko");
 
             if !is_kernelsu_patched && cpio.exists("init") {
@@ -920,7 +920,7 @@ pub fn patch(args: BootPatchArgs) -> Result<()> {
             let output_dir = out.unwrap_or(std::env::current_dir()?);
             let name = out_name.unwrap_or_else(|| {
                 let now = chrono::Utc::now();
-                format!("kernelsu_patched_{}.img", now.format("%Y%m%d_%H%M%S"))
+                format!("lunexsu_patched_{}.img", now.format("%Y%m%d_%H%M%S"))
             });
             let output_image = output_dir.join(name);
             std::fs::write(&output_image, &new_boot_bytes).context("write out new boot failed")?;
@@ -1020,7 +1020,7 @@ pub fn restore(args: BootRestoreArgs) -> Result<()> {
 
     ensure!(
         cpio.exists("kernelsu.ko"),
-        "boot image is not patched by KernelSU"
+        "boot image is not patched by LunexSU"
     );
 
     #[cfg(target_os = "android")]
@@ -1089,7 +1089,7 @@ pub fn restore(args: BootRestoreArgs) -> Result<()> {
         let output_dir = out.unwrap_or(std::env::current_dir()?);
         let name = out_name.unwrap_or_else(|| {
             let now = chrono::Utc::now();
-            format!("kernelsu_restore_{}.img", now.format("%Y%m%d_%H%M%S"))
+            format!("lunexsu_restore_{}.img", now.format("%Y%m%d_%H%M%S"))
         });
         let output_image = output_dir.join(name);
         std::fs::write(&output_image, &new_boot_bytes).context("copy out new boot failed")?;
@@ -1106,7 +1106,7 @@ fn rebuild_without_ksu(
     cpio: &mut Cpio,
     vendor_ramdisk_idx: Option<usize>,
 ) -> Result<Vec<u8>> {
-    println!("- Removing KernelSU from boot image");
+    println!("- Removing LunexSU from boot image");
     cpio.rm("kernelsu.ko", false);
     if cpio.exists("init.real") {
         cpio.mv("init.real", "init")?;

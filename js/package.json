@@ -1,18 +1,21 @@
 {
-  "name": "kernelsu",
+  "name": "lunexsu",
+  "private": true,
+  "type": "module",
   "version": "3.0.2",
-  "description": "Library for KernelSU's module WebUI",
+  "description": "LunexSU module WebUI library, compatible with the KernelSU bridge",
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
-    "test": "npm run test"
+    "test": "node --test"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tiann/KernelSU.git"
+    "url": "git+https://github.com/Shixiaoshi0417/LunexSU.git"
   },
   "keywords": [
     "su",
+    "lunexsu",
     "kernelsu",
     "module",
     "webui"
@@ -20,7 +23,7 @@
   "author": "weishu",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/tiann/KernelSU/issues"
+    "url": "https://github.com/Shixiaoshi0417/LunexSU/issues"
   },
-  "homepage": "https://github.com/tiann/KernelSU#readme"
+  "homepage": "https://github.com/Shixiaoshi0417/LunexSU#readme"
 }

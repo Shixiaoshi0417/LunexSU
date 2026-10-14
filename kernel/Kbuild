@@ -34,6 +34,7 @@ kernelsu-objs += manager/throne_tracker.o
 endif
 
 kernelsu-objs += policy/allowlist.o
+kernelsu-objs += policy/app_session.o
 kernelsu-objs += policy/app_profile.o
 kernelsu-objs += policy/feature.o
 
@@ -54,6 +55,7 @@ kernelsu-objs += supercall/supercall.o
 kernelsu-objs += feature/adb_root.o
 
 kernelsu-objs += feature/selinux_hide.o
+kernelsu-objs += feature/shell_su_adb_only.o
 
 ifdef KBUILD_EXTMOD
 ifeq ($(CONFIG_KSU_DISABLE_MANAGER),y)
@@ -89,6 +91,14 @@ endif
 
 ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include
 
+# sched_process_exit gained group_dead; vendor kernels may backport the change.
+# Plain-name grep only: parentheses or commas here would break make's parsing of
+# the function call, and the assignment keeps the value out of ifneq's arguments.
+KSU_SCHED_EXIT_GROUP_DEAD := $(shell grep -A2 sched_process_exit $(srctree)/include/trace/events/sched.h 2>/dev/null | grep -c group_dead)
+ifneq ($(KSU_SCHED_EXIT_GROUP_DEAD),0)
+ccflags-y += -DKSU_SCHED_EXIT_GROUP_DEAD
+endif
+
 obj-$(CONFIG_KSU) += kernelsu.o
 
 MDIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -107,11 +117,11 @@ ifneq ($(GIT_ROOT),$(KERNEL_GIT_ROOT))
 $(shell cd $(GIT_ROOT) && [ -f .git/shallow ] && $(GIT) fetch --unshallow 2>/dev/null || true)
 KSU_GIT_VERSION := $(shell cd $(GIT_ROOT) && $(GIT) rev-list --count HEAD 2>/dev/null)
 KSU_GIT_VERSION_VALID := 1
-$(info -- KernelSU: Git repo detected at $(GIT_ROOT))
+$(info -- LunexSU: Git repo detected at $(GIT_ROOT))
 endif
 endif
 else
-$(warning -- KernelSU: Git not detected, make sure git is installed in your PATH!)
+$(warning -- LunexSU: Git not detected, make sure git is installed in your PATH!)
 endif
 
 
@@ -119,11 +129,11 @@ endif
 ifdef KSU_GIT_VERSION_VALID
 # ksu_version: major * 10000 + git version + 200 for historical reasons
 $(eval KSU_VERSION=$(shell expr 30000 + $(KSU_GIT_VERSION)))
-$(info -- KernelSU version: $(KSU_VERSION))
+$(info -- LunexSU version: $(KSU_VERSION))
 ccflags-y += -DKSU_VERSION=$(KSU_VERSION)
 else
 # If there is no .git directory, use default version
-$(warning "KSU_GIT_VERSION not defined! It is better to make KernelSU a git repository!")
+$(warning "KSU_GIT_VERSION not defined! It is better to make LunexSU a git repository!")
 ccflags-y += -DKSU_VERSION=16
 endif
 
@@ -132,17 +142,18 @@ $(info -- KSU_NEW_DCACHE_FLUSH: $(KSU_NEW_DCACHE_FLUSH))
 
 KSU_IS_PR_BUILD ?= 0
 ifeq ($(KSU_IS_PR_BUILD),0)
-KSU_PACKAGE_NAME ?= me.weishu.kernelsu
+KSU_PACKAGE_NAME ?= com.shixiaoshi0417.lunexsu
 else
-KSU_PACKAGE_NAME ?= me.weishu.kernelsu.pr
+KSU_PACKAGE_NAME ?= com.shixiaoshi0417.lunexsu.pr
 endif
-KSU_EXPECTED_SIZE ?= 0x033b
-KSU_EXPECTED_HASH ?= c371061b19d8c7d7d6133c6a9bafe198fa944e50c1b31c9d8daa8d7f1fc2d2d6
+# LunexSU release certificate (docs/apk-signing.md); CI checks these defaults against it.
+KSU_EXPECTED_SIZE ?= 0x0323
+KSU_EXPECTED_HASH ?= 907ee678290b157d477340dc498446e777f2aa9d3ee96689598f154b0175d284
 
-$(info -- KernelSU Manager package name: $(KSU_PACKAGE_NAME))
-$(info -- KernelSU Manager signature size: $(KSU_EXPECTED_SIZE))
-$(info -- KernelSU Manager signature hash: $(KSU_EXPECTED_HASH))
-$(info -- KernelSU is PR Build: $(KSU_IS_PR_BUILD))
+$(info -- LunexSU Manager package name: $(KSU_PACKAGE_NAME))
+$(info -- LunexSU Manager signature size: $(KSU_EXPECTED_SIZE))
+$(info -- LunexSU Manager signature hash: $(KSU_EXPECTED_HASH))
+$(info -- LunexSU is PR Build: $(KSU_IS_PR_BUILD))
 
 ccflags-y += -DKSU_PACKAGE_NAME=\"$(KSU_PACKAGE_NAME)\"
 ccflags-y += -DEXPECTED_SIZE=$(KSU_EXPECTED_SIZE)

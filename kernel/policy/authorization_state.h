@@ -1,0 +1,100 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+#ifndef __LUNEXSU_AUTHORIZATION_STATE_H
+#define __LUNEXSU_AUTHORIZATION_STATE_H
+
+#include "uapi/authorization.h"
+
+#ifdef __KERNEL__
+#include <linux/compiler.h>
+#define KSU_AUTH_WRITE(value, updated) WRITE_ONCE(value, updated)
+#else
+#define KSU_AUTH_WRITE(value, updated) ((value) = (updated))
+#endif
+
+/* Locking belongs to allowlist.c. This state machine is also compiled verbatim
+ * by the host tests; no alternate implementation or clock is used in tests.
+ */
+struct ksu_authorization_state {
+    __u32 mode;
+    __u32 once; /* 0: inactive, 1: granted for one App run (tracked separately) */
+    __u64 deadline_ns;
+    __u64 duration_seconds;
+};
+
+/* KEEP may edit configured grants or revoke them, but cannot create a grant.
+ * The legacy SET_APP_PROFILE ABI is deliberately validated separately.
+ */
+static inline bool ksu_auth_operation_valid(__u32 operation, bool was_allowed, bool allow_su)
+{
+    return operation == KSU_AUTH_GRANT || (operation == KSU_AUTH_KEEP && (!allow_su || was_allowed));
+}
+
+static inline bool ksu_auth_available(const struct ksu_authorization_state *s, __u64 now)
+{
+    switch (s->mode) {
+    case KSU_AUTH_PERMANENT:
+        return true;
+    case KSU_AUTH_ONCE:
+        return s->once == 1;
+    case KSU_AUTH_TIMED:
+        return s->deadline_ns && now < s->deadline_ns;
+    default:
+        return false;
+    }
+}
+
+static inline bool ksu_auth_grant(struct ksu_authorization_state *s, __u32 mode, __u64 seconds, __u64 now)
+{
+    if (mode > KSU_AUTH_TIMED || (mode == KSU_AUTH_TIMED && (!seconds || seconds > KSU_AUTH_MAX_SECONDS ||
+                                                             now > (~(__u64)0) - seconds * 1000000000ULL)))
+        return false;
+    s->mode = mode;
+    s->once = mode == KSU_AUTH_ONCE ? 1 : 0;
+    s->deadline_ns = mode == KSU_AUTH_TIMED ? now + seconds * 1000000000ULL : 0;
+    s->duration_seconds = mode == KSU_AUTH_TIMED ? seconds : 0;
+    return true;
+}
+
+static inline bool ksu_auth_reserve(struct ksu_authorization_state *s, __u64 now, bool su_exec)
+{
+    if (!ksu_auth_available(s, now) || (s->mode == KSU_AUTH_ONCE && !su_exec))
+        return false;
+    return true;
+}
+
+static inline void ksu_auth_finish(struct ksu_authorization_state *s, bool success)
+{
+    /* Completion does not consume a run-scoped grant or restore a revoked one. */
+    (void)s;
+    (void)success;
+}
+
+/* Module umount follows the active grant, not the configured profile: an app
+ * whose temporary grant expired, was spent or did not survive a reboot is an
+ * ordinary app again. A Root profile carries no non-root policy of its own.
+ */
+static inline bool ksu_auth_should_umount(bool allow_su, bool active, bool nrp_use_default, bool nrp_umount,
+                                          bool default_umount)
+{
+    if (allow_su)
+        return active ? false : default_umount;
+    return nrp_use_default ? default_umount : nrp_umount;
+}
+
+/* A failed su exec under a temporary grant must not hand an App the elevated
+ * credentials, seccomp and namespaces of an applied Root profile. A refused
+ * escape aborts before any of those change, so the App just gets the error.
+ */
+static inline bool ksu_auth_kill_after_failed_exec(bool temporary, bool escaped)
+{
+    return temporary && escaped;
+}
+
+static inline void ksu_auth_invalidate(struct ksu_authorization_state *s)
+{
+    KSU_AUTH_WRITE(s->once, 0);
+    KSU_AUTH_WRITE(s->deadline_ns, 0);
+}
+
+#undef KSU_AUTH_WRITE
+#endif

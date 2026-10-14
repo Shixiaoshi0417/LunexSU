@@ -1,11 +1,13 @@
 # Instalasi
 
+> Adapted from the upstream [KernelSU](https://github.com/tiann/KernelSU) guides. See the [LunexSU README](https://github.com/Shixiaoshi0417/LunexSU#readme) for package identity, authorization expiry and migration details.
+
 ## Periksa apakah perangkat Anda didukung
 
-Unduh manajer KernelSU dari [GitHub Releases](https://github.com/tiann/KernelSU/releases) dan instal ke perangkat Anda:
+Unduh manajer LunexSU dari [GitHub Releases](https://github.com/Shixiaoshi0417/LunexSU/releases) dan instal ke perangkat Anda:
 
-- Jika aplikasi menunjukkan `Unsupported`, itu berarti **Anda harus mengkompilasi kernel sendiri**, KernelSU tidak akan dan tidak pernah menyediakan file boot.img untuk Anda flash.
-- Jika aplikasi menunjukkan `Not installed`, maka perangkat Anda secara resmi didukung oleh KernelSU.
+- Jika aplikasi menunjukkan `Unsupported`, itu berarti **Anda harus mengkompilasi kernel sendiri**, LunexSU tidak akan dan tidak pernah menyediakan file boot.img untuk Anda flash.
+- Jika aplikasi menunjukkan `Not installed`, maka perangkat Anda secara resmi didukung oleh LunexSU.
 
 ::: info
 Untuk perangkat yang menunjukkan `Unsupported`, Anda dapat memeriksa daftar [Perangkat yang didukung tidak resmi](unofficially-support-devices.md). Anda dapat mengkompilasi kernel sendiri.
@@ -57,10 +59,10 @@ Jika Anda menemukan bahwa versi kernel Anda adalah `android12-5.10.101`, tetapi 
 
 ## Pendahuluan
 
-Sejak versi [0.9.0](https://github.com/tiann/KernelSU/releases/tag/v0.9.0), KernelSU mendukung dua mode berjalan pada perangkat GKI:
+Sejak versi [0.9.0](https://github.com/Shixiaoshi0417/LunexSU/releases/tag/v0.9.0), LunexSU mendukung dua mode berjalan pada perangkat GKI:
 
 1. `LKM`: Muat **Loadable Kernel Module** (LKM) ke dalam kernel perangkat tanpa mengganti kernel asli.
-2. `GKI`: Ganti kernel asli perangkat dengan **Generic Kernel Image** (GKI) yang disediakan oleh KernelSU.
+2. `GKI`: Ganti kernel asli perangkat dengan **Generic Kernel Image** (GKI) yang disediakan oleh LunexSU.
 
 Kedua mode ini cocok untuk skenario yang berbeda, dan Anda dapat memilih salah satu sesuai kebutuhan Anda.
 
@@ -68,14 +70,14 @@ Kedua mode ini cocok untuk skenario yang berbeda, dan Anda dapat memilih salah s
 
 Dalam mode LKM, kernel asli perangkat tidak akan diganti, tetapi loadable kernel module akan dimuat ke dalam kernel perangkat. Keuntungan mode LKM adalah:
 
-1. Tidak akan mengganti kernel asli perangkat. Jika Anda memiliki persyaratan khusus untuk kernel asli perangkat, atau Anda ingin menggunakan KernelSU sambil menggunakan kernel pihak ketiga, Anda dapat menggunakan mode LKM.
-2. Lebih nyaman untuk upgrade dan OTA. Saat mengupgrade KernelSU, Anda dapat langsung menginstalnya di manajer tanpa flashing manual. Setelah OTA sistem, Anda dapat langsung menginstalnya ke slot kedua tanpa flashing manual.
+1. Tidak akan mengganti kernel asli perangkat. Jika Anda memiliki persyaratan khusus untuk kernel asli perangkat, atau Anda ingin menggunakan LunexSU sambil menggunakan kernel pihak ketiga, Anda dapat menggunakan mode LKM.
+2. Lebih nyaman untuk upgrade dan OTA. Saat mengupgrade LunexSU, Anda dapat langsung menginstalnya di manajer tanpa flashing manual. Setelah OTA sistem, Anda dapat langsung menginstalnya ke slot kedua tanpa flashing manual.
 3. Cocok untuk beberapa skenario khusus. Misalnya, LKM juga dapat dimuat dengan izin root sementara. Karena tidak perlu mengganti partisi boot, tidak akan memicu AVB dan tidak akan menyebabkan perangkat menjadi brick.
 4. LKM dapat di-uninstall sementara. Jika Anda ingin menonaktifkan akses root sementara, Anda dapat meng-uninstall LKM. Proses ini tidak memerlukan flashing partisi, atau bahkan me-reboot perangkat. Jika Anda ingin mengaktifkan root lagi, cukup reboot perangkat.
 
 ### Mode GKI {#gki-mode}
 
-Dalam mode GKI, kernel asli perangkat akan diganti dengan image kernel generik yang disediakan oleh KernelSU. Keuntungan mode GKI adalah:
+Dalam mode GKI, kernel asli perangkat akan diganti dengan image kernel generik yang disediakan oleh LunexSU. Keuntungan mode GKI adalah:
 
 1. Universalitas yang kuat, cocok untuk sebagian besar perangkat. Misalnya, Samsung telah mengaktifkan perangkat KNOX, dan mode LKM tidak dapat berfungsi. Ada juga beberapa perangkat yang dimodifikasi khusus yang hanya dapat menggunakan mode GKI.
 2. Dapat digunakan tanpa bergantung pada firmware resmi, dan tidak perlu menunggu pembaruan firmware resmi, selama KMI konsisten, dapat digunakan.
@@ -90,7 +92,7 @@ Jika perangkat Anda adalah ponsel, kami sarankan Anda memprioritaskan mode LKM. 
 
 Untuk menggunakan mode LKM, Anda perlu mendapatkan firmware resmi dan mem-patch-nya berdasarkan firmware resmi. Jika Anda menggunakan kernel pihak ketiga, Anda dapat menggunakan `boot.img` dari kernel pihak ketiga sebagai firmware resmi.
 
-Ada banyak cara untuk mendapatkan firmware resmi. Jika perangkat Anda mendukung `fastboot boot`, kami merekomendasikan **metode yang paling direkomendasikan dan paling sederhana** adalah menggunakan `fastboot boot` untuk boot sementara kernel GKI yang disediakan oleh KernelSU, lalu instal manajer, dan akhirnya instal langsung di manajer. Metode ini tidak memerlukan pengunduhan firmware resmi secara manual atau ekstraksi boot secara manual.
+Ada banyak cara untuk mendapatkan firmware resmi. Jika perangkat Anda mendukung `fastboot boot`, kami merekomendasikan **metode yang paling direkomendasikan dan paling sederhana** adalah menggunakan `fastboot boot` untuk boot sementara kernel GKI yang disediakan oleh LunexSU, lalu instal manajer, dan akhirnya instal langsung di manajer. Metode ini tidak memerlukan pengunduhan firmware resmi secara manual atau ekstraksi boot secara manual.
 
 Jika perangkat Anda tidak mendukung `fastboot boot`, Anda mungkin perlu mengunduh paket firmware resmi secara manual dan mengekstrak boot darinya.
 
@@ -101,27 +103,27 @@ Tidak seperti mode GKI, mode LKM memodifikasi `ramdisk`. Oleh karena itu, pada p
 Buka manajer, klik ikon instalasi di sudut kanan atas, dan beberapa opsi akan muncul:
 
 1. Pilih file. Jika perangkat Anda tidak memiliki hak root, Anda dapat memilih opsi ini lalu pilih firmware resmi Anda. Manajer akan secara otomatis mem-patch-nya. Setelah itu, flash file yang di-patch ini untuk mendapatkan hak root secara permanen.
-2. Instalasi langsung. Jika perangkat Anda sudah di-root, Anda dapat memilih opsi ini. Manajer akan secara otomatis mendapatkan informasi perangkat Anda, lalu secara otomatis mem-patch firmware resmi, dan mem-flash-nya secara otomatis. Anda dapat mempertimbangkan menggunakan `fastboot boot` kernel GKI KernelSU untuk mendapatkan root sementara dan menginstal manajer, lalu gunakan opsi ini. Ini juga merupakan cara utama untuk mengupgrade KernelSU.
+2. Instalasi langsung. Jika perangkat Anda sudah di-root, Anda dapat memilih opsi ini. Manajer akan secara otomatis mendapatkan informasi perangkat Anda, lalu secara otomatis mem-patch firmware resmi, dan mem-flash-nya secara otomatis. Anda dapat mempertimbangkan menggunakan `fastboot boot` kernel GKI LunexSU untuk mendapatkan root sementara dan menginstal manajer, lalu gunakan opsi ini. Ini juga merupakan cara utama untuk mengupgrade LunexSU.
 3. Instal ke slot yang tidak aktif. Jika perangkat Anda mendukung partisi A/B, Anda dapat memilih opsi ini. Manajer akan secara otomatis mem-patch firmware resmi dan menginstalnya ke partisi lain. Metode ini cocok untuk perangkat setelah OTA, Anda dapat langsung menginstalnya ke partisi lain setelah OTA, lalu restart perangkat.
 
 :::tip Cadangkan boot image stok
-Menggunakan opsi "Langsung pasang (Disarankan)" di manajer dapat secara otomatis mencadangkan boot image stok (atau init_boot) agar dapat dipulihkan sementara saat pembaruan OTA inkremental. Perlu diperhatikan bahwa cadangan ini hanya dibuat jika slot saat ini belum pernah di-patch oleh KernelSU.
+Menggunakan opsi "Langsung pasang (Disarankan)" di manajer dapat secara otomatis mencadangkan boot image stok (atau init_boot) agar dapat dipulihkan sementara saat pembaruan OTA inkremental. Perlu diperhatikan bahwa cadangan ini hanya dibuat jika slot saat ini belum pernah di-patch oleh LunexSU.
 Nilai SHA1 dari image cadangan disimpan di dalam image boot yang sudah di-patch, dan file cadangan disimpan di `/data/adb/ksu/ksu_backup_$SHA1`.
 Saat Anda menggunakan fitur "Hapus → Pulihkan image asli" di manajer, jika ada file cadangan yang cocok dengan SHA1 yang tercatat pada image yang sedang di-patch, cadangan tersebut akan langsung dipulihkan.
-Mulai versi 3.3.0, jika ini adalah pertama kalinya Anda memasang KernelSU tanpa root, setelah mem-patch boot image melalui "Pilih berkas" Anda dapat memilih "Cadangkan sebagai image stok". Dalam kasus ini, image cadangan akan disimpan di penyimpanan internal manajer; setelah image yang sudah di-patch di-flash dan perangkat berhasil boot, saat pertama kali membuka manajer cadangan tersebut akan otomatis dipindahkan ke `/data/adb/ksu`.
+Mulai versi 3.3.0, jika ini adalah pertama kalinya Anda memasang LunexSU tanpa root, setelah mem-patch boot image melalui "Pilih berkas" Anda dapat memilih "Cadangkan sebagai image stok". Dalam kasus ini, image cadangan akan disimpan di penyimpanan internal manajer; setelah image yang sudah di-patch di-flash dan perangkat berhasil boot, saat pertama kali membuka manajer cadangan tersebut akan otomatis dipindahkan ke `/data/adb/ksu`.
 :::
 
 ### Gunakan baris perintah
 
-Jika Anda tidak ingin menggunakan manajer, Anda juga dapat menggunakan baris perintah untuk menginstal LKM. Alat `ksud` yang disediakan oleh KernelSU dapat membantu Anda mem-patch firmware resmi dengan cepat lalu mem-flash-nya.
+Jika Anda tidak ingin menggunakan manajer, Anda juga dapat menggunakan baris perintah untuk menginstal LKM. Alat `ksud` yang disediakan oleh LunexSU dapat membantu Anda mem-patch firmware resmi dengan cepat lalu mem-flash-nya.
 
-Alat ini mendukung macOS, Linux, dan Windows. Anda dapat mengunduh versi yang sesuai dari [GitHub Release](https://github.com/tiann/KernelSU/releases).
+Alat ini mendukung macOS, Linux, dan Windows. Anda dapat mengunduh versi yang sesuai dari [GitHub Release](https://github.com/Shixiaoshi0417/LunexSU/releases).
 
 Penggunaan: `ksud boot-patch` Anda dapat memeriksa bantuan baris perintah untuk opsi spesifik.
 
 ```sh
 oriole:/ # ksud boot-patch -h
-Patch boot or init_boot images to apply KernelSU
+Patch boot or init_boot images to apply LunexSU
 
 Usage: ksud boot-patch [OPTIONS]
 
@@ -153,20 +155,20 @@ ksud boot-patch -b <boot.img> --kmi android13-5.10
 
 Ada beberapa metode instalasi untuk mode GKI, masing-masing cocok untuk skenario yang berbeda, jadi pilih sesuai:
 
-1. Instal dengan fastboot menggunakan boot.img yang disediakan oleh KernelSU.
+1. Instal dengan fastboot menggunakan boot.img yang disediakan oleh LunexSU.
 2. Instal dengan aplikasi flash kernel, seperti [Kernel Flasher](https://github.com/capntrips/KernelFlasher/releases).
 3. Perbaiki boot.img secara manual dan instal.
 4. Instal dengan Recovery kustom (misalnya, TWRP).
 
-## Instal dengan boot.img yang disediakan oleh KernelSU
+## Instal dengan boot.img yang disediakan oleh LunexSU
 
-Jika `boot.img` perangkat Anda menggunakan format kompresi yang umum digunakan, Anda dapat menggunakan image GKI yang disediakan oleh KernelSU untuk mem-flash-nya langsung. Ini tidak memerlukan TWRP atau self-patching image.
+Jika `boot.img` perangkat Anda menggunakan format kompresi yang umum digunakan, Anda dapat menggunakan image GKI yang disediakan oleh LunexSU untuk mem-flash-nya langsung. Ini tidak memerlukan TWRP atau self-patching image.
 
 ### Temukan boot.img yang tepat
 
-KernelSU menyediakan boot.img generik untuk perangkat GKI, dan Anda harus mem-flash boot.img ke partisi boot perangkat.
+LunexSU menyediakan boot.img generik untuk perangkat GKI, dan Anda harus mem-flash boot.img ke partisi boot perangkat.
 
-Anda dapat mengunduh boot.img dari [GitHub Release](https://github.com/tiann/KernelSU/releases). Harap dicatat bahwa Anda harus menggunakan versi boot.img yang benar. Jika Anda tidak tahu file mana yang harus diunduh, baca dengan cermat deskripsi [KMI](#kmi) dan [Tingkat patch keamanan](#security-patch-level) dalam dokumen ini.
+Anda dapat mengunduh boot.img dari [GitHub Release](https://github.com/Shixiaoshi0417/LunexSU/releases). Harap dicatat bahwa Anda harus menggunakan versi boot.img yang benar. Jika Anda tidak tahu file mana yang harus diunduh, baca dengan cermat deskripsi [KMI](#kmi) dan [Tingkat patch keamanan](#security-patch-level) dalam dokumen ini.
 
 Biasanya, ada tiga file boot dalam format berbeda untuk KMI dan tingkat patch keamanan yang sama. Mereka identik kecuali format kompresi kernel. Harap periksa format kompresi kernel dari boot.img asli Anda. Anda harus menggunakan format yang benar, seperti `lz4`, `gz`. Jika Anda menggunakan format kompresi yang salah, Anda mungkin mengalami bootloop setelah mem-flash boot.img.
 
@@ -178,7 +180,7 @@ Biasanya, ada tiga file boot dalam format berbeda untuk KMI dan tingkat patch ke
 
 ### Flash boot.img ke perangkat
 
-Gunakan `adb` untuk menghubungkan perangkat Anda, lalu jalankan `adb reboot bootloader` untuk masuk ke mode fastboot, dan gunakan perintah ini untuk mem-flash KernelSU:
+Gunakan `adb` untuk menghubungkan perangkat Anda, lalu jalankan `adb reboot bootloader` untuk masuk ke mode fastboot, dan gunakan perintah ini untuk mem-flash LunexSU:
 
 ```sh
 fastboot flash boot boot.img
@@ -205,8 +207,8 @@ Langkah-langkah:
 
 Dengan cara ini memerlukan aplikasi Kernel Flasher memiliki izin root. Anda dapat menggunakan metode berikut untuk mencapai ini:
 
-1. Perangkat Anda telah di-root. Misalnya, Anda telah menginstal KernelSU dan ingin mengupgrade ke versi terbaru atau Anda telah di-root melalui metode lain (seperti Magisk).
-2. Jika perangkat Anda tidak di-root, tetapi perangkat mendukung metode boot sementara `fastboot boot boot.img`, Anda dapat menggunakan image GKI yang disediakan oleh KernelSU untuk boot sementara perangkat Anda, mendapatkan izin root sementara, lalu gunakan aplikasi Kernel Flash untuk mendapatkan hak root permanen.
+1. Perangkat Anda telah di-root. Misalnya, Anda telah menginstal LunexSU dan ingin mengupgrade ke versi terbaru atau Anda telah di-root melalui metode lain (seperti Magisk).
+2. Jika perangkat Anda tidak di-root, tetapi perangkat mendukung metode boot sementara `fastboot boot boot.img`, Anda dapat menggunakan image GKI yang disediakan oleh LunexSU untuk boot sementara perangkat Anda, mendapatkan izin root sementara, lalu gunakan aplikasi Kernel Flash untuk mendapatkan hak root permanen.
 
 Beberapa aplikasi flashing kernel yang dapat digunakan untuk ini:
 
@@ -214,11 +216,11 @@ Beberapa aplikasi flashing kernel yang dapat digunakan untuk ini:
 2. [Franco Kernel Manager](https://play.google.com/store/apps/details?id=com.franco.kernel)
 3. [Ex Kernel Manager](https://play.google.com/store/apps/details?id=flar2.exkernelmanager)
 
-Catatan: Metode ini lebih nyaman saat mengupgrade KernelSU dan dapat dilakukan tanpa komputer (buat cadangan terlebih dahulu).
+Catatan: Metode ini lebih nyaman saat mengupgrade LunexSU dan dapat dilakukan tanpa komputer (buat cadangan terlebih dahulu).
 
 ## Patch boot.img secara manual {#patch-boot-image}
 
-Untuk beberapa perangkat, format boot.img tidak seperti `lz4`, `gz`, dan `uncompressed` yang umum. Contoh khas adalah Pixel, di mana boot.img dikompresi dalam format `lz4_legacy`, sedangkan ramdisk mungkin dalam `gz` atau juga dikompresi dalam `lz4_legacy`. Saat ini, jika Anda langsung mem-flash boot.img yang disediakan oleh KernelSU, perangkat mungkin tidak dapat boot. Dalam hal ini, Anda dapat mem-patch boot.img secara manual untuk mencapai ini.
+Untuk beberapa perangkat, format boot.img tidak seperti `lz4`, `gz`, dan `uncompressed` yang umum. Contoh khas adalah Pixel, di mana boot.img dikompresi dalam format `lz4_legacy`, sedangkan ramdisk mungkin dalam `gz` atau juga dikompresi dalam `lz4_legacy`. Saat ini, jika Anda langsung mem-flash boot.img yang disediakan oleh LunexSU, perangkat mungkin tidak dapat boot. Dalam hal ini, Anda dapat mem-patch boot.img secara manual untuk mencapai ini.
 
 Selalu disarankan untuk menggunakan `magiskboot` untuk mem-patch image, ada dua cara:
 
@@ -234,8 +236,8 @@ Android-Image-Kitchen tidak direkomendasikan untuk saat ini karena tidak menanga
 ### Persiapan
 
 1. Dapatkan boot.img stok perangkat Anda. Anda bisa mendapatkannya dari produsen perangkat Anda. Anda mungkin memerlukan [payload-dumper-go](https://github.com/ssut/payload-dumper-go).
-2. Unduh file ZIP AnyKernel3 yang disediakan oleh KernelSU yang cocok dengan versi KMI perangkat Anda. Anda dapat merujuk ke [Instal dengan Recovery kustom](#install-with-custom-recovery).
-3. Unpack paket AnyKernel3 dan dapatkan file `Image`, yang merupakan file kernel KernelSU.
+2. Unduh file ZIP AnyKernel3 yang disediakan oleh LunexSU yang cocok dengan versi KMI perangkat Anda. Anda dapat merujuk ke [Instal dengan Recovery kustom](#install-with-custom-recovery).
+3. Unpack paket AnyKernel3 dan dapatkan file `Image`, yang merupakan file kernel LunexSU.
 
 ### Menggunakan magiskboot di perangkat Android {#using-magiskboot-on-Android-devices}
 
@@ -267,7 +269,7 @@ Prasyarat: Perangkat Anda harus memiliki Recovery kustom, seperti TWRP. Jika tid
 
 Langkah-langkah:
 
-1. Di [GitHub Releases](https://github.com/tiann/KernelSU/releases), unduh paket ZIP yang dimulai dengan `AnyKernel3` yang cocok dengan versi perangkat Anda. Misalnya, jika versi kernel perangkat adalah `android12-5.10.66`, maka Anda harus mengunduh file `AnyKernel3-android12-5.10.66_yyyy-MM.zip` (di mana `yyyy` adalah tahun dan `MM` adalah bulan).
+1. Di [GitHub Releases](https://github.com/Shixiaoshi0417/LunexSU/releases), unduh paket ZIP yang dimulai dengan `AnyKernel3` yang cocok dengan versi perangkat Anda. Misalnya, jika versi kernel perangkat adalah `android12-5.10.66`, maka Anda harus mengunduh file `AnyKernel3-android12-5.10.66_yyyy-MM.zip` (di mana `yyyy` adalah tahun dan `MM` adalah bulan).
 2. Reboot perangkat ke TWRP.
 3. Gunakan ADB untuk menempatkan AnyKernel3-*.zip ke lokasi `/sdcard` perangkat dan pilih untuk menginstalnya di GUI TWRP, atau Anda dapat langsung menjalankan `adb sideload AnyKernel-*.zip` untuk menginstal.
 
@@ -275,17 +277,17 @@ Catatan: Metode ini cocok untuk instalasi apa pun (tidak terbatas pada instalasi
 
 ## Metode lain
 
-Faktanya, semua metode instalasi ini hanya memiliki satu ide utama, yaitu **mengganti kernel asli dengan yang disediakan oleh KernelSU**, selama ini dapat dicapai, dapat diinstal. Berikut adalah metode lain yang mungkin:
+Faktanya, semua metode instalasi ini hanya memiliki satu ide utama, yaitu **mengganti kernel asli dengan yang disediakan oleh LunexSU**, selama ini dapat dicapai, dapat diinstal. Berikut adalah metode lain yang mungkin:
 
-1. Pertama, instal Magisk, dapatkan hak root melalui Magisk, lalu gunakan Kernel Flasher untuk mem-flash AnyKernel3 ZIP dari KernelSU.
-2. Gunakan toolkit flashing apa pun di PC untuk mem-flash kernel yang disediakan oleh KernelSU.
+1. Pertama, instal Magisk, dapatkan hak root melalui Magisk, lalu gunakan Kernel Flasher untuk mem-flash AnyKernel3 ZIP dari LunexSU.
+2. Gunakan toolkit flashing apa pun di PC untuk mem-flash kernel yang disediakan oleh LunexSU.
 
 Namun, jika tidak berhasil, coba pendekatan `magiskboot`.
 
 ## Pasca-Instalasi: Dukungan Modul
 
 ::: warning METAMODULE UNTUK MODIFIKASI FILE SISTEM
-Jika Anda ingin menggunakan modul yang memodifikasi file `/system`, Anda perlu menginstal **metamodule** setelah menginstal KernelSU. Modul yang hanya menggunakan skrip, sepolicy, atau system.prop bekerja tanpa metamodule.
+Jika Anda ingin menggunakan modul yang memodifikasi file `/system`, Anda perlu menginstal **metamodule** setelah menginstal LunexSU. Modul yang hanya menggunakan skrip, sepolicy, atau system.prop bekerja tanpa metamodule.
 :::
 
 **Untuk dukungan modifikasi `/system`**, silakan lihat [Panduan Metamodule](metamodule.md) untuk:

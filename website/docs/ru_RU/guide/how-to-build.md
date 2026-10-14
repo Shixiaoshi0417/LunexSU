@@ -1,8 +1,10 @@
-# Как собрать KernelSU?
+# Как собрать LunexSU?
+
+> Adapted from the upstream [KernelSU](https://github.com/tiann/KernelSU) guides. See the [LunexSU README](https://github.com/Shixiaoshi0417/LunexSU#readme) for package identity, authorization expiry and migration details.
 
 ::: warning
 Этот документ предназначен только для архивных ссылок и больше не обновляется.
-Начиная с KernelSU v3.0, мы отказались от официальной поддержки режима образов GKI для более быстрой итерации и скорости сборки. Рекомендуется использовать `Ylarod/ddk` для сборки LKM.
+Начиная с LunexSU v3.0, мы отказались от официальной поддержки режима образов GKI для более быстрой итерации и скорости сборки. Рекомендуется использовать `Ylarod/ddk` для сборки LKM.
 :::
 
 Прежде всего, необходимо ознакомиться с официальной документацией Android по сборке ядра:
@@ -11,7 +13,7 @@
 2. [Сборки релизов GKI](https://source.android.com/docs/core/architecture/kernel/gki-release-builds)
 
 ::: warning
-Эта страница предназначена для устройств GKI, если вы используете старое ядро, пожалуйста, обратитесь к [Как интегрировать KernelSU для не GKI ядер?](how-to-integrate-for-non-gki).
+Эта страница предназначена для устройств GKI, если вы используете старое ядро, пожалуйста, обратитесь к [Как интегрировать LunexSU для не GKI ядер?](how-to-integrate-for-non-gki).
 :::
 
 ## Сборка ядра
@@ -45,26 +47,26 @@ LTO=thin BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh
 tools/bazel build --config=fast //common:kernel_aarch64_dist
 ```
 
-## Сборка ядра с помощью KernelSU
+## Сборка ядра с помощью LunexSU
 
-Если вы успешно собрали ядро, то собрать KernelSU очень просто, выберите любой запуск в корневом каталоге исходного кода ядра:
+Если вы успешно собрали ядро, то собрать LunexSU очень просто, выберите любой запуск в корневом каталоге исходного кода ядра:
 
 - Последний тэг(стабильный)
 
 ```sh
-curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -
 ```
 
 - Основная ветвь(разработка)
 
 ```sh
-curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
+curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -s main
 ```
 
 - Выбранный тэг(Например, версия v0.5.2)
 
 ```sh
-curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.5.2
+curl -LSs "https://raw.githubusercontent.com/Shixiaoshi0417/LunexSU/main/kernel/setup.sh" | bash -s v0.5.2
 ```
 
-А затем пересоберите ядро и получите образ ядра с KernelSU!
+А затем пересоберите ядро и получите образ ядра с LunexSU!

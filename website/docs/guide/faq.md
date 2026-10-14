@@ -1,57 +1,59 @@
 # FAQ
 
-## Does KernelSU support my device?
+> Adapted from the upstream [KernelSU](https://github.com/tiann/KernelSU) guides. See the [LunexSU README](https://github.com/Shixiaoshi0417/LunexSU#readme) for package identity, authorization expiry and migration details.
 
-KernelSU supports devices running Android with an unlocked bootloader. However, official support is only for GKI Linux Kernels 5.10+ (in practice, this means your device needs to have Android 12 out-of-the-box to be supported).
+## Does LunexSU support my device?
 
-You can easily check the support for your device through the KernelSU manager, which is available [here](https://github.com/tiann/KernelSU/releases). 
+LunexSU supports devices running Android with an unlocked bootloader. However, official support is only for GKI Linux Kernels 5.10+ (in practice, this means your device needs to have Android 12 out-of-the-box to be supported).
 
-If the app shows `Not installed`, it means your device is officially supported by KernelSU.
+You can easily check the support for your device through the LunexSU manager, which is available [here](https://github.com/Shixiaoshi0417/LunexSU/releases).
 
-If the app shows `Unsupported`, it means your device isn't officially supported at present. However, you can build kernel source code and integrate KernelSU to make it work, or use [Unofficially supported devices](unofficially-support-devices).
+If the app shows `Not installed`, it means your device is officially supported by LunexSU.
 
-## Do I need to unlock the bootloader to use KernelSU?
+If the app shows `Unsupported`, it means your device isn't officially supported at present. However, you can build kernel source code and integrate LunexSU to make it work, or use [Unofficially supported devices](unofficially-support-devices).
 
-Yes. KernelSU requires an unlocked bootloader.
+## Do I need to unlock the bootloader to use LunexSU?
 
-## Does KernelSU support modules?
+Yes. LunexSU requires an unlocked bootloader.
 
-Yes, most Magisk modules work on KernelSU. However, if your module needs to modify `/system` files, you need to install a [metamodule](metamodule.md) (such as `meta-overlayfs`). Other module features work without a metamodule. Check [Module guide](module.md) for more info.
+## Does LunexSU support modules?
 
-## Does KernelSU support Xposed?
+Yes, most Magisk modules work on LunexSU. However, if your module needs to modify `/system` files, you need to install a [metamodule](metamodule.md) (such as `meta-overlayfs`). Other module features work without a metamodule. Check [Module guide](module.md) for more info.
+
+## Does LunexSU support Xposed?
 
 Yes, you can use LSPosed (or other modern Xposed derivative) with [ZygiskNext](https://github.com/Dr-TSNG/ZygiskNext).
 
-## Does KernelSU support Zygisk?
+## Does LunexSU support Zygisk?
 
-KernelSU has no built-in Zygisk support, but you can use a module like [ZygiskNext](https://github.com/Dr-TSNG/ZygiskNext) to support it.
+LunexSU has no built-in Zygisk support, but you can use a module like [ZygiskNext](https://github.com/Dr-TSNG/ZygiskNext) to support it.
 
-## Is KernelSU compatible with Magisk?
+## Is LunexSU compatible with Magisk?
 
-KernelSU's module system conflicts with Magisk's magic mount. If any module is enabled in KernelSU, Magisk will stop working entirely.
+LunexSU's module system conflicts with Magisk's magic mount. If any module is enabled in LunexSU, Magisk will stop working entirely.
 
-However, if you only use the `su` of KernelSU, it will work well with Magisk. KernelSU modifies the `kernel`, while Magisk modifies the `ramdisk`, allowing both to work together.
+However, if you only use the `su` of LunexSU, it will work well with Magisk. LunexSU modifies the `kernel`, while Magisk modifies the `ramdisk`, allowing both to work together.
 
-## Will KernelSU substitute Magisk?
+## Will LunexSU substitute Magisk?
 
-No. Replacing Magisk isn't our goal. Magisk is already an excellent userspace root solution. KernelSU focuses on exposing kernel interfaces to users instead of supplanting Magisk.
+No. Replacing Magisk isn't our goal. Magisk is already an excellent userspace root solution. LunexSU focuses on exposing kernel interfaces to users instead of supplanting Magisk.
 
-## Can KernelSU support non-GKI devices?
+## Can LunexSU support non-GKI devices?
 
-It's possible. But you should download the kernel source, integrate KernelSU into the source tree, and compile the kernel yourself.
+It's possible. But you should download the kernel source, integrate LunexSU into the source tree, and compile the kernel yourself.
 
-## Can KernelSU support devices below Android 12?
+## Can LunexSU support devices below Android 12?
 
-It's the device's kernel that affects KernelSU's compatibility, and it has nothing to do with the Android version. The only restriction is that devices launched with Android 12 must have a kernel version of 5.10+ (GKI devices). So:
+It's the device's kernel that affects LunexSU's compatibility, and it has nothing to do with the Android version. The only restriction is that devices launched with Android 12 must have a kernel version of 5.10+ (GKI devices). So:
 
 1. Devices launched with Android 12 must be supported.
 2. Devices with an older kernel (some devices with Android 12 also have the older kernel) are compatible (you should build kernel yourself).
 
-## Can KernelSU support old kernel?
+## Can LunexSU support old kernel?
 
-It's possible. KernelSU is backported to kernel 4.14 now. For older kernels, you need to backport it manually, and PRs are always welcome!
+It's possible. LunexSU is backported to kernel 4.14 now. For older kernels, you need to backport it manually, and PRs are always welcome!
 
-## How to integrate KernelSU for an older kernel?
+## How to integrate LunexSU for an older kernel?
 
 Please check the [Integrate for non-GKI devices](how-to-integrate-for-non-gki) guide.
 
@@ -67,9 +69,9 @@ GKI 1.0 is completely different from GKI 2.0, you must compile kernel by yoursel
 
 We don't recommend that you modify the system partition directly. Please check [Module guide](module.md) to modify it systemlessly. If you insist on doing this, check [magisk_overlayfs](https://github.com/HuskyDG/magic_overlayfs).
 
-## Can KernelSU modify hosts? How can I use AdAway？
+## Can LunexSU modify hosts? How can I use AdAway？
 
-Of course. But KernelSU doesn't have built-in hosts support, you can install a module like [systemless-hosts](https://github.com/symbuzzer/systemless-hosts-KernelSU-module) to do it.
+Of course. But LunexSU doesn't have built-in hosts support, you can install a module like [systemless-hosts](https://github.com/symbuzzer/systemless-hosts-KernelSU-module) to do it.
 
 ## Why aren't my modules working after fresh install?
 

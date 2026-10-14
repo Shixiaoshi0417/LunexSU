@@ -1,10 +1,18 @@
-# Library for KernelSU's module WebUI
+# LunexSU module WebUI library
 
 ## Install
 
 ```sh
-yarn add kernelsu
+cd js
+npm pack
+# Install the generated lunexsu-*.tgz into your module's WebUI project.
+npm install /path/to/lunexsu-3.0.2.tgz
 ```
+
+The local package is named `lunexsu`; this repository does not publish an npm
+release automatically. The existing `ksu` WebUI bridge remains compatible with
+KernelSU modules. Original upstream authorship and the Apache-2.0 license are
+preserved.
 
 ## API
 
@@ -18,7 +26,7 @@ Spawns a **root** shell and runs a command within that shell, returning a Promis
   - `env` - Environment key-value pairs.
 
 ```javascript
-import { exec } from 'kernelsu';
+import { exec } from 'lunexsu';
 
 const { errno, stdout, stderr } = await exec('ls -l', { cwd: '/tmp' });
 if (errno === 0) {
@@ -42,7 +50,7 @@ Returns a `ChildProcess` instance. Instances of `ChildProcess` represent spawned
 Example of running `ls -lh /data`, capturing `stdout`, `stderr`, and the exit code:
 
 ```javascript
-import { spawn } from 'kernelsu';
+import { spawn } from 'lunexsu';
 
 const ls = spawn('ls', ['-lh', '/data']);
 
@@ -97,7 +105,7 @@ A `Readable Stream` that represents the child process's `stderr`.
 Request the WebView enter/exit full screen.
 
 ```javascript
-import { fullScreen } from 'kernelsu';
+import { fullScreen } from 'lunexsu';
 fullScreen(true);
 ```
 
@@ -111,7 +119,7 @@ Request the WebView to set padding to 0 or safeDrawing insets
   - add `<link rel="stylesheet" type="text/css" href="/internal/insets.css" />` in html.
 
 ```javascript
-import { enableEdgeToEdge } from 'kernelsu';
+import { enableEdgeToEdge } from 'lunexsu';
 enableEdgeToEdge(true);
 ```
 
@@ -120,7 +128,7 @@ enableEdgeToEdge(true);
 Show a toast message.
 
 ```javascript
-import { toast } from 'kernelsu';
+import { toast } from 'lunexsu';
 toast('Hello, world!');
 ```
 
@@ -129,7 +137,7 @@ toast('Hello, world!');
 Get module info.
 
 ```javascript
-import { moduleInfo } from 'kernelsu';
+import { moduleInfo } from 'lunexsu';
 // print moduleId in console
 console.log(moduleInfo());
 ```
@@ -143,7 +151,7 @@ Returns an array of package names.
 - `type` `<string>` The type of packages to list: "user", "system", or "all".
 
 ```javascript
-import { listPackages } from 'kernelsu';
+import { listPackages } from 'lunexsu';
 // list user packages
 const packages = listPackages("user");
 ```
@@ -163,7 +171,7 @@ Returns an array of `PackagesInfo` objects.
 - `packages` `<string[]>` The list of package names.
 
 ```javascript
-import { getPackagesInfo } from 'kernelsu';
+import { getPackagesInfo } from 'lunexsu';
 const packages = getPackagesInfo(['com.android.settings', 'com.android.shell']);
 ```
 
@@ -183,6 +191,6 @@ An object contains:
 Exit the current WebUI activity.
 
 ```javascript
-import { exit } from 'kernelsu';
+import { exit } from 'lunexsu';
 exit();
 ```

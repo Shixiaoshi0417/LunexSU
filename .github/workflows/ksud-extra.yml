@@ -31,8 +31,16 @@ jobs:
     - name: Prepare LKM files
       if: ${{ inputs.pack_lkm }}
       run: |
-        cp aarch64-android*-lkm/*_kernelsu.ko ./userspace/ksud/bin/aarch64/
-        cp x86_64-android*-lkm/*_kernelsu.ko ./userspace/ksud/bin/x86_64/
+        # Public names are LunexSU; the embedded name is a ramdisk/daemon ABI.
+        for ko in aarch64-android*-lkm/*_lunexsu.ko; do
+          name=$(basename "$ko")
+          cp "$ko" "./userspace/ksud/bin/aarch64/${name%_lunexsu.ko}_kernelsu.ko"
+        done
+        # Public names are LunexSU; the embedded name is a ramdisk/daemon ABI.
+        for ko in x86_64-android*-lkm/*_lunexsu.ko; do
+          name=$(basename "$ko")
+          cp "$ko" "./userspace/ksud/bin/x86_64/${name%_lunexsu.ko}_kernelsu.ko"
+        done
     
     - name: Prepare ksuinit
       if: ${{ inputs.pack_ksuinit }}

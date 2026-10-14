@@ -516,7 +516,7 @@ int ksu_install_file_wrapper(int fd)
      * security_inode_init_security_anon() checks FILE__CREATE against the
      * current SELinux domain. A custom root profile may have already moved
      * this task into a restricted domain (for example shell), so create the
-     * private wrapper inode with KernelSU's authorized credentials. The file
+     * private wrapper inode with LunexSU's authorized credentials. The file
      * is not published until the caller's credentials have been restored and
      * its inode has been relabeled below.
     */

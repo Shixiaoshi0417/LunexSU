@@ -1,19 +1,21 @@
 # Perangkat Yang Didukung Tidak Resmi
 
+> Adapted from the upstream [KernelSU](https://github.com/tiann/KernelSU) guides. See the [LunexSU README](https://github.com/Shixiaoshi0417/LunexSU#readme) for package identity, authorization expiry and migration details.
+
 ::: warning
 Dokumen ini hanya untuk referensi arsip dan tidak lagi diperbarui.
-Sejak KernelSU v1.0, kami telah menghentikan dukungan resmi untuk perangkat non-GKI.
+Sejak LunexSU v1.0, kami telah menghentikan dukungan resmi untuk perangkat non-GKI.
 :::
 
 :::peringatan
 
-di halaman ini, terdapat kernel untuk perangkat non-GKI yang mendukung KernelSU yang dikelola oleh pengembang lain.
+di halaman ini, terdapat kernel untuk perangkat non-GKI yang mendukung LunexSU yang dikelola oleh pengembang lain.
 
 :::
 
 :::peringatan
 
-Halaman ini hanya untuk Anda yang ingin menemukan kode sumber yang sesuai dengan perangkat Anda, itu **BUKAN** berarti kode sumber telah ditinjau oleh _KernelSU Developers_. Anda harus menggunakannya dengan risiko Anda sendiri.
+Halaman ini hanya untuk Anda yang ingin menemukan kode sumber yang sesuai dengan perangkat Anda, itu **BUKAN** berarti kode sumber telah ditinjau oleh _LunexSU Developers_. Anda harus menggunakannya dengan risiko Anda sendiri.
 
 :::
 

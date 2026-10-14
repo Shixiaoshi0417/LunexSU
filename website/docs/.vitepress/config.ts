@@ -3,18 +3,18 @@ import locales from './locales'
 import { readdir, writeFile } from 'fs/promises'
 import { resolve } from 'path'
 
+const base = process.env.LUNEXSU_SITE_BASE || '/LunexSU/'
+
 export default defineConfig( {
-    title: 'KernelSU',
+    title: 'LunexSU',
+    base,
     locales: locales.locales,
     head: [
-        ['script', {
-            async: 'async',
-            src: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8356785667482909',
-            crossorigin: 'anonymous',
-        }],
+        // head entries are not rewritten with base, unlike Markdown links.
+        ['link', { rel: 'icon', href: `${base}favicon.ico` }],
     ],
     sitemap: {
-        hostname: 'https://kernelsu.org'
+        hostname: process.env.LUNEXSU_SITE_URL || 'https://shixiaoshi0417.github.io/LunexSU/'
     },
     buildEnd: async (config: SiteConfig) => {
         const templateDir = resolve(config.outDir, 'templates');

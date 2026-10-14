@@ -18,16 +18,16 @@ export default defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/tiann/KernelSU' }
+      { icon: 'github', link: 'https://github.com/Shixiaoshi0417/LunexSU' }
     ],
 
     footer: {
       message: 'GPL3 ライセンスでリリースされています。',
-      copyright: 'Copyright © 2022-現在 KernelSU 開発者。'
+      copyright: 'Copyright © 2022-現在 KernelSU 開発者。 / LunexSU contributors.'
     },
 
     editLink: {
-      pattern: 'https://github.com/tiann/KernelSU/edit/main/website/docs/:path',
+      pattern: 'https://github.com/Shixiaoshi0417/LunexSU/edit/main/website/docs/:path',
       text: 'GitHub でこのページを編集'
     }
   }
@@ -44,7 +44,7 @@ function sidebarGuide() {
     {
       text: 'ガイド',
       items: [
-        { text: 'KernelSU とは?', link: '/ja_JP/guide/what-is-kernelsu' },
+        { text: 'LunexSU とは?', link: '/ja_JP/guide/what-is-kernelsu' },
         { text: 'インストール', link: '/ja_JP/guide/installation' },
         { text: 'ビルドするには?', link: '/ja_JP/guide/how-to-build' },
         { text: '非 GKI デバイスでの実装', link: '/ja_JP/guide/how-to-integrate-for-non-gki' },

@@ -223,6 +223,8 @@ fn assemble_bootstrap() {
 }
 
 fn main() {
+    // Embedded modules may be added after a cached daemon build.
+    println!("cargo:rerun-if-changed=bin");
     assemble_bootstrap();
 
     let (code, name) = match get_git_version() {
@@ -234,7 +236,7 @@ fn main() {
         }
     };
     if env::var("KSU_PACKAGE_NAME").is_err() {
-        println!("cargo:rustc-env=KSU_PACKAGE_NAME=me.weishu.kernelsu");
+        println!("cargo:rustc-env=KSU_PACKAGE_NAME=com.shixiaoshi0417.lunexsu");
     }
     println!("cargo:rustc-env=VERSION_CODE={code}");
     println!("cargo:rustc-env=VERSION_NAME={name}");

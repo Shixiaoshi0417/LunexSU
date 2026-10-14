@@ -14,9 +14,11 @@
 #include <linux/version.h>
 #include <linux/sched/task_stack.h>
 #include <linux/ptrace.h>
+#include <linux/sched/signal.h>
 
 #include "arch.h"
 #include "policy/allowlist.h"
+#include "policy/authorization_state.h"
 #include "policy/feature.h"
 #include "klog.h" // IWYU pragma: keep
 #include "runtime/ksud.h"
@@ -171,6 +173,8 @@ static long ksu_handle_execve_sucompat_common(const char __user **filename_user,
     int tmp_fd;
     struct file *ksud_file;
     const struct cred *old_cred;
+    struct ksu_auth_lease lease;
+    bool escaped;
 
     if (execveat && ((int)PT_REGS_SYSCALL_PARM1(regs) != AT_FDCWD || (int)PT_REGS_PARM5(regs) != 0))
         goto do_orig_execve;
@@ -212,6 +216,12 @@ static long ksu_handle_execve_sucompat_common(const char __user **filename_user,
         goto do_orig_execve;
     }
 
+    ret = ksu_authorization_begin(current_uid().val, true, &lease);
+    if (ret) {
+        fput(ksud_file);
+        put_unused_fd(tmp_fd);
+        return ret;
+    }
     fd_install(tmp_fd, ksud_file);
 
     pending_sucompat = ksu_sulog_capture_sucompat(*filename_user, argv_user, GFP_KERNEL);
@@ -228,13 +238,24 @@ static long ksu_handle_execve_sucompat_common(const char __user **filename_user,
     regs->__PT_PARM2_REG = empty_user_path();
     PT_REGS_SYSCALL_PARM1(regs) = tmp_fd;
 
-    ret = escape_with_root_profile();
+    ret = escape_with_root_profile_selected(&lease.profile);
     if (ret) {
         pr_err("escape_with_root_profile failed: %ld\n", ret);
     }
+    escaped = !ret;
+    if (!ret)
+        ret = ksu_syscall_table[__NR_execveat](regs);
+    if (ret >= 0) {
+        // Finish admission before any Root userspace instruction executes.
+        su_fd = ksu_install_su_fd();
+        if (su_fd < 0) {
+            pr_warn("install su session fd failed: %d\n", su_fd);
+            if (lease.temporary)
+                ret = su_fd;
+        }
+    }
     ksu_sulog_emit_pending(pending_sucompat, ret, GFP_KERNEL);
-
-    ret = ksu_syscall_table[__NR_execveat](regs);
+    ksu_authorization_finish(&lease, ret >= 0);
     if (ret < 0) {
         ksu_close_fd(tmp_fd);
         PT_REGS_SYSCALL_PARM1(regs) = orig_regs[0];
@@ -242,13 +263,12 @@ static long ksu_handle_execve_sucompat_common(const char __user **filename_user,
         regs->__PT_PARM3_REG = orig_regs[2];
         regs->__PT_SYSCALL_PARM4_REG = orig_regs[3];
         regs->__PT_PARM5_REG = orig_regs[4];
-    } else {
-        // Only grant the scoped driver capability after the selected root
-        // profile has been applied successfully.
-        su_fd = ksu_install_su_fd();
-        if (su_fd < 0) {
-            pr_warn("install su session fd failed: %d\n", su_fd);
-        }
+        /* Profile application changes credentials, seccomp and namespaces.
+         * Those side effects cannot safely be rolled back after failed exec.
+         * Never return to the original app with a refunded temporary grant
+         * and elevated credentials. Successful Root tasks are unaffected. */
+        if (ksu_auth_kill_after_failed_exec(lease.temporary, escaped))
+            force_sig(SIGKILL);
     }
     return ret;
 

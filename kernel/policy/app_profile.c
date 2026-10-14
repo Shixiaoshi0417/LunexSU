@@ -122,7 +122,7 @@ static void disable_seccomp(void)
     kfree(fake);
 }
 
-int escape_with_root_profile(void)
+int escape_with_root_profile_selected(struct root_profile *selected)
 {
     int ret = 0;
     struct cred *cred;
@@ -144,10 +144,11 @@ int escape_with_root_profile(void)
 
     if (test_thread_flag(TIF_KSU_DISABLE_ESCAPE_WITH_ROOT)) {
         pr_warn("TIF_KSU_DISABLE_ESCAPE_WITH_ROOT found, don't escape!\n");
+        ret = -EPERM;
         goto out_abort_creds;
     }
 
-    profile = ksu_get_root_profile(cred->uid.val);
+    profile = selected ? selected : ksu_get_root_profile(cred->uid.val);
 
     cred->uid.val = profile->uid;
     cred->suid.val = profile->uid;
@@ -187,6 +188,7 @@ int escape_with_root_profile(void)
     // on older kernels, per-UID process accounting lives in user_struct.
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 14, 0)
     if (set_cred_ucounts(cred)) {
+        ret = -ENOMEM;
         goto out_abort_creds;
     }
 #endif
@@ -215,14 +217,20 @@ int escape_with_root_profile(void)
     }
 
     setup_mount_ns(profile->namespaces);
-    ksu_put_root_profile(profile);
+    if (!selected)
+        ksu_put_root_profile(profile);
     return 0;
 
 out_abort_creds:
-    if (profile)
+    if (profile && !selected)
         ksu_put_root_profile(profile);
     abort_creds(cred);
     return ret;
+}
+
+int escape_with_root_profile(void)
+{
+    return escape_with_root_profile_selected(NULL);
 }
 
 void escape_to_root_for_init(void)

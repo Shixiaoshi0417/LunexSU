@@ -1,16 +1,18 @@
 # 非官方支持设备
 
+> 本文档改编自 [KernelSU](https://github.com/tiann/KernelSU) 上游指南。LunexSU 的包名、授权有效期与品牌迁移说明见[项目 README](https://github.com/Shixiaoshi0417/LunexSU#readme)。
+
 ::: warning
 该文档仅供存档参考，不再维护更新。
-自 KernelSU v1.0 版本之后，我们放弃了对非 GKI 设备的官方支持。
+自 LunexSU v1.0 版本之后，我们放弃了对非 GKI 设备的官方支持。
 :::
 
 ::: warning
-本文档列出由其他开发者维护的支持 KernelSU 的非 GKI 设备内核
+本文档列出由其他开发者维护的支持 LunexSU 的非 GKI 设备内核
 :::
 
 ::: warning
-本文档仅方便查找设备对应源码，这并不意味该源码**被** KernelSU 开发者**审查**，你应自行承担使用风险。
+本文档仅方便查找设备对应源码，这并不意味该源码**被** LunexSU 开发者**审查**，你应自行承担使用风险。
 :::
 
 <script setup>
