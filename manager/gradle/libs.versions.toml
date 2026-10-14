@@ -6,9 +6,10 @@ lifecycle = "2.11.0"
 activity-compose = "1.13.0"
 core-splashscreen = "1.2.0"
 kotlinx-coroutines = "1.11.0"
+kotlinx-serialization = "1.11.0"
+junit = "4.13.2"
 navigationevent = "1.1.2"
 graphics-shapes = "1.1.0"
-junit = "4.13.2"
 json = "20250517"
 commonmark = "0.30.0"
 webkit = "1.17.0"
@@ -64,12 +65,13 @@ com-github-topjohnwu-libsu-io = { group = "com.github.topjohnwu.libsu", name = "
 dev-rikka-rikkax-parcelablelist = { module = "dev.rikka.rikkax.parcelablelist:parcelablelist", version.ref = "parcelablelist" }
 
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+
+junit = { module = "junit:junit", version.ref = "junit" }
 
 androidx-navigationevent-compose = { module = "androidx.navigationevent:navigationevent-compose", version.ref = "navigationevent" }
 
 androidx-graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = "graphics-shapes" }
-
-junit = { module = "junit:junit", version.ref = "junit" }
 
 commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
 commonmark-ext-gfm-tables = { module = "org.commonmark:commonmark-ext-gfm-tables", version.ref = "commonmark" }

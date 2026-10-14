@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
+import com.shixiaoshi0417.lunexsu.data.registry.RegistryUrls
 import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.ui.component.markdown.MarkdownContent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -90,9 +91,14 @@ fun ConfirmDialogMiuix(
                     val dismissState = LocalDismissState.current
                     visuals.content?.let { content ->
                         when {
-                            visuals.isMarkdown -> MarkdownContent(content = content, isMarkdown = true)
-                            visuals.isHtml -> MarkdownContent(content = content, isMarkdown = false)
-                            else -> Text(text = content)
+                            // Registry content (and any HTML, which only comes from the registry) is rendered locked down.
+                        visuals.isRestricted || visuals.isHtml -> MarkdownContent(
+                            content = content,
+                            isMarkdown = !visuals.isHtml,
+                            restrictedBaseUrl = RegistryUrls.DEFAULT_BASE_URL,
+                        )
+                        visuals.isMarkdown -> MarkdownContent(content = content, isMarkdown = true)
+                        else -> Text(text = content)
                         }
                     }
                     Row(

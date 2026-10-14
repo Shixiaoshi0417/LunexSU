@@ -64,6 +64,9 @@ jobs:
       - name: release
         uses: softprops/action-gh-release@v3
         with:
+          draft: true
+          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'Beta') }}
+          fail_on_unmatched_files: true
           files: |
             manager/*.apk
             lkm/LunexSU-lkm-*.ko

@@ -194,7 +194,7 @@ class IdentityTests(unittest.TestCase):
                     if "lunexsu" in link.lower():
                         self.assertTrue(link.startswith("Shixiaoshi0417/LunexSU"), f"{path}: {link}")
         self.assertIn("https://github.com/tiann/KernelSU", read("manager/app/src/main/java/com/shixiaoshi0417/lunexsu/ui/screen/about/AboutScreen.kt"))
-        self.assertIn("https://github.com/KernelSU-Modules-Repo/", read("manager/app/src/main/java/com/shixiaoshi0417/lunexsu/ui/screen/modulerepo/ModuleRepoScreen.kt"))
+        self.assertIn("https://modules.kernelsu.org/", read("manager/app/src/main/java/com/shixiaoshi0417/lunexsu/data/registry/RegistryUrls.kt"))
 
     def test_branding_suite_runs_in_ci(self):
         # Every file in this directory runs on push and pull request, so a broken

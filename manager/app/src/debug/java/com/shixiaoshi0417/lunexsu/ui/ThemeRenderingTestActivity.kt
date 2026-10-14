@@ -86,7 +86,8 @@ class ThemeRenderingTestActivity : ComponentActivity() {
                                     onSetCheckUpdate = {}, onSetCheckModuleUpdate = {}, onOpenTheme = {},
                                     onSetUiModeIndex = {}, onOpenProfileTemplate = {}, onSetSuCompatMode = {},
                                     onSetKernelUmountEnabled = {}, onSetSelinuxHideEnabled = {}, onSetSulogEnabled = {},
-                                    onSetAdbRootEnabled = {}, onSetDefaultUmountModules = {}, onSetEnableWebDebugging = {},
+                                    onSetAdbRootEnabled = {}, onSetShellSuAdbOnlyEnabled = {},
+                                    onSetDefaultUmountModules = {}, onSetEnableWebDebugging = {},
                                     onSetAutoJailbreak = {}, onSetUseSoftReboot = {}, onOpenAbout = {},
                                 ),
                                 // Ensure overflow even without a Core; no capability gate or real setting is changed.

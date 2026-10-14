@@ -29,7 +29,8 @@ interface SettingsRepository {
     var enableWebDebugging: Boolean
     var moduleSortEnabledFirst: Boolean
     var moduleSortActionFirst: Boolean
-    var moduleRepoSortOrder: Int
+    /** Name of the [com.shixiaoshi0417.lunexsu.ui.screen.modulerepo.RepoSort] entry. */
+    var moduleRepoSortOrder: String
     var superuserShowSystemApps: Boolean
     var superuserShowOnlyPrimaryUserApps: Boolean
     var superuserSortOption: Int
@@ -62,6 +63,10 @@ interface SettingsRepository {
     suspend fun getAdbRootPersistValue(): Long?
     suspend fun getAdbRootValue(): Long?
     fun setAdbRootEnabled(enabled: Boolean): Boolean
+    suspend fun getShellSuAdbOnlyStatus(): String
+    suspend fun getShellSuAdbOnlyPersistValue(): Long?
+    suspend fun getShellSuAdbOnlyValue(): Long?
+    fun setShellSuAdbOnlyEnabled(enabled: Boolean): Boolean
 
     fun isDefaultUmountModules(): Boolean
     fun setDefaultUmountModules(enabled: Boolean): Boolean
