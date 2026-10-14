@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.view.MotionEvent
 import android.view.PixelCopy
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -57,6 +58,55 @@ internal object ThemeRenderingDeviceTests {
                 instrumentation.waitForIdleSync()
             }
         }
-        return Bundle().apply { putString("theme_rendering", "PASS: ${cases.size} hidden-card alpha, route isolation and native UI pixel cases") }
+        for (scenario in listOf("settings", "settings_native")) {
+            checkSettingsScroll(instrumentation, scenario)
+        }
+        return Bundle().apply { putString("theme_rendering", "PASS: ${cases.size} pixel cases and 2 settings scroll cases") }
+    }
+
+    private fun checkSettingsScroll(instrumentation: Instrumentation, scenario: String) {
+        val activity = instrumentation.startActivitySync(Intent().setClassName(instrumentation.targetContext,
+            "com.shixiaoshi0417.lunexsu.ui.ThemeRenderingTestActivity")
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("case", scenario))
+        fun read(name: String): Int {
+            var result = 0
+            instrumentation.runOnMainSync {
+                result = activity.javaClass.getMethod(name).invoke(activity) as Int
+            }
+            return result
+        }
+        fun swipe(up: Boolean) {
+            val view = activity.window.decorView
+            val start = SystemClock.uptimeMillis()
+            for (step in 0..16) {
+                val fraction = step / 16f
+                val y = view.height * if (up) (0.8f - 0.5f * fraction) else (0.3f + 0.5f * fraction)
+                val action = when (step) { 0 -> MotionEvent.ACTION_DOWN; 16 -> MotionEvent.ACTION_UP; else -> MotionEvent.ACTION_MOVE }
+                val event = MotionEvent.obtain(start, SystemClock.uptimeMillis(), action, view.width * 0.5f, y, 0)
+                try {
+                    instrumentation.runOnMainSync { activity.dispatchTouchEvent(event) }
+                } finally {
+                    event.recycle()
+                }
+                SystemClock.sleep(16)
+            }
+            instrumentation.waitForIdleSync()
+        }
+        try {
+            val deadline = SystemClock.uptimeMillis() + 10_000
+            while (read("settingsScrollRange") !in 1 until Int.MAX_VALUE && SystemClock.uptimeMillis() < deadline) {
+                instrumentation.waitForIdleSync()
+                SystemClock.sleep(50)
+            }
+            check(read("settingsScrollRange") in 1 until Int.MAX_VALUE) { "$scenario has no scrollable viewport" }
+            repeat(3) { swipe(up = true) }
+            val lower = read("settingsScrollPosition")
+            check(lower > 0) { "$scenario consumed gestures without scrolling the list" }
+            repeat(3) { swipe(up = false) }
+            check(read("settingsScrollPosition") < lower) { "$scenario cannot scroll back toward the top" }
+        } finally {
+            instrumentation.runOnMainSync { activity.finish() }
+            instrumentation.waitForIdleSync()
+        }
     }
 }

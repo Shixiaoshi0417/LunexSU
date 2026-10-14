@@ -1,5 +1,6 @@
 package com.shixiaoshi0417.lunexsu.ui.screen.settings
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -71,8 +72,14 @@ fun SettingPagerMaterial(
     uiState: SettingsUiState,
     actions: SettingsScreenActions,
     bottomInnerPadding: Dp,
+    scrollState: ScrollState = rememberScrollState(),
 ) {
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    // A fixed theme bar must not consume gestures trying to collapse an unattached large bar.
+    val scrollBehavior = if (LocalFinaThemeUi.current) {
+        TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
+    } else {
+        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    }
     val snackBarHost = remember { SnackbarHostState() }
     val showUninstallDialog = rememberSaveable { mutableStateOf(false) }
     var showBottomSheet by remember { mutableStateOf(false) }
@@ -93,7 +100,7 @@ fun SettingPagerMaterial(
             modifier = Modifier
                 .padding(paddingValues)
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
         ) {
             KsuIsValid {
                 SegmentedColumn(
@@ -380,6 +387,7 @@ private fun TopBar(
             title = { Text(stringResource(R.string.settings)) },
             colors = expressiveTopAppBarColors(),
             windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+            scrollBehavior = scrollBehavior,
         )
         return
     }

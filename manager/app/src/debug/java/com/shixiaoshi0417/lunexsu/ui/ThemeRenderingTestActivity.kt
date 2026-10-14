@@ -7,6 +7,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
@@ -18,6 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.shixiaoshi0417.lunexsu.ui.screen.home.HomeCard
+import com.shixiaoshi0417.lunexsu.ui.screen.settings.SettingPagerMaterial
+import com.shixiaoshi0417.lunexsu.ui.screen.settings.SettingsScreenActions
+import com.shixiaoshi0417.lunexsu.ui.screen.settings.SettingsUiState
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalFinaThemeUi
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.LocalThemePackBackground
 import com.shixiaoshi0417.lunexsu.ui.theme.pack.PackSurfaceId
@@ -32,6 +36,10 @@ import java.util.UUID
 class ThemeRenderingTestActivity : ComponentActivity() {
     private lateinit var fixtureRoot: File
     private lateinit var fixtureContext: Context
+    private var settingsScrollState: androidx.compose.foundation.ScrollState? = null
+
+    fun settingsScrollPosition(): Int = settingsScrollState?.value ?: -1
+    fun settingsScrollRange(): Int = settingsScrollState?.maxValue ?: 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,13 +72,28 @@ class ThemeRenderingTestActivity : ComponentActivity() {
         ThemePackState.reload(fixtureContext)
         setContent {
             CompositionLocalProvider(
-                LocalFinaThemeUi provides (scenario != "native"),
+                LocalFinaThemeUi provides (scenario != "native" && scenario != "settings_native"),
                 LocalThemePackBackground provides (scenario == "route_wallpaper"),
             ) {
                 MaterialTheme(colorScheme = lightColorScheme(surface = Color.Blue)) {
                     Box(Modifier.fillMaxSize().background(if (scenario == "card") Color.Blue else Color.Red),
                         contentAlignment = Alignment.Center) {
-                        if (scenario == "card") {
+                        if (scenario.startsWith("settings")) {
+                            val scrollState = rememberScrollState().also { settingsScrollState = it }
+                            SettingPagerMaterial(
+                                uiState = SettingsUiState(),
+                                actions = SettingsScreenActions(
+                                    onSetCheckUpdate = {}, onSetCheckModuleUpdate = {}, onOpenTheme = {},
+                                    onSetUiModeIndex = {}, onOpenProfileTemplate = {}, onSetSuCompatMode = {},
+                                    onSetKernelUmountEnabled = {}, onSetSelinuxHideEnabled = {}, onSetSulogEnabled = {},
+                                    onSetAdbRootEnabled = {}, onSetDefaultUmountModules = {}, onSetEnableWebDebugging = {},
+                                    onSetAutoJailbreak = {}, onSetUseSoftReboot = {}, onOpenAbout = {},
+                                ),
+                                // Ensure overflow even without a Core; no capability gate or real setting is changed.
+                                bottomInnerPadding = 600.dp,
+                                scrollState = scrollState,
+                            )
+                        } else if (scenario == "card") {
                             HomeCard(Modifier.size(160.dp), containerColor = Color.Red, surfaceId = PackSurfaceId.GRID) {
                                 // The status tile's icon/title/mode are all hidden, leaving only its constraints.
                                 Box(Modifier.fillMaxSize())

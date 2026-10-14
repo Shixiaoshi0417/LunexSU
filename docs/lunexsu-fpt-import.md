@@ -202,6 +202,17 @@ Theme JSON fields cannot write arbitrary preferences or authorization data.
 
 ## Validation
 
+### Settings scrolling (2026-10-14)
+
+The clean Release build, all 125 JVM tests and Android test APK compilation passed.
+The theme settings page uses a pinned scroll behavior connected to its compact
+top bar. It no longer leaves a large-bar collapse handler attached to the list
+without a corresponding collapsing bar, which could consume every upward drag
+instead of scrolling the settings. Ordinary M3E retains its large collapsing bar;
+MIUIX is unchanged. Optional debug instrumentation exercises the actual settings
+page in both theme and native M3E presentation with repeated drags in both
+directions. These gesture cases require device execution; no ADB was used.
+
 ### Hidden status photos and route isolation (2026-10-13)
 
 The clean Release build, all 125 JVM tests and Android test APK compilation passed.
