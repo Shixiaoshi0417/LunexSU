@@ -6,9 +6,11 @@ import com.shixiaoshi0417.lunexsu.ksuApp
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.UUID
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -20,6 +22,8 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import okhttp3.Call
+import okhttp3.OkHttpClient
 import okhttp3.Request
 
 /**
@@ -30,125 +34,150 @@ import okhttp3.Request
  * and every finished theme writes a `theme_meta.json` so it can be listed offline. Nothing is
  * applied here: the package goes through the regular FPT import confirmation afterwards.
  */
-class ThemeDownloader(private val context: Context) {
+class ThemeDownloader internal constructor(private val filesDir: File, private val client: OkHttpClient) {
+    constructor(context: Context) : this(
+        context.filesDir,
+        ksuApp.okhttpClient.newBuilder()
+            .cache(null)
+            .connectTimeout(DOWNLOAD_TIMEOUT_SEC, TimeUnit.SECONDS)
+            .readTimeout(DOWNLOAD_TIMEOUT_SEC, TimeUnit.SECONDS)
+            .build(),
+    )
 
-    private val library = ThemeLibrary(File(context.filesDir, "themes"))
+    private val library = ThemeLibrary(File(filesDir, "themes"))
     internal fun scanLocalThemes(): List<LocalTheme> = library.scan()
     internal fun deleteLocalTheme(theme: LocalTheme) = library.remove(theme)
 
-    private val client = ksuApp.okhttpClient.newBuilder()
-        .cache(null)
-        .connectTimeout(DOWNLOAD_TIMEOUT_SEC, TimeUnit.SECONDS)
-        .readTimeout(DOWNLOAD_TIMEOUT_SEC, TimeUnit.SECONDS)
-        .build()
-
     private val semaphore = Semaphore(MAX_CONCURRENT)
-
-    private val downloadTasks = ConcurrentHashMap<String, DownloadTask>()
+    // Ownership checks and mutations (including publication) share one lock.
+    private val taskLock = Any()
+    private val downloadTasks = mutableMapOf<String, DownloadTask>()
 
     private val _downloadProgress = MutableStateFlow<Map<String, DownloadProgress>>(emptyMap())
     val downloadProgress: StateFlow<Map<String, DownloadProgress>> = _downloadProgress.asStateFlow()
 
-    fun pauseDownload(themeId: String) {
+    fun pauseDownload(themeId: String) = synchronized(taskLock) {
         downloadTasks[themeId]?.isPaused = true
     }
 
     fun cancelDownload(themeId: String) {
-        val task = downloadTasks.remove(themeId)
-        // Signal first so the running writer stops at its next chunk, then drop the partial files.
-        task?.isCancelled = true
-        if (task != null) {
-            task.stage.deleteRecursively()
+        val task = synchronized(taskLock) {
+            downloadTasks.remove(themeId)?.also {
+                it.isCancelled = true
+                // An active worker owns its files until its streams have closed.
+                if (!it.isRunning) it.stage.deleteRecursively()
+            }.also { _downloadProgress.update { progress -> progress - themeId } }
         }
-        _downloadProgress.update { it - themeId }
+        task?.call?.cancel()
     }
 
     fun downloadTheme(theme: RemoteTheme): Flow<DownloadProgress> = flow {
-        val themeId = theme.id
-        val existing = downloadTasks[themeId]
-        if (existing != null && !existing.isPaused) {
-            emit(DownloadProgress(themeId, 0f, 0f, 0f, DownloadStatus.PENDING))
+        val task = synchronized(taskLock) {
+            val existing = downloadTasks[theme.id]
+            if (existing != null && (existing.isRunning || !existing.isPaused)) null
+            else (existing ?: DownloadTask(theme.id, File(filesDir, "theme_downloads/${UUID.randomUUID()}"))
+                .also { downloadTasks[theme.id] = it }).also {
+                it.isPaused = false
+                it.isRunning = true
+            }
+        }
+        if (task == null) {
+            emit(DownloadProgress(theme.id, 0f, 0f, 0f, DownloadStatus.PENDING))
             return@flow
         }
-        val task = existing ?: DownloadTask(File(context.filesDir, "theme_downloads/${UUID.randomUUID()}"))
-            .also { downloadTasks[themeId] = it }
-        task.isPaused = false
 
-        semaphore.withPermit {
-            try {
+        suspend fun report(file: Float, image: Float, overall: Float, status: DownloadStatus, error: String? = null) {
+            updateProgress(task, file, image, overall, status, error)?.let { emit(it) }
+        }
+
+        var keepForResume = false
+        try {
+            semaphore.withPermit {
+                currentCoroutineContext().ensureActive()
                 if (!isSafeDownloadUrl(theme.downloadUrl)) {
-                    fail(themeId, "Invalid download URL")
-                    emit(current(themeId))
+                    report(0f, 0f, 0f, DownloadStatus.FAILED, "Invalid download URL")
                     return@withPermit
                 }
-
-                updateProgress(themeId, 0f, 0f, 0f, DownloadStatus.DOWNLOADING)
-                emit(current(themeId))
-
+                checkTask(task)
+                report(0f, 0f, 0f, DownloadStatus.DOWNLOADING)
                 val themeResult = downloadFileWithRetry(
                     url = theme.downloadUrl,
                     file = File(task.stage, "${sanitizeFilename(theme.name)}.fpt"),
-                    taskId = themeId,
+                    task = task,
                     isThemeFile = true,
                 ) { progress ->
-                    updateProgress(themeId, progress, 0f, progress * 0.7f, DownloadStatus.DOWNLOADING)
+                    updateProgress(task, progress, 0f, progress * 0.7f, DownloadStatus.DOWNLOADING)
                 }
                 if (themeResult.paused) {
-                    updateProgress(themeId, 0f, 0f, 0f, DownloadStatus.PAUSED)
-                    emit(current(themeId))
+                    keepForResume = true
+                    report(0f, 0f, 0f, DownloadStatus.PAUSED)
                     return@withPermit
                 }
                 if (!themeResult.success) {
-                    // A cancelled task already cleared its progress; do not report it as failed.
-                    if (task.isCancelled) return@withPermit
-                    fail(themeId, themeResult.error)
-                    emit(current(themeId))
+                    report(0f, 0f, 0f, DownloadStatus.FAILED, themeResult.error)
                     return@withPermit
                 }
-
                 if (theme.previewUrl.isNotBlank() && isSafeDownloadUrl(theme.previewUrl)) {
                     val previewResult = downloadFileWithRetry(
                         url = theme.previewUrl,
                         file = File(task.stage, ThemeLibrary.PREVIEW_FILE_NAME),
-                        taskId = themeId,
+                        task = task,
                         isThemeFile = false,
                     ) { progress ->
-                        updateProgress(themeId, 1f, progress, 0.7f + progress * 0.3f, DownloadStatus.DOWNLOADING)
+                        updateProgress(task, 1f, progress, 0.7f + progress * 0.3f, DownloadStatus.DOWNLOADING)
                     }
                     if (previewResult.paused) {
-                        updateProgress(themeId, 1f, 0f, 0.7f, DownloadStatus.PAUSED)
-                        emit(current(themeId))
+                        keepForResume = true
+                        report(1f, 0f, 0.7f, DownloadStatus.PAUSED)
                         return@withPermit
                     }
                     // A failed preview is not fatal; the theme file is what matters.
                 }
-
-                if (task.isCancelled) return@withPermit
-                library.publish(task.stage, theme)
-                updateProgress(themeId, 1f, 1f, 1f, DownloadStatus.COMPLETED)
-                emit(current(themeId))
-                downloadTasks.remove(themeId)
-            } catch (e: IOException) {
-                if (task.isCancelled) return@withPermit
-                fail(themeId, describeException(e))
-                emit(current(themeId))
+                currentCoroutineContext().ensureActive()
+                val completed = synchronized(taskLock) {
+                    if (!ownsTask(task)) null else {
+                        checkTask(task)
+                        library.publish(task.stage, theme)
+                        updateProgress(task, 1f, 1f, 1f, DownloadStatus.COMPLETED)
+                    }
+                }
+                completed?.let { emit(it) }
+            }
+        } catch (_: DownloadPausedException) {
+            keepForResume = true
+            report(0f, 0f, 0f, DownloadStatus.PAUSED)
+        } catch (e: CancellationException) {
+            synchronized(taskLock) { task.isCancelled = true }
+            throw e
+        } catch (e: IOException) {
+            report(0f, 0f, 0f, DownloadStatus.FAILED, describeException(e))
+        } finally {
+            synchronized(taskLock) {
+                task.isRunning = false
+                task.call = null
+                if (task.isCancelled || !keepForResume) {
+                    if (downloadTasks[task.id] === task) {
+                        downloadTasks.remove(task.id)
+                        if (task.isCancelled) _downloadProgress.update { it - task.id }
+                    }
+                    task.stage.deleteRecursively()
+                }
             }
         }
     }.flowOn(Dispatchers.IO)
 
-    private fun current(themeId: String): DownloadProgress =
-        _downloadProgress.value[themeId] ?: DownloadProgress(themeId, 0f, 0f, 0f, DownloadStatus.FAILED)
+    private fun ownsTask(task: DownloadTask): Boolean =
+        downloadTasks[task.id] === task && !task.isCancelled
 
-    private fun fail(themeId: String, error: String?) {
-        updateProgress(themeId, 0f, 0f, 0f, DownloadStatus.FAILED, error)
-        // Drop the task so a later retry starts clean instead of reporting "already downloading".
-        downloadTasks.remove(themeId)?.stage?.deleteRecursively()
+    private fun checkTask(task: DownloadTask) {
+        if (task.isCancelled) throw IOException("Download cancelled")
+        if (task.isPaused) throw DownloadPausedException()
     }
 
     private suspend fun downloadFileWithRetry(
         url: String,
         file: File,
-        taskId: String,
+        task: DownloadTask,
         isThemeFile: Boolean,
         onProgress: (Float) -> Unit,
     ): DownloadFileResult {
@@ -159,7 +188,10 @@ class ThemeDownloader(private val context: Context) {
         var attempt = 0
         while (attempt < MAX_RETRIES) {
             try {
-                val expected = downloadOnce(url, temp, taskId, if (isThemeFile) MAX_THEME_BYTES else MAX_PREVIEW_BYTES, onProgress)
+                currentCoroutineContext().ensureActive()
+                checkTask(task)
+                val expected = downloadOnce(url, temp, task, if (isThemeFile) MAX_THEME_BYTES else MAX_PREVIEW_BYTES, onProgress)
+                checkTask(task)
                 validateDownloadedFile(temp, isThemeFile, expected)
                 commitDownload(temp, file)
                 return DownloadFileResult(true)
@@ -172,7 +204,7 @@ class ThemeDownloader(private val context: Context) {
             } catch (e: IOException) {
                 lastError = describeException(e)
                 attempt++
-                if (downloadTasks[taskId]?.isCancelled != false) {
+                if (task.isCancelled) {
                     temp.delete()
                     return DownloadFileResult(false, "Download cancelled")
                 }
@@ -196,7 +228,7 @@ class ThemeDownloader(private val context: Context) {
     private fun downloadOnce(
         url: String,
         file: File,
-        taskId: String,
+        task: DownloadTask,
         maxBytes: Long,
         onProgress: (Float) -> Unit,
     ): Long {
@@ -209,7 +241,13 @@ class ThemeDownloader(private val context: Context) {
             requestBuilder.header("Range", "bytes=$downloadedBytes-")
         }
 
-        client.newCall(requestBuilder.build()).execute().use { response ->
+        val call = client.newCall(requestBuilder.build())
+        synchronized(taskLock) {
+            checkTask(task)
+            task.call = call
+        }
+        call.execute().use { response ->
+            checkTask(task)
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
 
             val resume = response.code == 206 && downloadedBytes > 0
@@ -226,10 +264,10 @@ class ThemeDownloader(private val context: Context) {
                     val buffer = ByteArray(BUFFER_SIZE)
                     var written = if (resume) downloadedBytes else 0L
                     while (true) {
-                        val task = downloadTasks[taskId]
-                        if (task == null || task.isCancelled) throw IOException("Download cancelled")
-                        if (task.isPaused) throw DownloadPausedException()
+                        checkTask(task)
                         val read = input.read(buffer)
+                        // Cancellation may have happened while the blocking read was in flight.
+                        checkTask(task)
                         if (read == -1) break
                         output.write(buffer, 0, read)
                         written += read
@@ -247,16 +285,17 @@ class ThemeDownloader(private val context: Context) {
         (1.0 - 1.0 / (1.0 + downloaded / 256.0 / 1024.0)).toFloat().coerceIn(0f, 0.99f)
 
     private fun updateProgress(
-        themeId: String,
+        task: DownloadTask,
         fileProgress: Float,
         imageProgress: Float,
         overallProgress: Float,
         status: DownloadStatus,
         errorMessage: String? = null,
-    ) {
-        _downloadProgress.update { current ->
-            current + (themeId to DownloadProgress(themeId, fileProgress, imageProgress, overallProgress, status, errorMessage))
-        }
+    ): DownloadProgress? = synchronized(taskLock) {
+        if (!ownsTask(task)) return@synchronized null
+        val progress = DownloadProgress(task.id, fileProgress, imageProgress, overallProgress, status, errorMessage)
+        _downloadProgress.update { it + (task.id to progress) }
+        progress
     }
 
     private fun ensureDirectory(dir: File) {
@@ -276,7 +315,9 @@ class ThemeDownloader(private val context: Context) {
         val paused: Boolean = false,
     )
 
-    private class DownloadTask(val stage: File) {
+    private class DownloadTask(val id: String, val stage: File) {
+        var isRunning = false // Guarded by taskLock.
+        @Volatile var call: Call? = null
         @Volatile var isCancelled = false
         @Volatile var isPaused = false
     }
