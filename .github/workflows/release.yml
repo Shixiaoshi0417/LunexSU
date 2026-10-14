@@ -10,6 +10,8 @@ jobs:
     uses: ./.github/workflows/build-manager.yml
     secrets: inherit
   release:
+    permissions:
+      contents: write
     needs:
       - build-manager
     runs-on: ubuntu-latest
