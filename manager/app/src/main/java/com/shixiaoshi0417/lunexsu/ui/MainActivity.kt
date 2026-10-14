@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
@@ -183,8 +184,15 @@ class MainActivity : ComponentActivity() {
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             val selectedMainPage by viewModel.selectedMainPage.collectAsStateWithLifecycle()
             val appSettings = uiState.appSettings
-            val finaThemeUi = ThemePackState.active != null
-            val uiMode = effectiveUiMode(uiState.uiMode, finaThemeUi)
+            // Probe the current Core, never a saved "installed once" flag or the presence of a pack.
+            var coreInstalled by remember { mutableStateOf(Natives.isManager) }
+            LifecycleResumeEffect(Unit) {
+                coreInstalled = Natives.isManager
+                onPauseOrDispose { }
+            }
+            val presentation = managerUiPresentation(uiState.uiMode, ThemePackState.active != null, coreInstalled)
+            val finaThemeUi = presentation.finaThemeUi
+            val uiMode = presentation.uiMode
             val darkMode = appSettings.colorMode.isDark || (appSettings.colorMode.isSystem && isSystemInDarkTheme())
 
             DisposableEffect(darkMode) {

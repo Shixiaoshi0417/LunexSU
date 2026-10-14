@@ -18,6 +18,15 @@ enum class UiMode(val value: String) {
 
 val LocalUiMode = staticCompositionLocalOf { UiMode.Miuix }
 
-/** A theme changes presentation, not the user's persisted choice. */
-internal fun effectiveUiMode(preferred: UiMode, hasThemePack: Boolean): UiMode =
-    if (hasThemePack) UiMode.Material else preferred
+internal data class ManagerUiPresentation(val uiMode: UiMode, val finaThemeUi: Boolean)
+
+/** Installation must remain visible even if a previously imported theme hides its status card. */
+internal fun managerUiPresentation(
+    preferred: UiMode,
+    hasThemePack: Boolean,
+    coreInstalled: Boolean,
+): ManagerUiPresentation = when {
+    !coreInstalled -> ManagerUiPresentation(UiMode.Miuix, false)
+    hasThemePack -> ManagerUiPresentation(UiMode.Material, true)
+    else -> ManagerUiPresentation(preferred, false)
+}

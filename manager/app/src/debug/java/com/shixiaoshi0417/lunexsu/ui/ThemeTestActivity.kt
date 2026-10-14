@@ -43,8 +43,10 @@ class ThemeTestActivity : ComponentActivity() {
         setContent {
             val model = viewModel<MainActivityViewModel>()
             val state by model.uiState.collectAsStateWithLifecycle()
-            val themeUi = ThemePackState.active != null
-            val uiMode = effectiveUiMode(state.uiMode, themeUi)
+            // This private debug host deliberately previews the installed UI without a Core.
+            val presentation = managerUiPresentation(state.uiMode, ThemePackState.active != null, coreInstalled = true)
+            val themeUi = presentation.finaThemeUi
+            val uiMode = presentation.uiMode
             val navigator = rememberNavigator(initial)
             CompositionLocalProvider(
                 LocalNavigator provides navigator,

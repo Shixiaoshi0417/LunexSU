@@ -54,6 +54,13 @@ uses the same prepared payload that was reviewed. Cancel leaves the current them
 unchanged. Restore default theme resets colors, font, home layout, language and backgrounds
 while retaining the selected UI and unrelated settings.
 
+If the current Core is not installed or does not recognize this Manager, the app
+temporarily uses native MIUIX instead of the theme UI, regardless of the saved UI
+preference. This keeps installation controls visible even when an imported theme
+hides the working card. The pack and preference are retained, and the current
+Core is checked again when the activity resumes. Once the Core is available, the
+saved theme UI (or the chosen native UI without a pack) is restored automatically.
+
 GIF and animated WebP images use Android's drawable decoder; animation stops when
 the page is inactive or the activity is not resumed. Images are downsampled to a
 maximum dimension of 2048 pixels for rendering.
@@ -67,7 +74,8 @@ measured once per image from a 64 px decode: when brightness × (1 − dim) is b
 bar icons) and the painted scrim is raised to the smallest value that keeps that
 text at WCAG AA 4.5:1 over a white wallpaper. The pack's dim values are never
 rewritten. A dark theme never flips; its readability is left to the night dim, as
-in FinaSU. Active packs use this Material presentation even with a saved MIUIX preference.
+in FinaSU. With an installed Core, active packs use this Material presentation
+even with a saved MIUIX preference.
 
 Containers follow FinaSU's wallpaper materials. `backgroundOpacity` is the panel
 alpha (0 shows the wallpaper fully, 1 is opaque; a pack without it imports as
