@@ -465,10 +465,15 @@ class SettingsViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val result = BuiltinZygisk.apply(target)
             val status = BuiltinZygisk.status()
+            // Both backends manage kernel_umount, so its toggle follows the installed modules.
+            val kernelUmountStatus = repo.getKernelUmountStatus()
+            val isKernelUmountEnabled = repo.isKernelUmountEnabled()
             _uiState.update {
                 it.copy(
                     zygiskBusy = false,
                     zygiskStatus = status,
+                    kernelUmountStatus = kernelUmountStatus,
+                    isKernelUmountEnabled = isKernelUmountEnabled,
                     // Undoing a change before rebooting returns to what is running; nothing to restart.
                     showZygiskRebootDialog = result is ZygiskApplyResult.Changed && status.pendingReboot,
                 )

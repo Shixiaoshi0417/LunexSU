@@ -104,6 +104,39 @@ class ZygiskBackendTest {
     }
 
     @Test
+    fun failedSwitchRemovesTheStagedBackend() {
+        // Leaving Neo staged while Vex stays configured would start both injectors after reboot.
+        assertEquals(
+            listOf("module uninstall zygisksu"),
+            zygiskRollback(
+                mapOf(Vex to owned),
+                done = listOf(ZygiskStep.Install(Neo)),
+                failed = ZygiskStep.Uninstall(Vex),
+                staged = false,
+            ),
+        )
+    }
+
+    @Test
+    fun failedInstallOnlyCleansUpWhatItStaged() {
+        val install = ZygiskStep.Install(Vex)
+        assertEquals(emptyList<String>(), zygiskRollback(emptyMap(), emptyList(), install, staged = false))
+        assertEquals(
+            listOf("module uninstall rezygisk"),
+            zygiskRollback(emptyMap(), emptyList(), install, staged = true),
+        )
+    }
+
+    @Test
+    fun failedRestoreReappliesTheOriginalMarks() {
+        val before = mapOf(Neo to removing.copy(disabled = true), Vex to owned)
+        val restore = ZygiskStep.Restore(Neo)
+        val marks = listOf("module uninstall zygisksu", "module disable zygisksu")
+        assertEquals(marks, zygiskRollback(before, emptyList(), restore, staged = false))
+        assertEquals(marks, zygiskRollback(before, listOf(restore), ZygiskStep.Uninstall(Vex), staged = false))
+    }
+
+    @Test
     fun parsesTheStatusScriptOutput() {
         val (flags, monitor) = parseZygiskFlags(
             listOf("module rezygisk 1 1 0 1 0", "module zygisksu 0 0 0 0 0", "monitor 1", "noise"),

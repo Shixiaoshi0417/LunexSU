@@ -31,7 +31,8 @@ Re-enabling never reinstalls the backend. Reinstalling would rerun the installer
 installer stops the running monitor.
 
 When switching, the new backend is staged before the old one is marked for removal. If the
-install fails, the current setup stays in place.
+install fails, the current setup stays in place. If a later step fails, the steps that already
+succeeded are rolled back, so the next boot never starts both backends.
 
 Installed backends carry a `.lunexsu_builtin_zygisk` marker in both `modules_update/<id>` and
 `modules/<id>`. The marker has two uses:

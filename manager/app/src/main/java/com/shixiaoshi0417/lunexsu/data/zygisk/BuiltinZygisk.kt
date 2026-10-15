@@ -55,6 +55,7 @@ object BuiltinZygisk {
             }
             val steps = planZygiskChange(flags, target)
             if (steps.isEmpty()) return@withLock ZygiskApplyResult.Unchanged
+            val done = mutableListOf<ZygiskStep>()
             for (step in steps) {
                 val error = when (step) {
                     is ZygiskStep.Install -> install(step.backend)
@@ -62,7 +63,13 @@ object BuiltinZygisk {
                         ?: ksud("module enable ${step.backend.moduleId}")
                     is ZygiskStep.Uninstall -> ksud("module uninstall ${step.backend.moduleId}")
                 }
-                if (error != null) return@withLock ZygiskApplyResult.Failed(error)
+                if (error != null) {
+                    val staged = step is ZygiskStep.Install && readFlags().first[step.backend]?.present == true
+                    val rollbackErrors = zygiskRollback(flags, done, step, staged).mapNotNull { ksud(it) }
+                    val message = (listOf(error) + rollbackErrors.map { "rollback: $it" }).joinToString("\n")
+                    return@withLock ZygiskApplyResult.Failed(message)
+                }
+                done += step
             }
             val status = zygiskStatusOf(readFlags().first, monitor)
             if (status.configured != target) {

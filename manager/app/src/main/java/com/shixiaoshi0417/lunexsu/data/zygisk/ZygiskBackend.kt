@@ -102,14 +102,16 @@ internal fun zygiskStatusScript(): String = buildString {
 }
 
 internal sealed interface ZygiskStep {
+    val backend: ZygiskBackend
+
     /** Installs the bundled zip; it starts on the next boot. */
-    data class Install(val backend: ZygiskBackend) : ZygiskStep
+    data class Install(override val backend: ZygiskBackend) : ZygiskStep
 
     /** Clears a pending removal or a safe-mode disable of an installed backend. */
-    data class Restore(val backend: ZygiskBackend) : ZygiskStep
+    data class Restore(override val backend: ZygiskBackend) : ZygiskStep
 
     /** Marks an installed backend for removal; its uninstall.sh runs on the next boot. */
-    data class Uninstall(val backend: ZygiskBackend) : ZygiskStep
+    data class Uninstall(override val backend: ZygiskBackend) : ZygiskStep
 }
 
 /**
@@ -130,3 +132,31 @@ internal fun planZygiskChange(flags: Map<ZygiskBackend, ZygiskModuleFlags>, targ
             if (other?.isOwned == true && !other.remove) add(ZygiskStep.Uninstall(backend))
         }
     }
+
+/**
+ * The ksud commands that return the modules to [before] once [failed] stopped a change after the
+ * [done] steps succeeded. Without them a switch could leave both backends set to start on the next
+ * boot. [staged] tells whether a failed install still left its module behind.
+ */
+internal fun zygiskRollback(
+    before: Map<ZygiskBackend, ZygiskModuleFlags>,
+    done: List<ZygiskStep>,
+    failed: ZygiskStep,
+    staged: Boolean,
+): List<String> {
+    val undo = done.asReversed().toMutableList()
+    // A failed restore may have cleared the removal mark before the enable failed.
+    if (failed is ZygiskStep.Restore || (failed is ZygiskStep.Install && staged)) undo.add(0, failed)
+    return undo.flatMap { step ->
+        val id = step.backend.moduleId
+        when (step) {
+            is ZygiskStep.Install -> listOf("module uninstall $id")
+            is ZygiskStep.Uninstall -> listOf("module undo-uninstall $id")
+            is ZygiskStep.Restore -> buildList {
+                val flags = before[step.backend]
+                if (flags?.remove == true) add("module uninstall $id")
+                if (flags?.disabled == true) add("module disable $id")
+            }
+        }
+    }
+}
