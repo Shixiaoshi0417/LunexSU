@@ -67,8 +67,14 @@ object BuiltinZygisk {
                     is ZygiskStep.Uninstall -> ksud("module uninstall ${step.module.moduleId}")
                 }
                 if (error != null) {
-                    val staged = step is ZygiskStep.Install && readFlags().first[step.module]?.present == true
-                    val rollbackErrors = zygiskRollback(flags, done, step, staged).mapNotNull { ksud(it) }
+                    // ksud may fail before creating modules/<id>. Do not gate cleanup on that
+                    // placeholder, or use module uninstall (which requires it to exist).
+                    val rollbackErrors = zygiskRollback(flags, done, step).mapNotNull { action ->
+                        when (action) {
+                            is ZygiskRollback.Ksud -> ksud(action.args)
+                            is ZygiskRollback.DiscardInstall -> discardInstall(action.module)
+                        }
+                    }
                     val message = (listOf(error) + rollbackErrors.map { "rollback: $it" }).joinToString("\n")
                     return@withLock ZygiskApplyResult.Failed(message)
                 }
@@ -86,6 +92,15 @@ object BuiltinZygisk {
     private fun readFlags(): Pair<Map<ZygiskModule, ZygiskModuleFlags>, Boolean> {
         val out = getRootShell().newJob().add(zygiskStatusScript()).to(ArrayList(), null).exec().out
         return parseZygiskFlags(out)
+    }
+
+    private fun discardInstall(module: ZygiskModule): String? = try {
+        val out = ArrayList<String>()
+        val result = getRootShell().newJob().add(zygiskDiscardInstallScript(module)).to(out, out).exec()
+        if (result.isSuccess) null else out.failureSummary(result.code)
+    } catch (e: Exception) {
+        Log.w(TAG, "discard ${module.moduleId} failed", e)
+        e.message ?: e.javaClass.simpleName
     }
 
     /** Runs a ksud command and returns null on success or the tail of its output on failure. */
@@ -114,14 +129,14 @@ object BuiltinZygisk {
             }
             val actual = digest.digest().joinToString("") { "%02x".format(it) }
             if (actual != module.expectedSha256) return "${module.moduleId}: SHA-256 mismatch"
-            val error = ksud("module install ${zip.absolutePath}")
+            ksud("module install ${zip.absolutePath}")?.let { return it }
             // Both copies carry the marker: modules/<id> holds the pending entry until the
             // reboot moves modules_update/<id> into its place.
             val marker = ZYGISK_OWNER_MARKER
             val id = module.moduleId
             val result = getRootShell().newJob()
-                .add("if [ -d /data/adb/modules_update/$id ]; then mkdir -p /data/adb/modules/$id && touch /data/adb/modules_update/$id/$marker /data/adb/modules/$id/$marker; else false; fi").exec()
-            return error ?: if (result.isSuccess) null else "${module.moduleId}: marker"
+                .add("touch /data/adb/modules_update/$id/$marker /data/adb/modules/$id/$marker").exec()
+            return if (result.isSuccess) null else "${module.moduleId}: marker"
         } catch (e: Exception) {
             Log.w(TAG, "install ${module.moduleId} failed", e)
             return e.message ?: e.javaClass.simpleName

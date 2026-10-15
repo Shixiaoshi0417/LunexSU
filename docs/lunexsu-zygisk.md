@@ -34,7 +34,19 @@ own private state; this is not a promise to preserve all backend-specific settin
 
 All three owned modules carry `.lunexsu_builtin_zygisk` in `modules_update/<id>` and `modules/<id>`.
 They are hidden from the regular module list and managed through Settings. A matching module id
-without that marker is external: it is neither adopted nor removed, and enabling is blocked.
+in either directory without that marker is external or a failed install: it is neither adopted
+nor restored, and enabling is blocked until it is removed.
+
+When switching, the new backend is staged before the old one is marked for removal. If the
+install fails, the old backend is not marked for removal. Rollback checks both directories even
+if the installer failed before creating `modules/<id>`. The new payload is marked `remove` and
+`disable`, and its ownership markers are cleared so it cannot be restored as a successful install.
+At the next boot, ksud promotes the marked staging directory and runs its `uninstall.sh` before
+module scripts start. The payload is retained until then so its uninstaller can clean up hooks.
+Reboot before trying to enable it again; remaining staging is treated as a conflict.
+
+If a later step fails, completed steps are also rolled back. Cleanup errors are reported alongside
+the original error; a filesystem or shell failure can still prevent cleanup and requires recovery.
 
 **Old built-in Vex migration:** Vex and Re share `rezygisk`. The card detects Vex by its module
 name and requires disabling built-in Zygisk and rebooting before enabling Re. This lets Vex's

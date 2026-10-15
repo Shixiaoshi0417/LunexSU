@@ -101,24 +101,57 @@ class ZygiskBackendTest {
         assertEquals(emptyList<ZygiskStep>(), planZygiskChange(mapOf(Re to owned), ZygiskBackend.Re))
     }
 
-    @Test fun failedSwitchRemovesTheStagedBackend() {
-        assertEquals(listOf("module uninstall zygisksu"), zygiskRollback(
-            mapOf(Re to owned), listOf(ZygiskStep.Install(Neo)), ZygiskStep.Uninstall(Re), false,
-        ))
+    @Test
+    fun failedSwitchRemovesTheStagedBackend() {
+        // Leaving Neo staged while Re stays configured would start both injectors after reboot.
+        assertEquals(
+            listOf(ZygiskRollback.DiscardInstall(Neo)),
+            zygiskRollback(
+                mapOf(Re to owned),
+                done = listOf(ZygiskStep.Install(Neo)),
+                failed = ZygiskStep.Uninstall(Re),
+            ),
+        )
     }
 
-    @Test fun failedInstallOnlyCleansUpWhatItStaged() {
+    @Test
+    fun failedInstallAlwaysChecksForPartialStaging() {
         val install = ZygiskStep.Install(Re)
-        assertEquals(emptyList<String>(), zygiskRollback(emptyMap(), emptyList(), install, false))
-        assertEquals(listOf("module uninstall rezygisk"), zygiskRollback(emptyMap(), emptyList(), install, true))
+        assertEquals(
+            listOf(ZygiskRollback.DiscardInstall(Re)),
+            zygiskRollback(emptyMap(), emptyList(), install),
+        )
     }
 
     @Test fun failedRestoreReappliesTheOriginalMarks() {
         val before = mapOf(Neo to removing.copy(disabled = true), Re to owned)
         val restore = ZygiskStep.Restore(Neo)
-        val marks = listOf("module uninstall zygisksu", "module disable zygisksu")
-        assertEquals(marks, zygiskRollback(before, emptyList(), restore, false))
-        assertEquals(marks, zygiskRollback(before, listOf(restore), ZygiskStep.Uninstall(Re), false))
+        val marks = listOf(
+            ZygiskRollback.Ksud("module uninstall zygisksu"),
+            ZygiskRollback.Ksud("module disable zygisksu"),
+        )
+        assertEquals(marks, zygiskRollback(before, emptyList(), restore))
+        assertEquals(marks, zygiskRollback(before, listOf(restore), ZygiskStep.Uninstall(Re)))
+    }
+
+    @Test
+    fun stagingOnlyIsPendingAndExternalStagingBlocksAnotherInstall() {
+        val (flags, _) = parseZygiskFlags(listOf("module zygisksu 1 0 1 1 1 0"))
+        val status = zygiskStatusOf(flags, monitorRunning = false)
+        assertNull(status.configured)
+        assertNull(status.active)
+        assertEquals(Neo.moduleId, status.conflictId)
+    }
+
+    @Test
+    fun discardDoesNotDependOnTheLiveModuleOrDeleteThePayload() {
+        val script = zygiskDiscardInstallScript(Neo)
+        assertTrue(script.contains("/data/adb/modules_update/zygisksu /data/adb/modules/zygisksu"))
+        assertTrue(script.contains("touch \"\$dir/remove\" \"\$dir/disable\""))
+        assertTrue(script.contains("rm -f \"\$dir/$ZYGISK_OWNER_MARKER\""))
+        assertFalse(script.contains("module uninstall"))
+        assertFalse(script.contains("rm -rf"))
+        assertFalse(script.contains("rezygisk"))
     }
 
     @Test fun addonStagesAfterItsBackend() {
@@ -155,14 +188,14 @@ class ZygiskBackendTest {
     }
 
     @Test fun failedAddonInstallRollsBackTheNewBackendToo() {
-        assertEquals(listOf("module uninstall zygisknextsu", "module uninstall rezygisk"), zygiskRollback(
-            emptyMap(), listOf(ZygiskStep.Install(Re)), ZygiskStep.Install(NextNext), true,
+        assertEquals(listOf(ZygiskRollback.DiscardInstall(NextNext), ZygiskRollback.DiscardInstall(Re)), zygiskRollback(
+            emptyMap(), listOf(ZygiskStep.Install(Re)), ZygiskStep.Install(NextNext),
         ))
     }
 
     @Test fun failedBackendDisableRestoresTheAddon() {
-        assertEquals(listOf("module undo-uninstall zygisknextsu"), zygiskRollback(
-            mapOf(Re to owned, NextNext to owned), listOf(ZygiskStep.Uninstall(NextNext)), ZygiskStep.Uninstall(Re), false,
+        assertEquals(listOf(ZygiskRollback.Ksud("module undo-uninstall zygisknextsu")), zygiskRollback(
+            mapOf(Re to owned, NextNext to owned), listOf(ZygiskStep.Uninstall(NextNext)), ZygiskStep.Uninstall(Re),
         ))
     }
 
