@@ -65,27 +65,37 @@ val baseCFlags = listOf(
 )
 val baseCppFlags = baseCFlags + "-fno-rtti"
 
-// Built-in Zygisk backends: unmodified upstream release archives, pinned by SHA-256. The
-// corresponding sources are listed in docs/lunexsu-zygisk.md.
+// Built-in Zygisk payloads are pinned by SHA-256. NextNext's ZIP container is normalized
+// without changing payload bytes; sources and hashes are listed in docs/lunexsu-zygisk.md.
 data class PinnedAsset(val url: String, val sha256: String)
 
-val vexZygiskZip = PinnedAsset(
-    "https://github.com/Lxiaoyao077/VexZygisk/releases/download/v2.2.0/VexZygisk-v2.2.0-770-1d35d50-release.zip",
-    "9656568bdc8755941eb62eadde1acc14e6a9fec32da3a84282e061ca1b2c1b04",
+val reZygiskZip = PinnedAsset(
+    "https://github.com/PerformanC/ReZygisk/releases/download/v1.0.0/ReZygisk-v1.0.0-release.zip",
+    "7904649b8dcaf2b060c3432df4fee302aeb1258da199d2b425335e82d49510e6",
 )
 val neoZygiskZip = PinnedAsset(
     "https://github.com/JingMatrix/NeoZygisk/releases/download/v2.4/NeoZygisk-v2.4-289-release.zip",
     "93a1425c67bb89f58a0dcb9fc823ec93f6472214f221e667a70b67c6a6e061a1",
 )
+val nextNextZip = PinnedAsset(
+    "https://github.com/VeryBaaad/ZygiskNextNext/releases/download/v1.8.3/Zygisk-Next-Next-v1.8.3-184-e4da082-release.zip",
+    "5413ab654c1c167d843d480e61fce3fb01c01a277c5e10a23cb68801076f9fa4",
+)
+val nextNextStoredSha256 = "a9de2634f1688e8f3705513aafaffcc03fd69593db2ac31d2d8133b632d5fdf6"
 val zygiskAssets = mapOf(
-    "zygisk/vex.zip" to vexZygiskZip,
-    "zygisk/vex-LICENSE" to PinnedAsset(
-        "https://raw.githubusercontent.com/Lxiaoyao077/VexZygisk/1d35d502ab2495d08b40bb77a5c4defb5bf64342/LICENSE",
-        "8486a10c4393cee1c25392769ddd3b2d6c242d6ec7928e1414efff7dfb2f07ef",
+    "zygisk/re.zip" to reZygiskZip,
+    "zygisk/re-LICENSE" to PinnedAsset(
+        "https://raw.githubusercontent.com/PerformanC/ReZygisk/333d423cde1a959958d9fce380bd017cf6c1cf64/LICENSE",
+        "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
     ),
     "zygisk/neo.zip" to neoZygiskZip,
     "zygisk/neo-LICENSE" to PinnedAsset(
         "https://raw.githubusercontent.com/JingMatrix/NeoZygisk/08080ef775c7fbbd1ad5c4a5d837f81933437abd/LICENSE",
+        "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    ),
+    "zygisk/nextnext.zip" to nextNextZip,
+    "zygisk/nextnext-LICENSE" to PinnedAsset(
+        "https://raw.githubusercontent.com/VeryBaaad/ZygiskNextNext/e4da08237aa4a37a7cd53fd3243315ef24954618/LICENSE",
         "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
     ),
 )
@@ -101,6 +111,12 @@ abstract class FetchPinnedAssets : DefaultTask() {
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
+
+    @get:InputFile
+    abstract val normalizer: RegularFileProperty
+
+    @get:Input
+    abstract val normalizedSha256: Property<String>
 
     @TaskAction
     fun fetch() {
@@ -126,7 +142,18 @@ abstract class FetchPinnedAssets : DefaultTask() {
                 }
                 Files.move(partial.toPath(), cached.toPath(), StandardCopyOption.REPLACE_EXISTING)
             }
-            cached.copyTo(File(out, path), overwrite = true)
+            val destination = File(out, path)
+            destination.parentFile.mkdirs()
+            if (path == "zygisk/nextnext.zip") {
+                val python = if (System.getProperty("os.name").startsWith("Windows")) "python" else "python3"
+                val process = ProcessBuilder(python, normalizer.get().asFile.absolutePath, cached.absolutePath, destination.absolutePath)
+                    .inheritIO().start()
+                if (process.waitFor() != 0 || sha256Of(destination) != normalizedSha256.get()) {
+                    throw GradleException("ZygiskNextNext ZIP normalization failed")
+                }
+            } else {
+                cached.copyTo(destination, overwrite = true)
+            }
         }
     }
 
@@ -139,6 +166,8 @@ val fetchZygiskAssets = tasks.register<FetchPinnedAssets>("fetchZygiskAssets") {
     files.set(zygiskAssets.mapValues { (_, asset) -> "${asset.url} ${asset.sha256}" })
     cacheDir.set(rootProject.layout.projectDirectory.dir(".gradle/pinned-assets"))
     outputDir.set(layout.buildDirectory.dir("generated/zygisk/assets"))
+    normalizer.set(rootProject.layout.projectDirectory.file("../scripts/normalize_zygisk_zip.py"))
+    normalizedSha256.set(nextNextStoredSha256)
 }
 
 android {
@@ -231,8 +260,9 @@ android {
         applicationId = managerPackageName
 
         buildConfigField("boolean", "IS_PR_BUILD", isPrBuild.toString())
-        buildConfigField("String", "ZYGISK_VEX_SHA256", "\"${vexZygiskZip.sha256}\"")
+        buildConfigField("String", "ZYGISK_RE_SHA256", "\"${reZygiskZip.sha256}\"")
         buildConfigField("String", "ZYGISK_NEO_SHA256", "\"${neoZygiskZip.sha256}\"")
+        buildConfigField("String", "ZYGISK_NEXTNEXT_SHA256", "\"$nextNextStoredSha256\"")
         resValue("string", "app_name", managerName)
 
         externalNativeBuild {

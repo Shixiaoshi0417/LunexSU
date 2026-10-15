@@ -239,6 +239,9 @@ internal fun InstallScreenMiuix(
                             }
                         )
                     }
+                    Card(modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
+                        InstallSuperkey(uiState, actions)
+                    }
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -315,7 +318,7 @@ internal fun InstallScreenMiuix(
                             .fillMaxWidth()
                             .padding(top = 12.dp),
                         text = stringResource(id = R.string.install_next),
-                        enabled = uiState.installMethod != null && uiState.blockModulesValid,
+                        enabled = uiState.installMethod != null && uiState.blockModulesValid && !uiState.preparing,
                         colors = ButtonDefaults.textButtonColorsPrimary(),
                         onClick = actions.onNext
                     )

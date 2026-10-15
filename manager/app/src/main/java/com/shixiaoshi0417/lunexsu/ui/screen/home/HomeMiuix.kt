@@ -167,6 +167,7 @@ fun HomePagerMiuix(
                             state = state,
                             actions = actions,
                         )
+                        if (!state.isManager) SuperkeyEntry(actions.onSuperkeyClick)
                         InfoCard(
                             systemInfo = state.systemInfo,
                             modifier = Modifier.fillMaxWidth(),

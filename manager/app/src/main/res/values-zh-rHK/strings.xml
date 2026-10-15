@@ -272,7 +272,7 @@
     <string name="settings_soft_reboot">以軟重啟替代重新啟動</string>
     <string name="settings_soft_reboot_summary">安裝、更新或開關模組時以軟重啟替代完整重新啟動</string>
     <string name="settings_zygisk">內建 Zygisk</string>
-    <string name="settings_zygisk_summary">預設關閉，開啟後使用 VexZygisk。每次變更都需重新啟動後生效</string>
+    <string name="settings_zygisk_summary">預設關閉，開啟後使用 ReZygisk。每次變更都需重新啟動後生效</string>
     <string name="settings_zygisk_running">%s 運行中</string>
     <string name="settings_zygisk_not_running">%s 已啟用，但目前未運行</string>
     <string name="settings_zygisk_pending_enable">待重新啟動生效：重新啟動後啟用 %s</string>
@@ -283,7 +283,12 @@
     <string name="settings_zygisk_late_load">臨時 Root 模式下無法使用</string>
     <string name="settings_zygisk_failed">Zygisk 設定失敗：%s</string>
     <string name="settings_zygisk_backend">Zygisk 實作</string>
-    <string name="settings_zygisk_backend_summary">預設 VexZygisk（僅 arm64），可切換為 NeoZygisk</string>
+    <string name="settings_zygisk_backend_summary">預設 ReZygisk，可切換為 NeoZygisk</string>
+    <string name="settings_zygisk_nextnext">使用 ZygiskNextNext</string>
+    <string name="settings_zygisk_nextnext_summary">支援 Zygisk Next API。預設關閉，變更後需重新啟動生效</string>
+    <string name="settings_zygisk_nextnext_enable_first">請先開啟內置 Zygisk，才能啟用 Zygisk Next API 支援</string>
+    <string name="settings_zygisk_nextnext_pending">Zygisk Next API 支援已變更，需重新啟動後生效</string>
+    <string name="settings_zygisk_legacy_vex">偵測到舊版內置 Vex，請先關閉內置 Zygisk 並重新啟動，再開啟以使用 ReZygisk</string>
     <string name="settings_zygisk_backend_single">此裝置僅支援 %s</string>
     <string name="settings_zygisk_reboot_title">需要重新啟動</string>
     <string name="settings_zygisk_reboot_message">此變更將在裝置重新啟動後生效。</string>
@@ -454,4 +459,12 @@
     <string name="my_themes_delete_title">刪除主題</string>
     <string name="my_themes_delete_message">刪除「%1$s」？</string>
     <string name="my_themes_delete">刪除</string>
+    <string name="superkey_install">額外超級密鑰驗證</string>
+    <string name="superkey_install_summary">可選的重新啟動後管理員驗證，仍須通過套件名稱和簽章驗證。請保管好密鑰，忘記後需要重新刷入。</string>
+    <string name="superkey_set">設定超級密鑰</string>
+    <string name="superkey_confirm">確認超級密鑰</string>
+    <string name="superkey_validation">請輸入 12–128 位不含空格的可列印 ASCII 字元，兩次輸入必須一致。</string>
+    <string name="superkey_prepare_failed">無法準備超級密鑰設定</string>
+    <string name="superkey_enter">輸入超級密鑰</string>
+    <string name="superkey_failed">可能未安裝或密碼錯誤</string>
 </resources>

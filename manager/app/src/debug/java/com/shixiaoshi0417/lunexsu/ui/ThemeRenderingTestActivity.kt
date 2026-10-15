@@ -89,7 +89,7 @@ class ThemeRenderingTestActivity : ComponentActivity() {
                                     onSetAdbRootEnabled = {}, onSetShellSuAdbOnlyEnabled = {},
                                     onSetDefaultUmountModules = {}, onSetEnableWebDebugging = {},
                                     onSetAutoJailbreak = {}, onSetUseSoftReboot = {},
-                                    onSetZygiskEnabled = {}, onSetZygiskBackend = {},
+                                    onSetZygiskEnabled = {}, onSetZygiskBackend = {}, onSetZygiskNextNext = {},
                                     onZygiskRebootLater = {}, onZygiskRebootNow = {}, onOpenAbout = {},
                                 ),
                                 // Ensure overflow even without a Core; no capability gate or real setting is changed.

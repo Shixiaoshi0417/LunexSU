@@ -20,6 +20,7 @@ sealed interface ZygiskApplyResult {
     data class Changed(val status: ZygiskStatus) : ZygiskApplyResult
     data class Conflict(val moduleId: String) : ZygiskApplyResult
     data class Failed(val message: String) : ZygiskApplyResult
+    data object LegacyVex : ZygiskApplyResult
 }
 
 /** Installs and removes the bundled Zygisk backends through ksud's module commands. */
@@ -31,7 +32,7 @@ object BuiltinZygisk {
         ZygiskBackend.supportedOn(Build.SUPPORTED_ABIS.firstOrNull())
     }
 
-    /** The backend switching the feature on selects: VexZygisk where its installer accepts the device. */
+    /** Enabling always selects ReZygisk; the companion loader stays off by default. */
     val defaultBackend: ZygiskBackend?
         get() = ZygiskBackend.Default.takeIf { it in supportedBackends } ?: supportedBackends.firstOrNull()
 
@@ -45,7 +46,7 @@ object BuiltinZygisk {
         readFlags().first.filterValues { it.isOwned }.keys.mapTo(mutableSetOf()) { it.moduleId }
     }
 
-    suspend fun apply(target: ZygiskBackend?): ZygiskApplyResult = withContext(Dispatchers.IO) {
+    suspend fun apply(target: ZygiskBackend?, nextNext: Boolean = false): ZygiskApplyResult = withContext(Dispatchers.IO) {
         mutex.withLock {
             val (flags, monitor) = readFlags()
             val conflict = zygiskStatusOf(flags, monitor).conflictId
@@ -53,15 +54,17 @@ object BuiltinZygisk {
             if (target != null && target !in supportedBackends) {
                 return@withLock ZygiskApplyResult.Failed("${target.displayName}: ${Build.SUPPORTED_ABIS.firstOrNull()}")
             }
-            val steps = planZygiskChange(flags, target)
+            if (nextNext && target == null) return@withLock ZygiskApplyResult.Failed("ZygiskNextNext requires a backend")
+            if (requiresVexRemoval(flags, target)) return@withLock ZygiskApplyResult.LegacyVex
+            val steps = planZygiskChange(flags, target, nextNext)
             if (steps.isEmpty()) return@withLock ZygiskApplyResult.Unchanged
             val done = mutableListOf<ZygiskStep>()
             for (step in steps) {
                 val error = when (step) {
-                    is ZygiskStep.Install -> install(step.backend)
-                    is ZygiskStep.Restore -> ksud("module undo-uninstall ${step.backend.moduleId}")
-                        ?: ksud("module enable ${step.backend.moduleId}")
-                    is ZygiskStep.Uninstall -> ksud("module uninstall ${step.backend.moduleId}")
+                    is ZygiskStep.Install -> install(step.module)
+                    is ZygiskStep.Restore -> ksud("module undo-uninstall ${step.module.moduleId}")
+                        ?: ksud("module enable ${step.module.moduleId}")
+                    is ZygiskStep.Uninstall -> ksud("module uninstall ${step.module.moduleId}")
                 }
                 if (error != null) {
                     // ksud may fail before creating modules/<id>. Do not gate cleanup on that
@@ -69,7 +72,7 @@ object BuiltinZygisk {
                     val rollbackErrors = zygiskRollback(flags, done, step).mapNotNull { action ->
                         when (action) {
                             is ZygiskRollback.Ksud -> ksud(action.args)
-                            is ZygiskRollback.DiscardInstall -> discardInstall(action.backend)
+                            is ZygiskRollback.DiscardInstall -> discardInstall(action.module)
                         }
                     }
                     val message = (listOf(error) + rollbackErrors.map { "rollback: $it" }).joinToString("\n")
@@ -78,7 +81,7 @@ object BuiltinZygisk {
                 done += step
             }
             val status = zygiskStatusOf(readFlags().first, monitor)
-            if (status.configured != target) {
+            if (status.configured != target || status.nextNextConfigured != nextNext) {
                 ZygiskApplyResult.Failed("expected ${target?.displayName ?: "off"}, got ${status.configured?.displayName ?: "off"}")
             } else {
                 ZygiskApplyResult.Changed(status)
@@ -86,17 +89,17 @@ object BuiltinZygisk {
         }
     }
 
-    private fun readFlags(): Pair<Map<ZygiskBackend, ZygiskModuleFlags>, Boolean> {
+    private fun readFlags(): Pair<Map<ZygiskModule, ZygiskModuleFlags>, Boolean> {
         val out = getRootShell().newJob().add(zygiskStatusScript()).to(ArrayList(), null).exec().out
         return parseZygiskFlags(out)
     }
 
-    private fun discardInstall(backend: ZygiskBackend): String? = try {
+    private fun discardInstall(module: ZygiskModule): String? = try {
         val out = ArrayList<String>()
-        val result = getRootShell().newJob().add(zygiskDiscardInstallScript(backend)).to(out, out).exec()
+        val result = getRootShell().newJob().add(zygiskDiscardInstallScript(module)).to(out, out).exec()
         if (result.isSuccess) null else out.failureSummary(result.code)
     } catch (e: Exception) {
-        Log.w(TAG, "discard ${backend.displayName} failed", e)
+        Log.w(TAG, "discard ${module.moduleId} failed", e)
         e.message ?: e.javaClass.simpleName
     }
 
@@ -109,11 +112,11 @@ object BuiltinZygisk {
         return if (result.isSuccess) null else out.failureSummary(result.code)
     }
 
-    private fun install(backend: ZygiskBackend): String? {
-        val zip = File(ksuApp.cacheDir, "zygisk-${backend.assetName}.zip")
+    private fun install(module: ZygiskModule): String? {
+        val zip = File(ksuApp.cacheDir, "zygisk-${module.assetName}.zip")
         try {
             val digest = MessageDigest.getInstance("SHA-256")
-            ksuApp.assets.open("zygisk/${backend.assetName}.zip").use { input ->
+            ksuApp.assets.open("zygisk/${module.assetName}.zip").use { input ->
                 zip.outputStream().use { output ->
                     val buffer = ByteArray(64 * 1024)
                     while (true) {
@@ -125,27 +128,28 @@ object BuiltinZygisk {
                 }
             }
             val actual = digest.digest().joinToString("") { "%02x".format(it) }
-            if (actual != backend.expectedSha256) return "${backend.displayName}: SHA-256 mismatch"
+            if (actual != module.expectedSha256) return "${module.moduleId}: SHA-256 mismatch"
             ksud("module install ${zip.absolutePath}")?.let { return it }
             // Both copies carry the marker: modules/<id> holds the pending entry until the
             // reboot moves modules_update/<id> into its place.
             val marker = ZYGISK_OWNER_MARKER
-            val id = backend.moduleId
+            val id = module.moduleId
             val result = getRootShell().newJob()
                 .add("touch /data/adb/modules_update/$id/$marker /data/adb/modules/$id/$marker").exec()
-            return if (result.isSuccess) null else "${backend.displayName}: marker"
+            return if (result.isSuccess) null else "${module.moduleId}: marker"
         } catch (e: Exception) {
-            Log.w(TAG, "install ${backend.displayName} failed", e)
+            Log.w(TAG, "install ${module.moduleId} failed", e)
             return e.message ?: e.javaClass.simpleName
         } finally {
             zip.delete()
         }
     }
 
-    private val ZygiskBackend.expectedSha256: String
+    private val ZygiskModule.expectedSha256: String
         get() = when (this) {
-            ZygiskBackend.Vex -> BuildConfig.ZYGISK_VEX_SHA256
-            ZygiskBackend.Neo -> BuildConfig.ZYGISK_NEO_SHA256
+            ZygiskModule.Re -> BuildConfig.ZYGISK_RE_SHA256
+            ZygiskModule.Neo -> BuildConfig.ZYGISK_NEO_SHA256
+            ZygiskModule.NextNext -> BuildConfig.ZYGISK_NEXTNEXT_SHA256
         }
 
     private fun List<String>.failureSummary(code: Int): String =

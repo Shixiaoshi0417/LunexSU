@@ -756,6 +756,18 @@ static int do_disable_escape_to_root(void __user *arg)
 // IOCTL handlers mapping table
 // clang-format off
 static const struct ksu_ioctl_cmd_map ksu_ioctl_handlers[] = {
+    {
+        .cmd = KSU_IOCTL_SUPERKEY_SALT,
+        .name = "SUPERKEY_SALT",
+        .handler = ksu_superkey_salt,
+        .perm_check = always_allow
+    },
+    {
+        .cmd = KSU_IOCTL_SUPERKEY_AUTH,
+        .name = "SUPERKEY_AUTH",
+        .handler = ksu_superkey_auth,
+        .perm_check = always_allow
+    },
     { 
         .cmd = KSU_IOCTL_GRANT_ROOT,
         .name = "GRANT_ROOT",

@@ -442,11 +442,18 @@ class SettingsViewModel(
     }
 
     fun setZygiskEnabled(enabled: Boolean) {
+        if (!_uiState.value.zygiskSwitchEnabled) return
         applyZygisk(if (enabled) BuiltinZygisk.defaultBackend ?: return else null)
     }
 
     fun setZygiskBackend(backend: ZygiskBackend) {
-        if (_uiState.value.zygiskEnabled) applyZygisk(backend)
+        val state = _uiState.value
+        if (state.zygiskBackendEnabled) applyZygisk(backend, state.zygiskNextNext)
+    }
+
+    fun setZygiskNextNext(enabled: Boolean) {
+        val state = _uiState.value
+        if (state.zygiskNextNextEnabled) applyZygisk(state.zygiskStatus?.configured, enabled)
     }
 
     fun dismissZygiskRebootDialog() {
@@ -459,11 +466,11 @@ class SettingsViewModel(
         viewModelScope.launch(Dispatchers.IO) { reboot() }
     }
 
-    private fun applyZygisk(target: ZygiskBackend?) {
+    private fun applyZygisk(target: ZygiskBackend?, nextNext: Boolean = false) {
         if (_uiState.value.zygiskBusy) return
         _uiState.update { it.copy(zygiskBusy = true) }
         viewModelScope.launch(Dispatchers.IO) {
-            val result = BuiltinZygisk.apply(target)
+            val result = BuiltinZygisk.apply(target, nextNext)
             val status = BuiltinZygisk.status()
             // Both backends manage kernel_umount, so its toggle follows the installed modules.
             val kernelUmountStatus = repo.getKernelUmountStatus()
@@ -474,13 +481,14 @@ class SettingsViewModel(
                     zygiskStatus = status,
                     kernelUmountStatus = kernelUmountStatus,
                     isKernelUmountEnabled = isKernelUmountEnabled,
-                    // Undoing a change before rebooting returns to what is running; nothing to restart.
-                    showZygiskRebootDialog = result is ZygiskApplyResult.Changed && status.pendingReboot,
+                    // Every saved change, including the companion loader, gets the reboot prompt.
+                    showZygiskRebootDialog = result is ZygiskApplyResult.Changed,
                 )
             }
             val message = when (result) {
                 is ZygiskApplyResult.Conflict -> ksuApp.getString(R.string.settings_zygisk_conflict, result.moduleId)
                 is ZygiskApplyResult.Failed -> ksuApp.getString(R.string.settings_zygisk_failed, result.message)
+                ZygiskApplyResult.LegacyVex -> ksuApp.getString(R.string.settings_zygisk_legacy_vex)
                 else -> null
             }
             if (message != null) {

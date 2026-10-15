@@ -105,6 +105,16 @@ class ZygiskRollbackTests(unittest.TestCase):
         )
         self.assertNotEqual(result.returncode, 0)
 
+    def test_all_bundled_components_handle_staging_without_a_placeholder(self):
+        for module_id in ("rezygisk", "zygisksu", "zygisknextsu"):
+            with self.subTest(module_id=module_id):
+                adb = self.adb / module_id
+                staged = adb / "modules_update" / module_id
+                self.payload(staged)
+                subprocess.run(["sh", "-c", discard_script(adb, module_id)], check=True)
+                self.assert_quarantined(staged)
+                self.assertFalse((adb / "modules" / module_id).exists())
+
 
 if __name__ == "__main__":
     unittest.main()

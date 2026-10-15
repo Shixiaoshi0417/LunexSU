@@ -13,6 +13,26 @@
 #include "logging.h"
 #include "authorization_compat.h"
 
+extern "C" JNIEXPORT jbyteArray JNICALL
+Java_com_shixiaoshi0417_lunexsu_Natives_superkeySalt(JNIEnv *env, jobject) {
+    uint8_t salt[16];
+    if (!superkey_salt(salt)) return nullptr;
+    auto result = env->NewByteArray(sizeof(salt));
+    if (result) env->SetByteArrayRegion(result, 0, sizeof(salt), reinterpret_cast<jbyte *>(salt));
+    return result;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_shixiaoshi0417_lunexsu_Natives_authenticateSuperkey(JNIEnv *env, jobject, jbyteArray proof) {
+    if (!proof || env->GetArrayLength(proof) != 32) return false;
+    uint8_t bytes[32];
+    env->GetByteArrayRegion(proof, 0, sizeof(bytes), reinterpret_cast<jbyte *>(bytes));
+    if (env->ExceptionCheck()) { clear_superkey(bytes, sizeof(bytes)); return false; }
+    bool ok = superkey_auth(bytes);
+    clear_superkey(bytes, sizeof(bytes));
+    return ok;
+}
+
 extern "C"
 JNIEXPORT jint JNICALL
 Java_com_shixiaoshi0417_lunexsu_Natives_getVersion(JNIEnv *env, jobject) {

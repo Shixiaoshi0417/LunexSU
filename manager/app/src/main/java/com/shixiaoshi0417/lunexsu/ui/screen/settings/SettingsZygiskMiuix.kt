@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Hub
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.runtime.Composable
@@ -62,6 +63,21 @@ internal fun ZygiskCardMiuix(uiState: SettingsUiState, actions: SettingsScreenAc
             enabled = uiState.zygiskBackendEnabled,
             selectedIndex = choices.indexOf(uiState.zygiskSelected).coerceAtLeast(0),
             onSelectedIndexChange = { index -> choices.getOrNull(index)?.let(actions.onSetZygiskBackend) }
+        )
+        SwitchPreference(
+            title = stringResource(R.string.settings_zygisk_nextnext),
+            summary = zygiskNextNextSummary(uiState),
+            startAction = {
+                Icon(
+                    Icons.Rounded.Extension,
+                    modifier = Modifier.padding(end = 6.dp),
+                    contentDescription = null,
+                    tint = if (uiState.zygiskNextNextEnabled) colorScheme.onBackground else colorScheme.disabledOnSecondaryVariant,
+                )
+            },
+            enabled = uiState.zygiskNextNextEnabled,
+            checked = uiState.zygiskNextNext,
+            onCheckedChange = actions.onSetZygiskNextNext,
         )
     }
     ZygiskApplyingDialog(uiState.zygiskBusy)

@@ -22,6 +22,9 @@ import androidx.lifecycle.compose.dropUnlessResumed
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.shixiaoshi0417.lunexsu.data.Superkey
 import com.shixiaoshi0417.lunexsu.ui.util.getLoadedBlockableModules
 import com.shixiaoshi0417.lunexsu.ui.util.isBlockModulesValid
 import com.shixiaoshi0417.lunexsu.R
@@ -71,6 +74,11 @@ fun InstallScreen() {
     var blockModulesEnabled by rememberSaveable { mutableStateOf(false) }
     var blockModules by rememberSaveable { mutableStateOf("") }
     var blockModulesPrefilled by rememberSaveable { mutableStateOf(false) }
+    // Secrets deliberately do not participate in saved instance state/navigation state.
+    var superkeyEnabled by remember { mutableStateOf(false) }
+    var superkey by remember { mutableStateOf("") }
+    var superkeyConfirmation by remember { mutableStateOf("") }
+    var preparing by remember { mutableStateOf(false) }
     // Blocking a module the device needs can bootloop it, so nothing is
     // blocked unless the user explicitly opts in.
     val effectiveBlockModules = if (blockModulesEnabled) blockModules else ""
@@ -141,35 +149,64 @@ fun InstallScreen() {
     }
 
     val blockModulesInvalidMessage = stringResource(R.string.install_block_modules_invalid)
-    val onInstall = {
+    fun prepareInstall(): FlashIt? {
         if (!isBlockModulesValid(effectiveBlockModules)) {
             showMessage(blockModulesInvalidMessage)
-        } else installMethod?.let { method ->
-            navigator.push(
-                Route.Flash(
-                    when (method) {
-                        is InstallMethod.DownloadFile -> FlashIt.DownloadBoot(
-                            url = method.url ?: return@let,
-                            partition = method.partition ?: return@let,
-                            lkm = lkmSelection,
-                            allowShell = allowShell,
-                            enableAdb = enableAdb,
-                            backup = forceBackup,
-                            blockModules = effectiveBlockModules
-                        )
-                        else -> FlashIt.FlashBoot(
-                            boot = if (method is InstallMethod.SelectFile) method.uri else null,
-                            lkm = lkmSelection,
-                            ota = method is InstallMethod.DirectInstallToInactiveSlot,
-                            partition = partitions.getOrNull(partitionSelectionIndex),
-                            allowShell = allowShell,
-                            enableAdb = enableAdb,
-                            backup = method is InstallMethod.SelectFile && forceBackup,
-                            blockModules = effectiveBlockModules
-                        )
-                    }
+            return null
+        }
+        return installMethod?.let { method ->
+            when (method) {
+                is InstallMethod.DownloadFile -> FlashIt.DownloadBoot(
+                    url = method.url ?: return@let null,
+                    partition = method.partition ?: return@let null,
+                    lkm = lkmSelection,
+                    allowShell = allowShell,
+                    enableAdb = enableAdb,
+                    backup = forceBackup,
+                    blockModules = effectiveBlockModules,
                 )
-            )
+                else -> FlashIt.FlashBoot(
+                    boot = if (method is InstallMethod.SelectFile) method.uri else null,
+                    lkm = lkmSelection,
+                    ota = method is InstallMethod.DirectInstallToInactiveSlot,
+                    partition = partitions.getOrNull(partitionSelectionIndex),
+                    allowShell = allowShell,
+                    enableAdb = enableAdb,
+                    backup = method is InstallMethod.SelectFile && forceBackup,
+                    blockModules = effectiveBlockModules,
+                )
+            }
+        }
+    }
+
+    val onInstall: () -> Unit = {
+        if (!preparing) {
+            if (superkeyEnabled && (!Superkey.valid(superkey) || superkey != superkeyConfirmation)) {
+                showMessage(resources.getString(R.string.superkey_validation))
+            } else prepareInstall()?.let { request ->
+                preparing = true
+                val key = if (superkeyEnabled) superkey.toCharArray() else null
+                scope.launch {
+                    try {
+                        val record = withContext(Dispatchers.IO) { key?.let { Superkey.record(it) } }
+                        superkey = ""
+                        superkeyConfirmation = ""
+                        val flash = when (request) {
+                            is FlashIt.DownloadBoot -> request.copy(superkeyRecord = record)
+                            is FlashIt.FlashBoot -> request.copy(superkeyRecord = record)
+                            else -> request
+                        }
+                        navigator.push(Route.Flash(flash))
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        showMessage(resources.getString(R.string.superkey_prepare_failed))
+                    } finally {
+                        key?.fill('\u0000')
+                        preparing = false
+                    }
+                }
+            }
         }
     }
 
@@ -264,6 +301,10 @@ fun InstallScreen() {
         blockModulesEnabled = blockModulesEnabled,
         blockModules = blockModules,
         blockModulesValid = isBlockModulesValid(effectiveBlockModules),
+        superkeyEnabled = superkeyEnabled,
+        superkey = superkey,
+        superkeyConfirmation = superkeyConfirmation,
+        preparing = preparing,
     )
     val actions = InstallScreenActions(
         onBack = dropUnlessResumed { navigator.pop() },
@@ -317,6 +358,12 @@ fun InstallScreen() {
         onSelectBlockModules = {
             blockModulesEnabled = it
         },
+        onSuperkeyEnabled = {
+            superkeyEnabled = it
+            if (!it) { superkey = ""; superkeyConfirmation = "" }
+        },
+        onSuperkeyChange = { superkey = it },
+        onSuperkeyConfirmation = { superkeyConfirmation = it },
         onBlockModulesChange = {
             blockModules = it
         }

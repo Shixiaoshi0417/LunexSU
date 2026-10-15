@@ -62,6 +62,7 @@ fun SettingPager(
         onSetUseSoftReboot = viewModel::setUseSoftReboot,
         onSetZygiskEnabled = viewModel::setZygiskEnabled,
         onSetZygiskBackend = viewModel::setZygiskBackend,
+        onSetZygiskNextNext = viewModel::setZygiskNextNext,
         onZygiskRebootLater = viewModel::dismissZygiskRebootDialog,
         onZygiskRebootNow = viewModel::rebootForZygisk,
         onOpenAbout = { navigator.push(Route.About) },

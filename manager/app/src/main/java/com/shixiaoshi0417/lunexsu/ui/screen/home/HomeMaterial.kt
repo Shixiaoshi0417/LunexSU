@@ -67,6 +67,7 @@ fun HomePagerMaterial(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             HomeWarnings(state = state, actions = actions)
+            if (!state.isManager) SuperkeyEntry(actions.onSuperkeyClick)
             val effectsSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
             AnimatedContent(
                 targetState = layout,

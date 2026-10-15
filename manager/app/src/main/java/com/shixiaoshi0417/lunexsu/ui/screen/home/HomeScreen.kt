@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -61,6 +62,17 @@ fun HomePager(
     val scope = rememberCoroutineScope()
     val latestIsCurrentPage by rememberUpdatedState(isCurrentPage)
     val initialResumeHandled = rememberSaveable { mutableStateOf(false) }
+    var showSuperkey by remember { mutableStateOf(false) }
+    if (showSuperkey) {
+        SuperkeyDialog(
+            onDismiss = { showSuperkey = false },
+            onAuthenticated = {
+                showSuperkey = false
+                viewModel.refresh()
+                (context as? android.app.Activity)?.recreate()
+            },
+        )
+    }
 
     var hasActivated by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(isCurrentPage) {
@@ -96,6 +108,7 @@ fun HomePager(
         },
         onOpenSuperUser = { mainPagerState.animateToPage(BottomBarDestination.SuperUser.ordinal) },
         onOpenModule = { mainPagerState.animateToPage(BottomBarDestination.Module.ordinal) },
+        onSuperkeyClick = { showSuperkey = true },
     )
 
     if (LocalFinaThemeUi.current) {

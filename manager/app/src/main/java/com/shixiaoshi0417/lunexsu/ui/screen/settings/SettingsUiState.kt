@@ -95,7 +95,14 @@ data class SettingsUiState(
             (zygiskEnabled || (zygiskStatus.conflictId == null && zygiskBackends.isNotEmpty()))
 
     val zygiskBackendEnabled: Boolean
-        get() = zygiskEnabled && !zygiskBusy && !isLateLoadMode && zygiskBackends.size > 1
+        get() = zygiskEnabled && !zygiskBusy && !isLateLoadMode &&
+            zygiskStatus?.conflictId == null && zygiskBackends.size > 1
+
+    val zygiskNextNext: Boolean get() = zygiskStatus?.nextNextConfigured == true
+
+    val zygiskNextNextEnabled: Boolean
+        get() = zygiskEnabled && !zygiskBusy && !isLateLoadMode &&
+            zygiskStatus?.conflictId == null && zygiskStatus?.legacyVex != true
 }
 
 @Immutable
@@ -117,6 +124,7 @@ data class SettingsScreenActions(
     val onSetUseSoftReboot: (Boolean) -> Unit,
     val onSetZygiskEnabled: (Boolean) -> Unit,
     val onSetZygiskBackend: (ZygiskBackend) -> Unit,
+    val onSetZygiskNextNext: (Boolean) -> Unit,
     val onZygiskRebootLater: () -> Unit,
     val onZygiskRebootNow: () -> Unit,
     val onOpenAbout: () -> Unit,
