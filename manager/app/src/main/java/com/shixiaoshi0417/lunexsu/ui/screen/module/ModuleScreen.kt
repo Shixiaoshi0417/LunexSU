@@ -23,6 +23,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
+import com.shixiaoshi0417.lunexsu.data.script.ScriptRepository
+import com.shixiaoshi0417.lunexsu.ui.screen.scriptrun.ScriptRunArg
 import com.shixiaoshi0417.lunexsu.ui.screen.modulerepo.downloadFailureMessage
 import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.ui.LocalUiMode
@@ -172,7 +174,20 @@ fun ModulePager(
             viewModel.undoUninstallModule(module)
         },
         onOpenFlash = { uris ->
-            if (uris.isNotEmpty()) {
+            if (uris.size == 1) {
+                // A one-shot script ZIP is offered to be run instead (or installed anyway).
+                scope.launch {
+                    val script = ScriptRepository.peekOneshot(uris.first())
+                    if (script != null) {
+                        navigator.push(
+                            Route.ScriptRun(ScriptRunArg(uris.first(), offerInstall = true, displayName = script.name))
+                        )
+                    } else {
+                        navigator.push(Route.Flash(FlashIt.FlashModules(uris)))
+                    }
+                    viewModel.markNeedRefresh()
+                }
+            } else if (uris.isNotEmpty()) {
                 navigator.push(Route.Flash(FlashIt.FlashModules(uris)))
                 viewModel.markNeedRefresh()
             }

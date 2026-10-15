@@ -6,12 +6,14 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ByteArraySerializer
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import com.shixiaoshi0417.lunexsu.ui.screen.scriptrun.ScriptRunArg
 import com.shixiaoshi0417.lunexsu.ui.screen.flash.FlashIt
 import com.shixiaoshi0417.lunexsu.ui.screen.modulerepo.RepoModuleArg
 import com.shixiaoshi0417.lunexsu.ui.viewmodel.TemplateViewModel
 
 object FlashItSerializer : BaseParcelableSerializer<FlashIt>(FlashIt::class.java)
 object RepoModuleArgSerializer : BaseParcelableSerializer<RepoModuleArg>(RepoModuleArg::class.java)
+object ScriptRunArgSerializer : BaseParcelableSerializer<ScriptRunArg>(ScriptRunArg::class.java)
 object TemplateInfoSerializer : BaseParcelableSerializer<TemplateViewModel.TemplateInfo>(TemplateViewModel.TemplateInfo::class.java)
 
 open class BaseParcelableSerializer<T : Parcelable>(

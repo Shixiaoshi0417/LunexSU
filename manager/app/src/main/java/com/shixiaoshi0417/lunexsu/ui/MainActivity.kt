@@ -111,6 +111,7 @@ import com.shixiaoshi0417.lunexsu.ui.screen.install.InstallScreen
 import com.shixiaoshi0417.lunexsu.ui.screen.module.ModulePager
 import com.shixiaoshi0417.lunexsu.ui.screen.modulerepo.ModuleRepoDetailScreen
 import com.shixiaoshi0417.lunexsu.ui.screen.modulerepo.ModuleRepoScreen
+import com.shixiaoshi0417.lunexsu.ui.screen.scriptrun.ScriptRunScreen
 import com.shixiaoshi0417.lunexsu.ui.screen.settings.SettingPager
 import com.shixiaoshi0417.lunexsu.ui.screen.sulog.SulogScreen
 import com.shixiaoshi0417.lunexsu.ui.screen.superuser.SuperUserPager
@@ -244,6 +245,11 @@ class MainActivity : ComponentActivity() {
                     }
                     val flashRoute = navigator.current() as? Route.Flash
                     var flashBackEnabled by remember(flashRoute) { mutableStateOf(false) }
+                    val scriptRunRoute = navigator.current() as? Route.ScriptRun
+                    var scriptRunBackEnabled by remember(scriptRunRoute) { mutableStateOf(true) }
+                    // Read here, not inside the NavDisplay builder: NavDisplay only rebuilds its entries
+                    // (and their swipeDismiss) when the builder lambda changes, so it must capture the value.
+                    val scriptRunSwipeDismiss = if (scriptRunBackEnabled) swipeDismiss else NavSwipeDirection.None
                     val mainScreenEntry = @Composable {
                         MainScreen(
                             initialPage = selectedMainPage,
@@ -294,6 +300,14 @@ class MainActivity : ComponentActivity() {
                                 ExecuteModuleActionScreen(
                                     key.moduleId,
                                     key.fromShortcut
+                                )
+                            }
+                            themeEntry<Route.ScriptRun>(swipeDismiss = scriptRunSwipeDismiss) { key ->
+                                ScriptRunScreen(
+                                    key.arg,
+                                    onBackEnabledChange = { enabled ->
+                                        if (navigator.current() == key) scriptRunBackEnabled = enabled
+                                    },
                                 )
                             }
                             themeEntry<Route.Home>(swipeDismiss = swipeDismiss) { mainScreenEntry() }
