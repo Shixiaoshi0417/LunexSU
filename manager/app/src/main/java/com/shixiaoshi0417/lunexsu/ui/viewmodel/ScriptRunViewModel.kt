@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,7 @@ import com.shixiaoshi0417.lunexsu.data.script.ScriptCommand
 import com.shixiaoshi0417.lunexsu.data.script.ScriptPackageException
 import com.shixiaoshi0417.lunexsu.data.script.ScriptRepository
 import com.shixiaoshi0417.lunexsu.data.script.UnverifiedScriptException
+import com.shixiaoshi0417.lunexsu.data.script.executeScriptLifecycle
 import com.shixiaoshi0417.lunexsu.ksuApp
 import com.shixiaoshi0417.lunexsu.ui.screen.scriptrun.ScriptRunArg
 import com.shixiaoshi0417.lunexsu.ui.screen.scriptrun.ScriptRunPhase
@@ -106,41 +108,53 @@ class ScriptRunViewModel : ViewModel() {
             return
         }
         _state.update { it.copy(phase = ScriptRunPhase.RUNNING, output = "") }
-        viewModelScope.launch {
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
             var text = ""
-            val exitCode = withContext(Dispatchers.IO) {
-                val code = runOneshotScript(
-                    command = command,
-                    onStdout = { line ->
-                        val tempText = "$line\n"
-                        text = if (tempText.startsWith("\u001b[H\u001b[J")) { // clear command
-                            tempText.substring(6)
-                        } else {
-                            text + tempText
-                        }
-                        _state.update { it.copy(output = text) }
-                        synchronized(logContent) { logContent.append(line).append('\n') }
-                    },
-                    onStderr = { line ->
-                        synchronized(logContent) { logContent.append(line).append('\n') }
-                    },
-                )
-                ScriptRepository.recordRun(prepared, code)
-                // Nothing stays behind: the script may have created root-owned files in its directory.
-                runCatching { removeAsRoot(dir) }
-                    .onSuccess { removed -> if (!removed) Log.w(TAG, "cannot remove $dir") }
-                    .onFailure { Log.w(TAG, "cannot remove $dir", it) }
-                ScriptRepository.release(token)
-                if (owner == token) owner = null
-                code
-            }
-            _state.update {
-                it.copy(
-                    phase = ScriptRunPhase.FINISHED,
-                    exitCode = exitCode,
-                    lastRun = ScriptRepository.history.last(prepared.manifest.id),
-                )
-            }
+            var lastRun = current.lastRun
+            executeScriptLifecycle(
+                execute = {
+                    runOneshotScript(
+                        command = command,
+                        onStdout = { line ->
+                            val tempText = "$line\n"
+                            text = if (tempText.startsWith("\u001b[H\u001b[J")) { // clear command
+                                tempText.substring(6)
+                            } else {
+                                text + tempText
+                            }
+                            _state.update { it.copy(output = text) }
+                            synchronized(logContent) { logContent.append(line).append('\n') }
+                        },
+                        onStderr = { line ->
+                            synchronized(logContent) { logContent.append(line).append('\n') }
+                        },
+                    )
+                },
+                record = { code ->
+                    ScriptRepository.recordRun(prepared, code)
+                    lastRun = ScriptRepository.history.last(prepared.manifest.id)
+                },
+                cleanup = {
+                    // The script may have created root-owned files in its directory.
+                    if (!removeAsRoot(dir)) Log.w(TAG, "cannot remove $dir")
+                },
+                release = {
+                    try {
+                        ScriptRepository.release(token)
+                    } finally {
+                        if (owner == token) owner = null
+                    }
+                },
+                finished = { code ->
+                    _state.update { it.copy(phase = ScriptRunPhase.FINISHED, exitCode = code, lastRun = lastRun) }
+                },
+                onFailure = { error ->
+                    Log.w(TAG, "script execution or cleanup failed", error)
+                    val message = errorMessage(error)
+                    synchronized(logContent) { logContent.append(message).append('\n') }
+                    _state.update { it.copy(output = it.output + "$message\n") }
+                },
+            )
         }
     }
 

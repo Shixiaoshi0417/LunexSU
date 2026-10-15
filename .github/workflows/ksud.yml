@@ -69,6 +69,10 @@ jobs:
       with:
         ndk-version: r29
 
+    - name: Test hot-install script path handling on host
+      if: ${{ inputs.target == 'aarch64-linux-android' }}
+      run: cargo test -p ksud --test hot_install_script
+
     - name: Check Android Rust compilation, lints and formatting
       if: ${{ inputs.target == 'aarch64-linux-android' }}
       working-directory: userspace/ksud

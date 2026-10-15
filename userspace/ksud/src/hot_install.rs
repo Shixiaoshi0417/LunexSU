@@ -17,12 +17,15 @@ use anyhow::{Context, Result, bail};
 use log::{info, warn};
 
 use std::{
-    fs::{canonicalize, remove_dir_all, remove_file, rename},
+    fs::{remove_dir_all, remove_file, rename},
     os::unix::process::CommandExt,
-    path::{Component, Path, PathBuf},
+    path::{Path, PathBuf},
     process::{Command, Stdio},
     time::{Instant, SystemTime, UNIX_EPOCH},
 };
+
+mod script;
+use script::check_run_script;
 
 pub struct Request {
     run_script: Option<String>,
@@ -39,33 +42,6 @@ pub fn take_request(staged_dir: &Path) -> Option<Request> {
     Some(Request {
         run_script: (!script.is_empty()).then(|| script.to_owned()),
     })
-}
-
-/// Resolve the run script to a path relative to the module dir. A missing script is skipped,
-/// like the metamodule implementations do.
-fn check_run_script(staged_dir: &Path, script: &str) -> Result<Option<PathBuf>> {
-    let mut components = Path::new(script).components().peekable();
-    while components.next_if_eq(&Component::CurDir).is_some() {}
-    let relative: PathBuf = components.collect();
-    if relative.as_os_str().is_empty()
-        || !relative
-            .components()
-            .all(|c| matches!(c, Component::Normal(_)))
-    {
-        bail!("invalid MODULE_HOT_RUN_SCRIPT '{script}'");
-    }
-
-    let path = staged_dir.join(&relative);
-    if path.symlink_metadata().is_err() {
-        println!("! MODULE_HOT_RUN_SCRIPT '{script}' not found, skipping it");
-        return Ok(None);
-    }
-    // Symlinks may only point to files inside the module
-    let resolved = canonicalize(&path)?;
-    if !resolved.is_file() || !resolved.starts_with(canonicalize(staged_dir)?) {
-        bail!("MODULE_HOT_RUN_SCRIPT '{script}' is not a file inside the module");
-    }
-    Ok(Some(relative))
 }
 
 fn check(module_id: &str, is_metamodule: bool, request: &Request) -> Result<Option<PathBuf>> {
