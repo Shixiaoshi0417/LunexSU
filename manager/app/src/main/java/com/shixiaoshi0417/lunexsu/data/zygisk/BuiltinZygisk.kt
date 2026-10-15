@@ -64,8 +64,14 @@ object BuiltinZygisk {
                     is ZygiskStep.Uninstall -> ksud("module uninstall ${step.backend.moduleId}")
                 }
                 if (error != null) {
-                    val staged = step is ZygiskStep.Install && readFlags().first[step.backend]?.present == true
-                    val rollbackErrors = zygiskRollback(flags, done, step, staged).mapNotNull { ksud(it) }
+                    // ksud may fail before creating modules/<id>. Do not gate cleanup on that
+                    // placeholder, or use module uninstall (which requires it to exist).
+                    val rollbackErrors = zygiskRollback(flags, done, step).mapNotNull { action ->
+                        when (action) {
+                            is ZygiskRollback.Ksud -> ksud(action.args)
+                            is ZygiskRollback.DiscardInstall -> discardInstall(action.backend)
+                        }
+                    }
                     val message = (listOf(error) + rollbackErrors.map { "rollback: $it" }).joinToString("\n")
                     return@withLock ZygiskApplyResult.Failed(message)
                 }
@@ -83,6 +89,15 @@ object BuiltinZygisk {
     private fun readFlags(): Pair<Map<ZygiskBackend, ZygiskModuleFlags>, Boolean> {
         val out = getRootShell().newJob().add(zygiskStatusScript()).to(ArrayList(), null).exec().out
         return parseZygiskFlags(out)
+    }
+
+    private fun discardInstall(backend: ZygiskBackend): String? = try {
+        val out = ArrayList<String>()
+        val result = getRootShell().newJob().add(zygiskDiscardInstallScript(backend)).to(out, out).exec()
+        if (result.isSuccess) null else out.failureSummary(result.code)
+    } catch (e: Exception) {
+        Log.w(TAG, "discard ${backend.displayName} failed", e)
+        e.message ?: e.javaClass.simpleName
     }
 
     /** Runs a ksud command and returns null on success or the tail of its output on failure. */

@@ -31,16 +31,23 @@ Re-enabling never reinstalls the backend. Reinstalling would rerun the installer
 installer stops the running monitor.
 
 When switching, the new backend is staged before the old one is marked for removal. If the
-install fails, the current setup stays in place. If a later step fails, the steps that already
-succeeded are rolled back, so the next boot never starts both backends.
+install fails, the old backend is not marked for removal. Rollback checks both directories even
+if the installer failed before creating `modules/<id>`. The new payload is marked `remove` and
+`disable`, and its ownership markers are cleared so it cannot be restored as a successful install.
+At the next boot, ksud promotes the marked staging directory and runs its `uninstall.sh` before
+module scripts start. The payload is retained until then so its uninstaller can clean up hooks.
+Reboot before trying to enable it again; remaining staging is treated as a conflict.
+
+If a later step fails, completed steps are also rolled back. Cleanup errors are reported alongside
+the original error; a filesystem or shell failure can still prevent cleanup and requires recovery.
 
 Installed backends carry a `.lunexsu_builtin_zygisk` marker in both `modules_update/<id>` and
 `modules/<id>`. The marker has two uses:
 
 - The module list hides marked modules, so they are managed only from Settings.
-- A `rezygisk` or `zygisksu` module without the marker was installed by the user. It is treated
-  as an external Zygisk, and enabling the built-in Zygisk is refused until it is removed, so
-  Zygote is never injected twice.
+- A `rezygisk` or `zygisksu` directory in either module location without the marker is treated
+  as an external or failed Zygisk install. Enabling the built-in Zygisk is refused until it is
+  removed, to avoid duplicate injection.
 
 The card reports state as follows:
 

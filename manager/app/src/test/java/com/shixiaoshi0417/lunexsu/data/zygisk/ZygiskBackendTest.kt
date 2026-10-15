@@ -107,23 +107,21 @@ class ZygiskBackendTest {
     fun failedSwitchRemovesTheStagedBackend() {
         // Leaving Neo staged while Vex stays configured would start both injectors after reboot.
         assertEquals(
-            listOf("module uninstall zygisksu"),
+            listOf(ZygiskRollback.DiscardInstall(Neo)),
             zygiskRollback(
                 mapOf(Vex to owned),
                 done = listOf(ZygiskStep.Install(Neo)),
                 failed = ZygiskStep.Uninstall(Vex),
-                staged = false,
             ),
         )
     }
 
     @Test
-    fun failedInstallOnlyCleansUpWhatItStaged() {
+    fun failedInstallAlwaysChecksForPartialStaging() {
         val install = ZygiskStep.Install(Vex)
-        assertEquals(emptyList<String>(), zygiskRollback(emptyMap(), emptyList(), install, staged = false))
         assertEquals(
-            listOf("module uninstall rezygisk"),
-            zygiskRollback(emptyMap(), emptyList(), install, staged = true),
+            listOf(ZygiskRollback.DiscardInstall(Vex)),
+            zygiskRollback(emptyMap(), emptyList(), install),
         )
     }
 
@@ -131,9 +129,32 @@ class ZygiskBackendTest {
     fun failedRestoreReappliesTheOriginalMarks() {
         val before = mapOf(Neo to removing.copy(disabled = true), Vex to owned)
         val restore = ZygiskStep.Restore(Neo)
-        val marks = listOf("module uninstall zygisksu", "module disable zygisksu")
-        assertEquals(marks, zygiskRollback(before, emptyList(), restore, staged = false))
-        assertEquals(marks, zygiskRollback(before, listOf(restore), ZygiskStep.Uninstall(Vex), staged = false))
+        val marks = listOf(
+            ZygiskRollback.Ksud("module uninstall zygisksu"),
+            ZygiskRollback.Ksud("module disable zygisksu"),
+        )
+        assertEquals(marks, zygiskRollback(before, emptyList(), restore))
+        assertEquals(marks, zygiskRollback(before, listOf(restore), ZygiskStep.Uninstall(Vex)))
+    }
+
+    @Test
+    fun stagingOnlyIsPendingAndExternalStagingBlocksAnotherInstall() {
+        val (flags, _) = parseZygiskFlags(listOf("module zygisksu 1 0 1 1 1"))
+        val status = zygiskStatusOf(flags, monitorRunning = false)
+        assertNull(status.configured)
+        assertNull(status.active)
+        assertEquals(Neo.moduleId, status.conflictId)
+    }
+
+    @Test
+    fun discardDoesNotDependOnTheLiveModuleOrDeleteThePayload() {
+        val script = zygiskDiscardInstallScript(Neo)
+        assertTrue(script.contains("/data/adb/modules_update/zygisksu /data/adb/modules/zygisksu"))
+        assertTrue(script.contains("touch \"\$dir/remove\" \"\$dir/disable\""))
+        assertTrue(script.contains("rm -f \"\$dir/$ZYGISK_OWNER_MARKER\""))
+        assertFalse(script.contains("module uninstall"))
+        assertFalse(script.contains("rm -rf"))
+        assertFalse(script.contains("rezygisk"))
     }
 
     @Test

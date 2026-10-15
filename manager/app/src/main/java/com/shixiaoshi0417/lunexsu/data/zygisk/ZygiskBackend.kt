@@ -93,9 +93,11 @@ internal fun zygiskStatusScript(): String = buildString {
     ZygiskBackend.entries.forEach { backend ->
         val id = backend.moduleId
         appendLine("m=/data/adb/modules/$id; u=/data/adb/modules_update/$id; p=0; o=0; up=0; rm=0; d=0")
-        appendLine("[ -d \"\$m\" ] && p=1")
+        appendLine("if [ -d \"\$m\" ] || [ -d \"\$u\" ]; then p=1; fi")
         appendLine("if [ -f \"\$m/$ZYGISK_OWNER_MARKER\" ] || [ -f \"\$u/$ZYGISK_OWNER_MARKER\" ]; then o=1; fi")
-        appendLine("[ -e \"\$m/update\" ] && up=1; [ -e \"\$m/remove\" ] && rm=1; [ -e \"\$m/disable\" ] && d=1")
+        appendLine("if [ -e \"\$m/update\" ] || [ -d \"\$u\" ]; then up=1; fi")
+        appendLine("if [ -e \"\$m/remove\" ] || [ -e \"\$u/remove\" ]; then rm=1; fi")
+        appendLine("if [ -e \"\$m/disable\" ] || [ -e \"\$u/disable\" ]; then d=1; fi")
         appendLine("echo \"module $id \$p \$o \$up \$rm \$d\"")
     }
     appendLine("if pidof zygisk-ptrace64 >/dev/null 2>&1 || pidof zygisk-ptrace32 >/dev/null 2>&1; then echo 'monitor 1'; else echo 'monitor 0'; fi")
@@ -133,30 +135,51 @@ internal fun planZygiskChange(flags: Map<ZygiskBackend, ZygiskModuleFlags>, targ
         }
     }
 
+internal sealed interface ZygiskRollback {
+    data class DiscardInstall(val backend: ZygiskBackend) : ZygiskRollback
+    data class Ksud(val args: String) : ZygiskRollback
+}
+
 /**
- * The ksud commands that return the modules to [before] once [failed] stopped a change after the
+ * The actions that return the modules to [before] once [failed] stopped a change after the
  * [done] steps succeeded. Without them a switch could leave both backends set to start on the next
- * boot. [staged] tells whether a failed install still left its module behind.
+ * boot. A failed install can leave only modules_update/<id>, without a live module entry.
  */
 internal fun zygiskRollback(
     before: Map<ZygiskBackend, ZygiskModuleFlags>,
     done: List<ZygiskStep>,
     failed: ZygiskStep,
-    staged: Boolean,
-): List<String> {
+): List<ZygiskRollback> {
     val undo = done.asReversed().toMutableList()
     // A failed restore may have cleared the removal mark before the enable failed.
-    if (failed is ZygiskStep.Restore || (failed is ZygiskStep.Install && staged)) undo.add(0, failed)
+    if (failed is ZygiskStep.Restore || failed is ZygiskStep.Install) undo.add(0, failed)
     return undo.flatMap { step ->
         val id = step.backend.moduleId
         when (step) {
-            is ZygiskStep.Install -> listOf("module uninstall $id")
-            is ZygiskStep.Uninstall -> listOf("module undo-uninstall $id")
+            is ZygiskStep.Install -> listOf(ZygiskRollback.DiscardInstall(step.backend))
+            is ZygiskStep.Uninstall -> listOf(ZygiskRollback.Ksud("module undo-uninstall $id"))
             is ZygiskStep.Restore -> buildList {
                 val flags = before[step.backend]
-                if (flags?.remove == true) add("module uninstall $id")
-                if (flags?.disabled == true) add("module disable $id")
+                if (flags?.remove == true) add(ZygiskRollback.Ksud("module uninstall $id"))
+                if (flags?.disabled == true) add(ZygiskRollback.Ksud("module disable $id"))
             }
         }
     }
+}
+
+/** Keep uninstall.sh for boot-time cleanup, but never allow a failed payload to be restored. */
+internal fun zygiskDiscardInstallScript(backend: ZygiskBackend): String {
+    val id = backend.moduleId
+    return """
+        (
+            result=0
+            for dir in /data/adb/modules_update/$id /data/adb/modules/$id; do
+                if [ -d "${'$'}dir" ]; then
+                    touch "${'$'}dir/remove" "${'$'}dir/disable" || result=1
+                    rm -f "${'$'}dir/$ZYGISK_OWNER_MARKER" || result=1
+                fi
+            done
+            exit "${'$'}result"
+        )
+    """.trimIndent()
 }
