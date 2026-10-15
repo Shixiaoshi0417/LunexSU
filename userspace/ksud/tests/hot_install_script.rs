@@ -52,7 +52,13 @@ fn symlinks_outside_module_and_directories_are_rejected() {
 fn missing_script_is_skipped_but_invalid_paths_are_rejected() {
     let temp = tempfile::tempdir().unwrap();
     assert_eq!(check_run_script(temp.path(), "missing.sh").unwrap(), None);
-    for name in ["", ".", "../outside.sh", "/absolute.sh", "scripts/../run.sh"] {
+    for name in [
+        "",
+        ".",
+        "../outside.sh",
+        "/absolute.sh",
+        "scripts/../run.sh",
+    ] {
         assert!(check_run_script(temp.path(), name).is_err(), "{name}");
     }
 }
