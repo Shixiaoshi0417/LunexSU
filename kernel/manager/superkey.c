@@ -40,15 +40,14 @@ void ksu_superkey_revoke(void)
  */
 static bool candidate(void)
 {
-    return ksu_is_manager_appid_valid() &&
-           ksu_get_manager_appid() == current_uid().val % KSU_PER_USER_RANGE;
+    return ksu_is_manager_appid_valid() && ksu_get_manager_appid() == current_uid().val % KSU_PER_USER_RANGE;
 }
 
 int ksu_superkey_salt(void __user *arg)
 {
     struct ksu_superkey_salt_cmd cmd;
-    if (!candidate() || !required() || ksu_superkey_config[16] != 1 ||
-        ksu_superkey_config[17] || ksu_superkey_config[18] || ksu_superkey_config[19])
+    if (!candidate() || !required() || ksu_superkey_config[16] != 1 || ksu_superkey_config[17] ||
+        ksu_superkey_config[18] || ksu_superkey_config[19])
         return -EACCES;
     memcpy(cmd.salt, ksu_superkey_config + 20, sizeof(cmd.salt));
     return copy_to_user(arg, &cmd, sizeof(cmd)) ? -EFAULT : 0;
@@ -71,8 +70,7 @@ int ksu_superkey_auth(void __user *arg)
         goto out;
     /* Limit expensive attempts from the signed candidate; other apps cannot lock it out. */
     retry_after = jiffies + 2 * HZ;
-    if (ksu_superkey_config[16] != 1 || ksu_superkey_config[17] ||
-        ksu_superkey_config[18] || ksu_superkey_config[19])
+    if (ksu_superkey_config[16] != 1 || ksu_superkey_config[17] || ksu_superkey_config[18] || ksu_superkey_config[19])
         goto out;
     tfm = crypto_alloc_shash("sha256", 0, 0);
     if (IS_ERR(tfm))

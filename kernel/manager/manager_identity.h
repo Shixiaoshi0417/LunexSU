@@ -5,7 +5,7 @@
 #include <linux/types.h>
 #include "manager/superkey.h"
 
-#define KSU_INVALID_APPID ((uid_t)-1)
+#define KSU_INVALID_APPID ((uid_t) - 1)
 #define KSU_PER_USER_RANGE 100000
 
 #ifdef CONFIG_KSU_DISABLE_MANAGER
