@@ -48,6 +48,7 @@ import androidx.compose.material.icons.automirrored.outlined.ChromeReaderMode
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.InstallMobile
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Verified
 import androidx.compose.material.icons.rounded.Star
@@ -99,6 +100,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import com.shixiaoshi0417.lunexsu.ui.screen.scriptrun.lastRunText
 import com.shixiaoshi0417.lunexsu.data.model.RepoRelease
 import com.shixiaoshi0417.lunexsu.ui.screen.module.ExpandableDescriptionText
 import com.shixiaoshi0417.lunexsu.ui.theme.LocalModuleDescriptionMaxLines
@@ -291,6 +293,7 @@ fun ModuleRepoScreenMaterial(
 @Composable
 private fun RepoBadges(
     metamodule: Boolean,
+    isScript: Boolean,
     installState: RepoInstallState,
 ) {
     Row(
@@ -303,6 +306,14 @@ private fun RepoBadges(
                 modifier = Modifier.padding(bottom = 4.dp),
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 backgroundColor = MaterialTheme.colorScheme.primary
+            )
+        }
+        if (isScript) {
+            StatusTag(
+                stringResource(R.string.module_repo_script_badge),
+                modifier = Modifier.padding(bottom = 4.dp),
+                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                backgroundColor = MaterialTheme.colorScheme.tertiaryContainer
             )
         }
         when (installState) {
@@ -357,7 +368,7 @@ private fun RepoModuleList(
         }
         items(modules, key = { it.moduleId }, contentType = { "module" }) { module ->
             val moduleAuthor = stringResource(id = R.string.module_author)
-            val installState = repoInstallState(installedVersions[module.moduleId], module.latestVersionCode)
+            val installState = repoInstallStateOf(module, installedVersions)
             val maxLinesLimit = LocalModuleDescriptionMaxLines.current
             var summaryExpanded by rememberSaveable(module.moduleId) { mutableStateOf(false) }
             var summaryCanExpand by rememberSaveable(module.moduleId) { mutableStateOf(true) }
@@ -418,7 +429,7 @@ private fun RepoModuleList(
                         )
                     }
 
-                    RepoBadges(module.metamodule, installState)
+                    RepoBadges(module.metamodule, module.isScript, installState)
                     HorizontalDivider(thickness = Dp.Hairline)
                     Spacer(modifier = Modifier.height(4.dp))
 
@@ -477,7 +488,7 @@ fun ModuleRepoDetailScreenMaterial(
     val module = state.module
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val confirmTitle = stringResource(R.string.module_install)
+    val confirmTitle = stringResource(if (state.isScript) R.string.script_run_title else R.string.module_install)
     var pendingDownload by remember { mutableStateOf<(() -> Unit)?>(null) }
     val confirmDialog = rememberConfirmDialog(onConfirm = { pendingDownload?.invoke() })
 
@@ -825,6 +836,7 @@ fun ReleasesPage(
                         ReleaseZipSegmentedItem(
                             release = rel,
                             canInstall = state.canInstall,
+                            isScript = state.isScript,
                             confirmTitle = confirmTitle,
                             confirmDialog = confirmDialog,
                             scope = scope,
@@ -854,6 +866,7 @@ fun ReleasesPage(
 private fun ReleaseZipSegmentedItem(
     release: RepoRelease,
     canInstall: Boolean,
+    isScript: Boolean,
     confirmTitle: String,
     confirmDialog: ConfirmDialogHandle,
     scope: CoroutineScope,
@@ -904,20 +917,21 @@ private fun ReleaseZipSegmentedItem(
                                 if (isDownloadAvailable(downloadedUri)) {
                                     onInstallModule(downloadedUri)
                                 } else {
-                                    handle.downloadedUri = null
+                                    handle.setDownloaded(null)
                                 }
                             }
                         },
                         contentPadding = ButtonDefaults.TextButtonContentPadding
                     ) {
+                        val label = stringResource(if (isScript) R.string.script_run else R.string.install)
                         Icon(
                             modifier = Modifier.size(20.dp),
-                            imageVector = Icons.Outlined.InstallMobile,
-                            contentDescription = stringResource(R.string.install)
+                            imageVector = if (isScript) Icons.Outlined.PlayArrow else Icons.Outlined.InstallMobile,
+                            contentDescription = label
                         )
                         Text(
                             modifier = Modifier.padding(start = 7.dp),
-                            text = stringResource(R.string.install),
+                            text = label,
                             style = MaterialTheme.typography.labelMedium,
                         )
                     }
@@ -1014,6 +1028,13 @@ fun InfoPage(
                         text = stringResource(R.string.module_repo_not_in_index),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                if (state.isScript) {
+                    Text(
+                        text = lastRunText(LocalContext.current, state.lastRun),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 if (detail?.healthStale == true) {
