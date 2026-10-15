@@ -37,7 +37,8 @@ internal fun ThemePackMusic() {
     val file = media?.music?.let { File(pack.directory, it) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(file, lifecycle) {
-        PackMusic.requested = file != null && media?.autoPlay == true
+        // Always start paused, even when the pack requests autoplay. Playback needs a user tap.
+        PackMusic.requested = false
         val player = file?.let { MediaPlayer() }
         var ready = false
         var disposed = false

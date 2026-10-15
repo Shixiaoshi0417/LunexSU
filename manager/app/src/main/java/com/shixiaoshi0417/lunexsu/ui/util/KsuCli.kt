@@ -41,7 +41,7 @@ import java.util.zip.ZipFile
  */
 private const val TAG = "KsuCli"
 
-private fun getKsuDaemonPath(): String {
+internal fun getKsuDaemonPath(): String {
     return ksuApp.applicationInfo.nativeLibraryDir + File.separator + "libksud.so"
 }
 
@@ -51,8 +51,19 @@ data class FlashResult(val code: Int, val err: String, val showReboot: Boolean) 
 }
 
 object KsuCli {
-    val SHELL: Shell = createRootShell()
-    val GLOBAL_MNT_SHELL: Shell = createRootShell(true)
+    var SHELL: Shell = createRootShell()
+        private set
+    var GLOBAL_MNT_SHELL: Shell = createRootShell(true)
+        private set
+
+    /** Discard the unprivileged fallback shells once the Core accepts the Manager. */
+    @Synchronized
+    fun refreshAfterAuthentication() {
+        SHELL.close()
+        GLOBAL_MNT_SHELL.close()
+        SHELL = createRootShell()
+        GLOBAL_MNT_SHELL = createRootShell(true)
+    }
 }
 
 fun getRootShell(globalMnt: Boolean = false): Shell {
@@ -347,13 +358,27 @@ sealed class LkmSelection : Parcelable {
     data object KmiNone : LkmSelection()
 }
 
-private fun writeLkmFile(lkm: LkmSelection): File? {
-    if (lkm !is LkmSelection.LkmUri) return null
+private fun writeLkmFile(lkm: LkmSelection, record: ByteArray? = null, detectedKmi: String? = null): File? {
+    if (lkm !is LkmSelection.LkmUri && record == null) return null
     val file = File(ksuApp.cacheDir, "kernelsu-tmp-lkm.ko")
-    ksuApp.contentResolver.openInputStream(lkm.uri)?.use { input ->
-        file.outputStream().use { output -> input.copyTo(output) }
+    try {
+        if (lkm is LkmSelection.LkmUri) {
+            requireNotNull(ksuApp.contentResolver.openInputStream(lkm.uri)).use { input ->
+                file.outputStream().use { output -> input.copyTo(output) }
+            }
+        } else {
+            val kmi = (lkm as? LkmSelection.KmiString)?.value ?: detectedKmi
+            require(kmi != null && Regex("android[0-9]+-[0-9]+\\.[0-9]+").matches(kmi)) { "Missing or invalid KMI" }
+            val result = Shell.getShell().newJob()
+                .add("${getKsuDaemonPath()} debug extract-binary ${kmi}_kernelsu.ko ${file.absolutePath}").exec()
+            check(result.isSuccess && file.isFile) { "Cannot extract matching LKM" }
+        }
+        if (record != null) file.writeBytes(com.shixiaoshi0417.lunexsu.data.Superkey.patch(file.readBytes(), record))
+        return file
+    } catch (e: Exception) {
+        file.delete()
+        throw e
     }
-    return file
 }
 
 // A single module name as accepted by ksud's --block-module parser.
@@ -405,6 +430,7 @@ fun installBoot(
     blockModules: String,
     onStdout: (String) -> Unit,
     onStderr: (String) -> Unit,
+    superkeyRecord: ByteArray? = null,
 ): FlashResult {
     val resolver = ksuApp.contentResolver
 
@@ -433,7 +459,14 @@ fun installBoot(
         cmd += " -u"
     }
 
-    val lkmFile = writeLkmFile(lkm)
+    val lkmFile = try {
+        writeLkmFile(lkm, superkeyRecord, if (superkeyRecord != null && lkm is LkmSelection.KmiNone) {
+            ShellUtils.fastCmd("${getKsuDaemonPath()} boot-info current-kmi").trim()
+        } else null)
+    } catch (e: Exception) {
+        bootFile?.delete()
+        return FlashResult(-1, "Cannot prepare superkey LKM: ${e.message}", false)
+    }
     if (lkmFile != null) {
         cmd += " -m ${lkmFile.absolutePath}"
     } else if (lkm is LkmSelection.KmiString) {
@@ -474,6 +507,7 @@ fun downloadBoot(
     blockModules: String,
     onStdout: (String) -> Unit,
     onStderr: (String) -> Unit,
+    superkeyRecord: ByteArray? = null,
 ): FlashResult {
     val bootFile = File(ksuApp.cacheDir, "download-boot.img")
     var probedKmi: String? = null
@@ -530,7 +564,12 @@ fun downloadBoot(
     var cmd = "${getKsuDaemonPath()} boot-patch -b ${bootFile.absolutePath}"
     cmd += bootPatchFlags(allowShell, enableAdb, forceBackup, blockModules)
 
-    val lkmFile = writeLkmFile(lkm)
+    val lkmFile = try {
+        writeLkmFile(lkm, superkeyRecord, autoKmi)
+    } catch (e: Exception) {
+        bootFile.delete()
+        return FlashResult(-1, "Cannot prepare superkey LKM: ${e.message}", false)
+    }
     if (lkmFile != null) {
         cmd += " -m ${lkmFile.absolutePath}"
     } else if (lkm is LkmSelection.KmiString) {

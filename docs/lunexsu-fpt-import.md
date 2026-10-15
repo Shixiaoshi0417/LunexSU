@@ -111,9 +111,10 @@ scope and prevent subsequent imports.
 - `video_background.*`: a looping global video with `videoVolume`, allocated only
   for the visible page while the activity is resumed.
 - `musicFilename`: an exact archive-local audio name, with `isMusicEnabled`,
-  `musicVolume`, `isAutoPlayEnabled` and `isLoopingEnabled`. One activity-scoped
-   player is shared across pages; playback pauses in the background. The play/pause
-  button toggles playback even when autoplay is disabled.
+  `musicVolume` and `isLoopingEnabled`. One activity-scoped player is shared across
+  pages; playback pauses in the background. Music starts paused on launch or theme
+  changes and requires the play/pause button to start. `isAutoPlayEnabled` is parsed
+  for compatibility but does not override this manual-playback policy.
 - `appLanguage`: validated BCP-47 tags; empty follows the system. Android 13+
   uses application locales, while older supported versions recreate the activity
   with a locale-specific context.

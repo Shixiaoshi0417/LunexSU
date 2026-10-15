@@ -23,6 +23,10 @@ internal data class InstallUiState(
     val blockModulesEnabled: Boolean,
     val blockModules: String,
     val blockModulesValid: Boolean,
+    val superkeyEnabled: Boolean = false,
+    val superkey: String = "",
+    val superkeyConfirmation: String = "",
+    val preparing: Boolean = false,
 )
 
 @Immutable
@@ -41,4 +45,7 @@ internal data class InstallScreenActions(
     val onSelectForceBackup: (Boolean) -> Unit,
     val onSelectBlockModules: (Boolean) -> Unit,
     val onBlockModulesChange: (String) -> Unit,
+    val onSuperkeyEnabled: (Boolean) -> Unit = {},
+    val onSuperkeyChange: (String) -> Unit = {},
+    val onSuperkeyConfirmation: (String) -> Unit = {},
 )

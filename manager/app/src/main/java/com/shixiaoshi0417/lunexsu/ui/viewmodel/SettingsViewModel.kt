@@ -15,6 +15,10 @@ import com.shixiaoshi0417.lunexsu.Natives
 import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.data.repository.SettingsRepository
 import com.shixiaoshi0417.lunexsu.data.repository.SettingsRepositoryImpl
+import com.shixiaoshi0417.lunexsu.data.zygisk.BuiltinZygisk
+import com.shixiaoshi0417.lunexsu.data.zygisk.ZygiskApplyResult
+import com.shixiaoshi0417.lunexsu.data.zygisk.ZygiskBackend
+import com.shixiaoshi0417.lunexsu.ui.util.reboot
 import com.shixiaoshi0417.lunexsu.ksuApp
 import com.shixiaoshi0417.lunexsu.ui.screen.settings.SettingsUiState
 import com.shixiaoshi0417.lunexsu.ui.theme.ColorContrast
@@ -103,6 +107,7 @@ class SettingsViewModel(
             val autoJailbreak = repo.autoJailbreak
             val useSoftReboot = repo.useSoftReboot
             val isLateLoadMode = Natives.isLateLoadMode
+            val zygiskStatus = BuiltinZygisk.status()
 
             _uiState.update {
                 it.copy(
@@ -149,6 +154,8 @@ class SettingsViewModel(
                     autoJailbreak = autoJailbreak,
                     useSoftReboot = useSoftReboot,
                     isLateLoadMode = isLateLoadMode,
+                    zygiskStatus = zygiskStatus,
+                    zygiskBackends = BuiltinZygisk.supportedBackends,
                 )
             }
         }
@@ -430,6 +437,64 @@ class SettingsViewModel(
             if (repo.setAdbRootEnabled(enabled)) {
                 repo.execKsudFeatureSave()
                 _uiState.update { it.copy(isAdbRootEnabled = enabled) }
+            }
+        }
+    }
+
+    fun setZygiskEnabled(enabled: Boolean) {
+        if (!_uiState.value.zygiskSwitchEnabled) return
+        applyZygisk(if (enabled) BuiltinZygisk.defaultBackend ?: return else null)
+    }
+
+    fun setZygiskBackend(backend: ZygiskBackend) {
+        val state = _uiState.value
+        if (state.zygiskBackendEnabled) applyZygisk(backend, state.zygiskNextNext)
+    }
+
+    fun setZygiskNextNext(enabled: Boolean) {
+        val state = _uiState.value
+        if (state.zygiskNextNextEnabled) applyZygisk(state.zygiskStatus?.configured, enabled)
+    }
+
+    fun dismissZygiskRebootDialog() {
+        _uiState.update { it.copy(showZygiskRebootDialog = false) }
+    }
+
+    /** A full reboot: a soft reboot keeps the current Zygote and would not load the new setup. */
+    fun rebootForZygisk() {
+        dismissZygiskRebootDialog()
+        viewModelScope.launch(Dispatchers.IO) { reboot() }
+    }
+
+    private fun applyZygisk(target: ZygiskBackend?, nextNext: Boolean = false) {
+        if (_uiState.value.zygiskBusy) return
+        _uiState.update { it.copy(zygiskBusy = true) }
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = BuiltinZygisk.apply(target, nextNext)
+            val status = BuiltinZygisk.status()
+            // Both backends manage kernel_umount, so its toggle follows the installed modules.
+            val kernelUmountStatus = repo.getKernelUmountStatus()
+            val isKernelUmountEnabled = repo.isKernelUmountEnabled()
+            _uiState.update {
+                it.copy(
+                    zygiskBusy = false,
+                    zygiskStatus = status,
+                    kernelUmountStatus = kernelUmountStatus,
+                    isKernelUmountEnabled = isKernelUmountEnabled,
+                    // Every saved change, including the companion loader, gets the reboot prompt.
+                    showZygiskRebootDialog = result is ZygiskApplyResult.Changed,
+                )
+            }
+            val message = when (result) {
+                is ZygiskApplyResult.Conflict -> ksuApp.getString(R.string.settings_zygisk_conflict, result.moduleId)
+                is ZygiskApplyResult.Failed -> ksuApp.getString(R.string.settings_zygisk_failed, result.message)
+                ZygiskApplyResult.LegacyVex -> ksuApp.getString(R.string.settings_zygisk_legacy_vex)
+                else -> null
+            }
+            if (message != null) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(ksuApp, message, Toast.LENGTH_LONG).show()
+                }
             }
         }
     }

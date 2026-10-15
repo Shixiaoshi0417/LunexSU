@@ -228,11 +228,12 @@ internal fun InstallScreenMaterial(
                     )
                 }
             }
+            SegmentedColumn(modifier = Modifier.padding(horizontal = 16.dp), content = listOf({ InstallSuperkey(uiState, actions) }))
             Button(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                enabled = uiState.installMethod != null && uiState.blockModulesValid,
+                enabled = uiState.installMethod != null && uiState.blockModulesValid && !uiState.preparing,
                 onClick = actions.onNext
             ) { Text(stringResource(R.string.install_next)) }
         }

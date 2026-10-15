@@ -6,6 +6,7 @@
 #define KERNELSU_KSU_H
 
 #include <cstdint>
+#include <cstddef>
 #include <sys/ioctl.h>
 #include <sys/prctl.h>
 #include <utility>
@@ -29,6 +30,14 @@ bool is_lkm_bundled();
 bool is_late_load_mode();
 
 bool is_manager();
+bool superkey_salt(uint8_t salt[16]);
+bool superkey_auth(const uint8_t proof[32]);
+
+// Bionic's explicit_bzero is unavailable on some supported API levels.
+inline void clear_superkey(void *buffer, size_t length) {
+    auto *bytes = static_cast<volatile uint8_t *>(buffer);
+    while (length--) *bytes++ = 0;
+}
 
 bool is_pr_build();
 

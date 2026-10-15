@@ -65,6 +65,7 @@ internal fun FinaThemeHome(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             HomeWarnings(state, actions)
+            if (!state.isManager) SuperkeyEntry(actions.onSuperkeyClick)
             HomeLayoutContent(LocalHomeLayoutOptions.current.style, state, actions, superuserCount, moduleEnabledCount, metrics)
             HomeSupportLinks(onOpenUrl = actions.onOpenUrl)
             Spacer(Modifier.height(bottomInnerPadding + if (!state.isFullFeatured)

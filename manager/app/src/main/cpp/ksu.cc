@@ -77,6 +77,25 @@ static int ksuctl(unsigned long op, Args &&... args) {
 
 static struct ksu_get_info_cmd g_version {};
 
+bool superkey_salt(uint8_t salt[16]) {
+    // Only use the FD installed for a package/certificate-verified candidate.
+    // A missing Core must fail normally, never invoke a seccomp-blocked syscall.
+    ksu_superkey_salt_cmd cmd {};
+    if (ksuctl(KSU_IOCTL_SUPERKEY_SALT, &cmd)) return false;
+    memcpy(salt, cmd.salt, sizeof(cmd.salt));
+    return true;
+}
+
+bool superkey_auth(const uint8_t proof[32]) {
+    ksu_superkey_auth_cmd cmd {};
+    memcpy(cmd.proof, proof, sizeof(cmd.proof));
+    bool ok = ksuctl(KSU_IOCTL_SUPERKEY_AUTH, &cmd) == 0;
+    clear_superkey(&cmd, sizeof(cmd));
+    // GET_INFO caches the Manager flag. Never retain the locked result after authentication.
+    g_version = {};
+    return ok && is_manager();
+}
+
 struct ksu_get_info_cmd get_info() {
     if (!g_version.version) {
         if (ksuctl(KSU_IOCTL_GET_INFO, &g_version) < 0) {

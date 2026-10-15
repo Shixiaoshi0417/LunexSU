@@ -79,6 +79,7 @@ sealed class FlashIt : Parcelable {
         val enableAdb: Boolean = false,
         val backup: Boolean = false,
         val blockModules: String = "",
+        val superkeyRecord: ByteArray? = null,
     ) : FlashIt()
 
     @Parcelize
@@ -90,6 +91,7 @@ sealed class FlashIt : Parcelable {
         val enableAdb: Boolean = false,
         val backup: Boolean = false,
         val blockModules: String = "",
+        val superkeyRecord: ByteArray? = null,
     ) : FlashIt()
 
     @Parcelize
@@ -135,7 +137,8 @@ fun flashIt(
             flashIt.backup,
             flashIt.blockModules,
             onStdout,
-            onStderr
+            onStderr,
+            flashIt.superkeyRecord,
         )
 
         is FlashIt.DownloadBoot -> downloadBoot(
@@ -147,7 +150,8 @@ fun flashIt(
             flashIt.backup,
             flashIt.blockModules,
             onStdout,
-            onStderr
+            onStderr,
+            flashIt.superkeyRecord,
         )
 
         is FlashIt.FlashModules -> {

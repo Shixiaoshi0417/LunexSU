@@ -1,6 +1,11 @@
 @file:Suppress("UnstableApiUsage")
 
 import com.google.protobuf.gradle.id
+import java.io.File
+import java.net.URI
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
 
 plugins {
     alias(libs.plugins.agp.app)
@@ -59,6 +64,111 @@ val baseCFlags = listOf(
     "-Wno-builtin-macro-redefined", "-Wno-unused-value", "-D__FILE__=__FILE_NAME__"
 )
 val baseCppFlags = baseCFlags + "-fno-rtti"
+
+// Built-in Zygisk payloads are pinned by SHA-256. NextNext's ZIP container is normalized
+// without changing payload bytes; sources and hashes are listed in docs/lunexsu-zygisk.md.
+data class PinnedAsset(val url: String, val sha256: String)
+
+val reZygiskZip = PinnedAsset(
+    "https://github.com/PerformanC/ReZygisk/releases/download/v1.0.0/ReZygisk-v1.0.0-release.zip",
+    "7904649b8dcaf2b060c3432df4fee302aeb1258da199d2b425335e82d49510e6",
+)
+val neoZygiskZip = PinnedAsset(
+    "https://github.com/JingMatrix/NeoZygisk/releases/download/v2.4/NeoZygisk-v2.4-289-release.zip",
+    "93a1425c67bb89f58a0dcb9fc823ec93f6472214f221e667a70b67c6a6e061a1",
+)
+val nextNextZip = PinnedAsset(
+    "https://github.com/VeryBaaad/ZygiskNextNext/releases/download/v1.8.3/Zygisk-Next-Next-v1.8.3-184-e4da082-release.zip",
+    "5413ab654c1c167d843d480e61fce3fb01c01a277c5e10a23cb68801076f9fa4",
+)
+val nextNextStoredSha256 = "a9de2634f1688e8f3705513aafaffcc03fd69593db2ac31d2d8133b632d5fdf6"
+val zygiskAssets = mapOf(
+    "zygisk/re.zip" to reZygiskZip,
+    "zygisk/re-LICENSE" to PinnedAsset(
+        "https://raw.githubusercontent.com/PerformanC/ReZygisk/333d423cde1a959958d9fce380bd017cf6c1cf64/LICENSE",
+        "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    ),
+    "zygisk/neo.zip" to neoZygiskZip,
+    "zygisk/neo-LICENSE" to PinnedAsset(
+        "https://raw.githubusercontent.com/JingMatrix/NeoZygisk/08080ef775c7fbbd1ad5c4a5d837f81933437abd/LICENSE",
+        "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    ),
+    "zygisk/nextnext.zip" to nextNextZip,
+    "zygisk/nextnext-LICENSE" to PinnedAsset(
+        "https://raw.githubusercontent.com/VeryBaaad/ZygiskNextNext/e4da08237aa4a37a7cd53fd3243315ef24954618/LICENSE",
+        "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    ),
+)
+
+/** Downloads pinned files once into a cache outside `build/` and stages them as assets. */
+abstract class FetchPinnedAssets : DefaultTask() {
+    /** Asset path to "url sha256". */
+    @get:Input
+    abstract val files: MapProperty<String, String>
+
+    @get:Internal
+    abstract val cacheDir: DirectoryProperty
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @get:InputFile
+    abstract val normalizer: RegularFileProperty
+
+    @get:Input
+    abstract val normalizedSha256: Property<String>
+
+    @TaskAction
+    fun fetch() {
+        val out = outputDir.get().asFile
+        out.deleteRecursively()
+        files.get().forEach { (path, spec) ->
+            val (url, sha256) = spec.split(' ')
+            val cached = cacheDir.get().file(sha256).asFile
+            if (!cached.isFile || sha256Of(cached) != sha256) {
+                cached.parentFile.mkdirs()
+                val partial = File(cached.path + ".part")
+                val connection = URI(url).toURL().openConnection().apply {
+                    connectTimeout = 30_000
+                    readTimeout = 60_000
+                }
+                connection.getInputStream().use { input ->
+                    partial.outputStream().use { input.copyTo(it) }
+                }
+                val actual = sha256Of(partial)
+                if (actual != sha256) {
+                    partial.delete()
+                    throw GradleException("$url: expected SHA-256 $sha256, got $actual")
+                }
+                Files.move(partial.toPath(), cached.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            }
+            val destination = File(out, path)
+            destination.parentFile.mkdirs()
+            if (path == "zygisk/nextnext.zip") {
+                val python = if (System.getProperty("os.name").startsWith("Windows")) "python" else "python3"
+                val process = ProcessBuilder(python, normalizer.get().asFile.absolutePath, cached.absolutePath, destination.absolutePath)
+                    .inheritIO().start()
+                if (process.waitFor() != 0 || sha256Of(destination) != normalizedSha256.get()) {
+                    throw GradleException("ZygiskNextNext ZIP normalization failed")
+                }
+            } else {
+                cached.copyTo(destination, overwrite = true)
+            }
+        }
+    }
+
+    private fun sha256Of(file: File): String =
+        MessageDigest.getInstance("SHA-256").digest(file.readBytes())
+            .joinToString("") { "%02x".format(it) }
+}
+
+val fetchZygiskAssets = tasks.register<FetchPinnedAssets>("fetchZygiskAssets") {
+    files.set(zygiskAssets.mapValues { (_, asset) -> "${asset.url} ${asset.sha256}" })
+    cacheDir.set(rootProject.layout.projectDirectory.dir(".gradle/pinned-assets"))
+    outputDir.set(layout.buildDirectory.dir("generated/zygisk/assets"))
+    normalizer.set(rootProject.layout.projectDirectory.file("../scripts/normalize_zygisk_zip.py"))
+    normalizedSha256.set(nextNextStoredSha256)
+}
 
 android {
     namespace = "com.shixiaoshi0417.lunexsu"
@@ -150,6 +260,9 @@ android {
         applicationId = managerPackageName
 
         buildConfigField("boolean", "IS_PR_BUILD", isPrBuild.toString())
+        buildConfigField("String", "ZYGISK_RE_SHA256", "\"${reZygiskZip.sha256}\"")
+        buildConfigField("String", "ZYGISK_NEO_SHA256", "\"${neoZygiskZip.sha256}\"")
+        buildConfigField("String", "ZYGISK_NEXTNEXT_SHA256", "\"$nextNextStoredSha256\"")
         resValue("string", "app_name", managerName)
 
         externalNativeBuild {
@@ -177,6 +290,9 @@ android {
 }
 
 androidComponents {
+    onVariants {
+        it.sources.assets?.addGeneratedSourceDirectory(fetchZygiskAssets, FetchPinnedAssets::outputDir)
+    }
     onVariants(selector().withBuildType("release")) {
         it.packaging.resources.excludes.addAll(listOf("META-INF/**", "kotlin/**", "**.bin"))
     }

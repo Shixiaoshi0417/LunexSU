@@ -4,6 +4,8 @@ import androidx.compose.runtime.Immutable
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 import com.shixiaoshi0417.lunexsu.data.model.HomeLayoutStyle
+import com.shixiaoshi0417.lunexsu.data.zygisk.ZygiskBackend
+import com.shixiaoshi0417.lunexsu.data.zygisk.ZygiskStatus
 import com.shixiaoshi0417.lunexsu.ui.UiMode
 import com.shixiaoshi0417.lunexsu.ui.theme.ColorContrast
 import com.shixiaoshi0417.lunexsu.ui.theme.ColorGenerationMode
@@ -71,8 +73,37 @@ data class SettingsUiState(
     val autoJailbreak: Boolean = false,
 
     // Soft Reboot
-    val useSoftReboot: Boolean = false
-)
+    val useSoftReboot: Boolean = false,
+
+    // Built-in Zygisk: null until the first status read
+    val zygiskStatus: ZygiskStatus? = null,
+    val zygiskBackends: List<ZygiskBackend> = emptyList(),
+    val zygiskBusy: Boolean = false,
+    val showZygiskRebootDialog: Boolean = false,
+) {
+    val zygiskEnabled: Boolean get() = zygiskStatus?.configured != null
+
+    /** The backend shown as selected; turning the switch on picks [ZygiskBackend.Default]. */
+    val zygiskSelected: ZygiskBackend
+        get() = zygiskStatus?.configured
+            ?: ZygiskBackend.Default.takeIf { it in zygiskBackends }
+            ?: zygiskBackends.firstOrNull()
+            ?: ZygiskBackend.Default
+
+    val zygiskSwitchEnabled: Boolean
+        get() = zygiskStatus != null && !zygiskBusy && !isLateLoadMode &&
+            (zygiskEnabled || (zygiskStatus.conflictId == null && zygiskBackends.isNotEmpty()))
+
+    val zygiskBackendEnabled: Boolean
+        get() = zygiskEnabled && !zygiskBusy && !isLateLoadMode &&
+            zygiskStatus?.conflictId == null && zygiskBackends.size > 1
+
+    val zygiskNextNext: Boolean get() = zygiskStatus?.nextNextConfigured == true
+
+    val zygiskNextNextEnabled: Boolean
+        get() = zygiskEnabled && !zygiskBusy && !isLateLoadMode &&
+            zygiskStatus?.conflictId == null && zygiskStatus?.legacyVex != true
+}
 
 @Immutable
 data class SettingsScreenActions(
@@ -91,5 +122,10 @@ data class SettingsScreenActions(
     val onSetEnableWebDebugging: (Boolean) -> Unit,
     val onSetAutoJailbreak: (Boolean) -> Unit,
     val onSetUseSoftReboot: (Boolean) -> Unit,
+    val onSetZygiskEnabled: (Boolean) -> Unit,
+    val onSetZygiskBackend: (ZygiskBackend) -> Unit,
+    val onSetZygiskNextNext: (Boolean) -> Unit,
+    val onZygiskRebootLater: () -> Unit,
+    val onZygiskRebootNow: () -> Unit,
     val onOpenAbout: () -> Unit,
 )
