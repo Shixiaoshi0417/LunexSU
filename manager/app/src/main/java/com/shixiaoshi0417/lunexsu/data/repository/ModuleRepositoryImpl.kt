@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.shixiaoshi0417.lunexsu.data.model.Module
 import com.shixiaoshi0417.lunexsu.data.model.ModuleUpdateInfo
+import com.shixiaoshi0417.lunexsu.data.zygisk.BuiltinZygisk
 import com.shixiaoshi0417.lunexsu.ksuApp
 import com.shixiaoshi0417.lunexsu.ui.util.isNetworkAvailable
 import com.shixiaoshi0417.lunexsu.ui.util.listModules
@@ -22,9 +23,12 @@ class ModuleRepositoryImpl : ModuleRepository {
         runCatching {
             val result = listModules()
             val array = JSONArray(result)
+            // The built-in Zygisk backends are managed from Settings, where every change needs a reboot.
+            val builtin = BuiltinZygisk.ownedModuleIds()
             (0 until array.length())
                 .asSequence()
                 .map { array.getJSONObject(it) }
+                .filter { it.getString("id") !in builtin }
                 .map { obj ->
                     Module(
                         id = obj.getString("id"),

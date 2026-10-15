@@ -364,6 +364,8 @@ fun SettingPagerMiuix(
                             )
                         }
 
+                        ZygiskCardMiuix(uiState, actions)
+
                         Card(
                             modifier = Modifier
                                 .padding(top = 12.dp)

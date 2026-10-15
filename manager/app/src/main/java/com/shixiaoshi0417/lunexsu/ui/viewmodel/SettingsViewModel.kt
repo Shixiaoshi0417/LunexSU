@@ -15,6 +15,10 @@ import com.shixiaoshi0417.lunexsu.Natives
 import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.data.repository.SettingsRepository
 import com.shixiaoshi0417.lunexsu.data.repository.SettingsRepositoryImpl
+import com.shixiaoshi0417.lunexsu.data.zygisk.BuiltinZygisk
+import com.shixiaoshi0417.lunexsu.data.zygisk.ZygiskApplyResult
+import com.shixiaoshi0417.lunexsu.data.zygisk.ZygiskBackend
+import com.shixiaoshi0417.lunexsu.ui.util.reboot
 import com.shixiaoshi0417.lunexsu.ksuApp
 import com.shixiaoshi0417.lunexsu.ui.screen.settings.SettingsUiState
 import com.shixiaoshi0417.lunexsu.ui.theme.ColorContrast
@@ -103,6 +107,7 @@ class SettingsViewModel(
             val autoJailbreak = repo.autoJailbreak
             val useSoftReboot = repo.useSoftReboot
             val isLateLoadMode = Natives.isLateLoadMode
+            val zygiskStatus = BuiltinZygisk.status()
 
             _uiState.update {
                 it.copy(
@@ -149,6 +154,8 @@ class SettingsViewModel(
                     autoJailbreak = autoJailbreak,
                     useSoftReboot = useSoftReboot,
                     isLateLoadMode = isLateLoadMode,
+                    zygiskStatus = zygiskStatus,
+                    zygiskBackends = BuiltinZygisk.supportedBackends,
                 )
             }
         }
@@ -430,6 +437,51 @@ class SettingsViewModel(
             if (repo.setAdbRootEnabled(enabled)) {
                 repo.execKsudFeatureSave()
                 _uiState.update { it.copy(isAdbRootEnabled = enabled) }
+            }
+        }
+    }
+
+    fun setZygiskEnabled(enabled: Boolean) {
+        applyZygisk(if (enabled) BuiltinZygisk.defaultBackend ?: return else null)
+    }
+
+    fun setZygiskBackend(backend: ZygiskBackend) {
+        if (_uiState.value.zygiskEnabled) applyZygisk(backend)
+    }
+
+    fun dismissZygiskRebootDialog() {
+        _uiState.update { it.copy(showZygiskRebootDialog = false) }
+    }
+
+    /** A full reboot: a soft reboot keeps the current Zygote and would not load the new setup. */
+    fun rebootForZygisk() {
+        dismissZygiskRebootDialog()
+        viewModelScope.launch(Dispatchers.IO) { reboot() }
+    }
+
+    private fun applyZygisk(target: ZygiskBackend?) {
+        if (_uiState.value.zygiskBusy) return
+        _uiState.update { it.copy(zygiskBusy = true) }
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = BuiltinZygisk.apply(target)
+            val status = BuiltinZygisk.status()
+            _uiState.update {
+                it.copy(
+                    zygiskBusy = false,
+                    zygiskStatus = status,
+                    // Undoing a change before rebooting returns to what is running; nothing to restart.
+                    showZygiskRebootDialog = result is ZygiskApplyResult.Changed && status.pendingReboot,
+                )
+            }
+            val message = when (result) {
+                is ZygiskApplyResult.Conflict -> ksuApp.getString(R.string.settings_zygisk_conflict, result.moduleId)
+                is ZygiskApplyResult.Failed -> ksuApp.getString(R.string.settings_zygisk_failed, result.message)
+                else -> null
+            }
+            if (message != null) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(ksuApp, message, Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
