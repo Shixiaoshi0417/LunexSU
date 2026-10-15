@@ -493,4 +493,12 @@
     <string name="my_themes_delete_title">Delete theme</string>
     <string name="my_themes_delete_message">Delete \"%1$s\"?</string>
     <string name="my_themes_delete">Delete</string>
+    <string name="superkey_install">Require a superkey</string>
+    <string name="superkey_install_summary">Optional extra Manager authentication after reboot. Package and signature checks still apply. Keep the key safe; recovery requires reflashing.</string>
+    <string name="superkey_set">Superkey</string>
+    <string name="superkey_confirm">Confirm superkey</string>
+    <string name="superkey_validation">Use 12–128 printable ASCII characters, without spaces, and enter the same key twice.</string>
+    <string name="superkey_prepare_failed">Could not prepare superkey configuration</string>
+    <string name="superkey_enter">Enter superkey</string>
+    <string name="superkey_failed">Possibly not installed or incorrect password</string>
 </resources>

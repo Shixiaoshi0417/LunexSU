@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'kernel/policy/**'
+      - 'kernel/manager/**'
       - 'kernel/feature/sucompat.c'
       - 'kernel/supercall/dispatch.c'
       - 'kernel/hook/**'
@@ -13,6 +14,7 @@ on:
   pull_request:
     paths:
       - 'kernel/policy/**'
+      - 'kernel/manager/**'
       - 'kernel/feature/sucompat.c'
       - 'kernel/supercall/dispatch.c'
       - 'kernel/hook/**'

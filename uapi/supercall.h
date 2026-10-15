@@ -12,7 +12,17 @@
 // 4: add KSU_GET_INFO_FLAG_BUNDLED
 // 5: add EVENT_SERVICES with a start/skip result
 // 6: LunexSU boot-scoped authorization profiles
-static const __u32 KERNEL_SU_UAPI_VERSION = 6;
+// 7: optional boot-scoped Manager superkey authentication (package/signature still required)
+static const __u32 KERNEL_SU_UAPI_VERSION = 7;
+
+struct ksu_superkey_salt_cmd {
+    __u8 salt[16];
+};
+struct ksu_superkey_auth_cmd {
+    __u8 proof[32];
+};
+static const __u32 KSU_IOCTL_SUPERKEY_SALT = _IOR('K', 150, struct ksu_superkey_salt_cmd);
+static const __u32 KSU_IOCTL_SUPERKEY_AUTH = _IOW('K', 151, struct ksu_superkey_auth_cmd);
 
 /* Magic numbers for reboot hook to install fd */
 static const __u32 KSU_INSTALL_MAGIC1 = 0xDEADBEEF;

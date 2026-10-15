@@ -454,4 +454,12 @@
     <string name="my_themes_delete_title">刪除主題</string>
     <string name="my_themes_delete_message">刪除「%1$s」？</string>
     <string name="my_themes_delete">刪除</string>
+    <string name="superkey_install">額外超級密鑰驗證</string>
+    <string name="superkey_install_summary">可選的重新啟動後管理員驗證，仍須通過套件名稱和簽章驗證。請保管好密鑰，忘記後需要重新刷入。</string>
+    <string name="superkey_set">設定超級密鑰</string>
+    <string name="superkey_confirm">確認超級密鑰</string>
+    <string name="superkey_validation">請輸入 12–128 位不含空格的可列印 ASCII 字元，兩次輸入必須一致。</string>
+    <string name="superkey_prepare_failed">無法準備超級密鑰設定</string>
+    <string name="superkey_enter">輸入超級密鑰</string>
+    <string name="superkey_failed">可能未安裝或密碼錯誤</string>
 </resources>

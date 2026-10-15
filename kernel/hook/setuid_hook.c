@@ -29,7 +29,10 @@ int ksu_handle_setresuid(uid_t old_uid, uid_t new_uid)
     pr_info("handle_setresuid from %d to %d\n", old_uid, new_uid);
     ksu_app_session_update_current();
 
-    if (unlikely(is_uid_manager(new_uid))) {
+    /* The locked, signed Manager still needs the driver FD to submit its superkey.
+     * Per-ioctl permission checks continue to require the authenticated identity.
+     */
+    if (unlikely(is_uid_manager_candidate(new_uid))) {
         spin_lock_irq(&current->sighand->siglock);
         ksu_seccomp_allow_cache(current->seccomp.filter, __NR_reboot);
         ksu_set_task_tracepoint_flag(current);

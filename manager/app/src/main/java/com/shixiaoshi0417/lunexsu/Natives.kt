@@ -53,6 +53,9 @@ object Natives {
     val isManager: Boolean
         external get
 
+    external fun superkeySalt(): ByteArray?
+    external fun authenticateSuperkey(proof: ByteArray): Boolean
+
     val isPrBuild: Boolean
         external get
 

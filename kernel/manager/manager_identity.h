@@ -3,8 +3,9 @@
 
 #include <linux/cred.h>
 #include <linux/types.h>
+#include "manager/superkey.h"
 
-#define KSU_INVALID_APPID -1
+#define KSU_INVALID_APPID ((uid_t)-1)
 #define KSU_PER_USER_RANGE 100000
 
 #ifdef CONFIG_KSU_DISABLE_MANAGER
@@ -19,6 +20,11 @@ static inline bool is_manager()
 }
 
 static inline bool is_uid_manager(uid_t uid)
+{
+    return uid == 0;
+}
+
+static inline bool is_uid_manager_candidate(uid_t uid)
 {
     return uid == 0;
 }
@@ -41,32 +47,44 @@ extern uid_t ksu_manager_appid; // DO NOT DIRECT USE
 
 static inline bool ksu_is_manager_appid_valid()
 {
-    return ksu_manager_appid != KSU_INVALID_APPID;
+    return READ_ONCE(ksu_manager_appid) != KSU_INVALID_APPID;
 }
 
 static inline bool is_manager()
 {
-    return unlikely(ksu_manager_appid == current_uid().val % KSU_PER_USER_RANGE);
+    return unlikely(READ_ONCE(ksu_manager_appid) == current_uid().val % KSU_PER_USER_RANGE) &&
+           ksu_superkey_authorized(current_uid().val);
+}
+
+/* Candidate identity is package/certificate checked, but conveys no management permission. */
+static inline bool is_uid_manager_candidate(uid_t uid)
+{
+    return unlikely(READ_ONCE(ksu_manager_appid) == uid % KSU_PER_USER_RANGE);
 }
 
 static inline bool is_uid_manager(uid_t uid)
 {
-    return unlikely(ksu_manager_appid == uid % KSU_PER_USER_RANGE);
+    return is_uid_manager_candidate(uid) && ksu_superkey_authorized(uid);
 }
 
 static inline uid_t ksu_get_manager_appid()
 {
-    return ksu_manager_appid;
+    return READ_ONCE(ksu_manager_appid);
 }
 
 static inline void ksu_set_manager_appid(uid_t appid)
 {
-    ksu_manager_appid = appid;
+    if (READ_ONCE(ksu_manager_appid) != appid) {
+        WRITE_ONCE(ksu_manager_appid, KSU_INVALID_APPID);
+        ksu_superkey_revoke();
+        WRITE_ONCE(ksu_manager_appid, appid);
+    }
 }
 
 static inline void ksu_invalidate_manager_uid()
 {
-    ksu_manager_appid = KSU_INVALID_APPID;
+    WRITE_ONCE(ksu_manager_appid, KSU_INVALID_APPID);
+    ksu_superkey_revoke();
 }
 #endif
 

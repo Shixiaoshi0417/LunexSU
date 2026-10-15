@@ -73,4 +73,5 @@ data class HomeActions(
     val onJailbreakClick: () -> Unit = {},
     val onOpenSuperUser: () -> Unit = {},
     val onOpenModule: () -> Unit = {},
+    val onSuperkeyClick: () -> Unit = {},
 )
