@@ -2,82 +2,93 @@
 
 ## Behavior
 
-- Settings has a built-in Zygisk card. It is off by default.
-- Turning it on selects VexZygisk. NeoZygisk can be chosen instead from the same card.
-- Every change takes effect only after a full reboot. Nothing is loaded or unloaded at runtime.
-- After a successful change, the card shows a reboot dialog with "Reboot later" and "Reboot now".
-  If you choose "Reboot later", the card keeps showing the pending state until the device
-  reboots.
-- The card and the dialog are drawn in all three UIs:
-  - native Material
-  - native MIUIX
-  - the FinaSU theme UI, which uses the pack palette and the wallpaper overlay
-- The card is hidden when Core is unavailable. It is disabled in temporary root (late-load)
-  mode, where a reboot would drop root.
+- Built-in Zygisk is off by default. Enabling selects **ReZygisk**; the backend selector also
+  offers **NeoZygisk**. VexZygisk is no longer bundled.
+- Directly below the selector, **Use ZygiskNextNext** adds Zygisk Next API support. This is an
+  independent companion loader, not a third standard Zygisk backend. It defaults to off and is
+  greyed out until built-in Zygisk is enabled. Switching Re/Neo preserves the companion selection;
+  disabling built-in Zygisk also disables the companion. Re-enabling starts with the companion off.
+- Every successful change prompts for a full reboot, with "Reboot later" and "Reboot now".
+  Pending changes remain visible. No injector is started, killed, or hot-switched by these actions.
+- The card, selector, companion switch (including its disabled state), and reboot dialog use the
+  native Material/MIUIX UI or the FinaSU theme palette and wallpaper overlay.
+- The card is hidden without Core and disabled in temporary root (late-load) mode.
 
-## Implementation
+## Installation and recovery
 
-The backends are the unmodified upstream release zips. They are bundled as APK assets and
-installed through ksud's regular module commands. ksud, the kernel and the supercall interface
-are unchanged.
+The payloads are bundled APK assets installed through ksud's normal module flow. This feature
+does not change ksud, the kernel, or the supercall interface.
 
-| Action | Effect |
+| Action | Next-boot configuration |
 |---|---|
-| Enable or switch to a backend | `ksud module install` stages its zip. |
-| Disable, or leave the previous backend | `ksud module uninstall` marks the module for removal. Its own `uninstall.sh` then runs on the next boot. |
-| Re-enable a backend before rebooting | `undo-uninstall` and `enable` restore it. |
+| Enable or switch backend | Stage the new module, then mark the previous backend for removal. |
+| Enable ZygiskNextNext | Stage `zygisknextsu`, leaving the standard backend installed. |
+| Disable ZygiskNextNext | Mark only the companion for removal. |
+| Disable built-in Zygisk | Mark the companion first, then all owned backends for removal. |
+| Re-enable before reboot | Restore existing modules with `undo-uninstall` and `enable`; do not rerun installers. |
 
-Re-enabling never reinstalls the backend. Reinstalling would rerun the installer, and VexZygisk's
-installer stops the running monitor.
+Steps are rolled back on failure, in reverse order, including a partially staged companion.
+Rollback failures are reported rather than silently claimed to have succeeded. Normal Zygisk
+modules are not removed by backend changes. Upstream backend uninstall scripts may remove their
+own private state; this is not a promise to preserve all backend-specific settings.
 
-When switching, the new backend is staged before the old one is marked for removal. If the
-install fails, the current setup stays in place. If a later step fails, the steps that already
-succeeded are rolled back, so the next boot never starts both backends.
+All three owned modules carry `.lunexsu_builtin_zygisk` in `modules_update/<id>` and `modules/<id>`.
+They are hidden from the regular module list and managed through Settings. A matching module id
+without that marker is external: it is neither adopted nor removed, and enabling is blocked.
 
-Installed backends carry a `.lunexsu_builtin_zygisk` marker in both `modules_update/<id>` and
-`modules/<id>`. The marker has two uses:
+**Old built-in Vex migration:** Vex and Re share `rezygisk`. The card detects Vex by its module
+name and requires disabling built-in Zygisk and rebooting before enabling Re. This lets Vex's
+own uninstall script remove its global boot/late-load hooks; the Manager does not overwrite an
+active Vex directory or run its uninstall script live. External Vex must be uninstalled manually.
 
-- The module list hides marked modules, so they are managed only from Settings.
-- A `rezygisk` or `zygisksu` module without the marker was installed by the user. It is treated
-  as an external Zygisk, and enabling the built-in Zygisk is refused until it is removed, so
-  Zygote is never injected twice.
+Status is inferred from ksud's flags: configured means owned and not `remove`/`disable`; active
+means owned and not `update`/`disable`. A pending removal continues until reboot; a staged install
+does not run yet. A `zygisk-ptrace32/64` process indicates the standard backend's monitor, not
+proof that every module or the companion initialized correctly. Safe mode disables all modules.
 
-The card reports state as follows:
+## Pinned payloads and licenses
 
-- **Next boot:** an owned module that is not marked `remove` or `disable`.
-- **This boot:** an owned module that is not `update` or `disable`.
-- **Running:** a live `zygisk-ptrace` monitor process.
+`fetchZygiskAssets` caches downloads in `manager/.gradle/pinned-assets`, verifies SHA-256, and stages
+the assets. Manager verifies the installation archive again. Python 3 with its standard `lzma`
+module is required at build time for the companion archive conversion described below.
 
-Safe mode disables every module. A safe-mode-disabled backend therefore shows as off, and turning
-the switch on restores it.
+| Component | Module id | Release | Source commit | License at that commit |
+|---|---|---|---|---|
+| ReZygisk | `rezygisk` | [v1.0.0](https://github.com/PerformanC/ReZygisk/releases/tag/v1.0.0) | [`333d423c`](https://github.com/PerformanC/ReZygisk/tree/333d423cde1a959958d9fce380bd017cf6c1cf64) | GPL-3.0 |
+| NeoZygisk | `zygisksu` | [v2.4](https://github.com/JingMatrix/NeoZygisk/releases/tag/v2.4) | [`08080ef7`](https://github.com/JingMatrix/NeoZygisk/tree/08080ef775c7fbbd1ad5c4a5d837f81933437abd) | GPL-3.0 |
+| ZygiskNextNext | `zygisknextsu` | [v1.8.3](https://github.com/VeryBaaad/ZygiskNextNext/releases/tag/v1.8.3) | [`e4da0823`](https://github.com/VeryBaaad/ZygiskNextNext/tree/e4da08237aa4a37a7cd53fd3243315ef24954618) | GPL-3.0 |
 
-## Bundled versions
+SHA-256:
 
-The Gradle task `fetchZygiskAssets` downloads each file once into `manager/.gradle/pinned-assets`.
-It verifies the SHA-256 before staging the file as an asset. The Manager checks the same hash
-again before installing.
+- Re `ReZygisk-v1.0.0-release.zip`: `7904649b8dcaf2b060c3432df4fee302aeb1258da199d2b425335e82d49510e6`
+- Neo `NeoZygisk-v2.4-289-release.zip`: `93a1425c67bb89f58a0dcb9fc823ec93f6472214f221e667a70b67c6a6e061a1`
+- NextNext upstream `Zygisk-Next-Next-v1.8.3-184-e4da082-release.zip`: `5413ab654c1c167d843d480e61fce3fb01c01a277c5e10a23cb68801076f9fa4`
+- NextNext installation ZIP: `a9de2634f1688e8f3705513aafaffcc03fd69593db2ac31d2d8133b632d5fdf6`
 
-| Backend | Module id | Release | SHA-256 | Source | License |
-|---|---|---|---|---|---|
-| VexZygisk | `rezygisk` | [v2.2.0](https://github.com/Lxiaoyao077/VexZygisk/releases/tag/v2.2.0) `VexZygisk-v2.2.0-770-1d35d50-release.zip` | `9656568bdc8755941eb62eadde1acc14e6a9fec32da3a84282e061ca1b2c1b04` | [`1d35d502`](https://github.com/Lxiaoyao077/VexZygisk/tree/1d35d502ab2495d08b40bb77a5c4defb5bf64342) (build commit, two commits after the tag) | AGPL-3.0 |
-| NeoZygisk | `zygisksu` | [v2.4](https://github.com/JingMatrix/NeoZygisk/releases/tag/v2.4) `NeoZygisk-v2.4-289-release.zip` | `93a1425c67bb89f58a0dcb9fc823ec93f6472214f221e667a70b67c6a6e061a1` | [`08080ef7`](https://github.com/JingMatrix/NeoZygisk/tree/08080ef775c7fbbd1ad5c4a5d837f81933437abd) | GPL-3.0 |
+Re and Neo archives are unmodified. NextNext's upstream ZIP contains XZ-compressed ZIP entries
+(method 95). Its installer calls BusyBox unzip, which cannot decode those entries. After verifying
+the upstream archive, `scripts/normalize_zygisk_zip.py` deterministically repacks it using stored
+entries. File names and bytes, including all 36 upstream `.sha256` files, are unchanged; the outer
+container, order, attributes and timestamps change. The normalized archive has its own pinned hash.
 
-The license texts from those commits ship next to the zips as `assets/zygisk/vex-LICENSE` and
-`assets/zygisk/neo-LICENSE`.
+Pinned license texts ship as `assets/zygisk/{re,neo,nextnext}-LICENSE`. Re's README historically
+mentions AGPL, but the selected commit's actual LICENSE is GPLv3. Preserve upstream and dependency
+notices and provide the corresponding source/build materials when redistributing. ZygiskNextNext
+is an open-source API loader, **not** the closed-source ZygiskNext distribution.
 
-## Known limits
+## Limits and device validation
 
-- **Architecture:**
-  - VexZygisk installs only on arm64.
-  - NeoZygisk supports arm, arm64, x86 and x86_64. On 64-bit devices it does not inject 32-bit
-    apps.
-  - Devices without a supported backend (for example riscv64) cannot enable the switch.
-- **Kernel umount:** both modules declare `managedFeatures=kernel_umount` and handle unmounting
-  themselves. While a backend is active, the Kernel umount setting is shown as managed.
-- **Switching from NeoZygisk to VexZygisk:** VexZygisk's installer stops the running
-  `zygisk-ptrace64` monitor. Processes that were already injected stay injected, but newly
-  started apps are not injected until the reboot.
-- **NeoZygisk on LunexSU:** its installer shows a warning, but still installs, when the kernel
-  version code is 30000 or higher.
-- **Testing:** none of this has been tested on a device yet. Module compatibility depends on the
-  chosen backend.
+- Re and Neo accept arm, arm64, x86 and x86_64; unsupported devices (including riscv64) cannot
+  enable built-in Zygisk even though NextNext itself has additional architectures.
+- Neo does not inject 32-bit apps on 64-bit devices. A companion API loader does not remove this
+  limitation for standard Zygisk modules.
+- Both backends declare `managedFeatures=kernel_umount`; refresh the managed Kernel umount setting
+  after any change. NextNext can also affect namespaces and mounts, so metamodule compatibility
+  and per-app umount behavior require device testing.
+- Neo warns but still installs when the kernel version code is at least 30000.
+- Local JVM tests cover planning, dependency/disabled-state rules, reboot state, rollback and Vex
+  migration. Python tests cover the ZIP conversion; no backend/device compatibility is implied.
+- Before release, test Re/Neo with the companion both off/on; every enable/disable/switch followed
+  by reboot; failed installs/rollback; safe mode; external conflicts; Vex removal and late-load-hook
+  cleanup; 32/64-bit apps, LSPosed and actual Zygisk Next API modules on stock and HyperOS devices.
+- No device testing or ADB was performed. Module compatibility is not guaranteed.

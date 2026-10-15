@@ -1,7 +1,9 @@
 package com.shixiaoshi0417.lunexsu.data.zygisk
 
-import com.shixiaoshi0417.lunexsu.data.zygisk.ZygiskBackend.Neo
-import com.shixiaoshi0417.lunexsu.data.zygisk.ZygiskBackend.Vex
+import com.shixiaoshi0417.lunexsu.data.zygisk.ZygiskModule.Neo
+import com.shixiaoshi0417.lunexsu.data.zygisk.ZygiskModule.NextNext
+import com.shixiaoshi0417.lunexsu.data.zygisk.ZygiskModule.Re
+import com.shixiaoshi0417.lunexsu.ui.screen.settings.SettingsUiState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -14,145 +16,201 @@ class ZygiskBackendTest {
     private val removing = owned.copy(remove = true)
     private val external = ZygiskModuleFlags(present = true)
 
-    @Test
-    fun defaultsToOffWithNothingInstalled() {
-        val status = zygiskStatusOf(emptyMap(), monitorRunning = false)
+    @Test fun defaultsToOffWithNothingInstalled() {
+        val status = zygiskStatusOf(emptyMap(), false)
         assertNull(status.configured)
         assertNull(status.active)
+        assertFalse(status.nextNextConfigured)
         assertFalse(status.pendingReboot)
     }
 
-    @Test
-    fun vexIsTheDefaultOnArm64AndNeoElsewhere() {
-        assertEquals(Vex, ZygiskBackend.Default)
-        assertEquals(listOf(Vex, Neo), ZygiskBackend.supportedOn("arm64-v8a"))
-        assertEquals(listOf(Neo), ZygiskBackend.supportedOn("x86_64"))
+    @Test fun reIsTheDefaultOnAllSupportedArchitectures() {
+        assertEquals(ZygiskBackend.Re, ZygiskBackend.Default)
+        listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64").forEach {
+            assertEquals(listOf(ZygiskBackend.Re, ZygiskBackend.Neo), ZygiskBackend.supportedOn(it))
+        }
         assertEquals(emptyList<ZygiskBackend>(), ZygiskBackend.supportedOn("riscv64"))
     }
 
-    @Test
-    fun stagedInstallOnlyRunsAfterReboot() {
-        val status = zygiskStatusOf(mapOf(Vex to staged), monitorRunning = false)
-        assertEquals(Vex, status.configured)
+    @Test fun stagedInstallOnlyRunsAfterReboot() {
+        val status = zygiskStatusOf(mapOf(Re to staged), false)
+        assertEquals(ZygiskBackend.Re, status.configured)
         assertNull(status.active)
         assertTrue(status.pendingReboot)
     }
 
-    @Test
-    fun pendingRemovalKeepsRunningUntilReboot() {
-        val status = zygiskStatusOf(mapOf(Neo to removing), monitorRunning = true)
+    @Test fun pendingRemovalKeepsRunningUntilReboot() {
+        val status = zygiskStatusOf(mapOf(Neo to removing), true)
         assertNull(status.configured)
-        assertEquals(Neo, status.active)
+        assertEquals(ZygiskBackend.Neo, status.active)
         assertTrue(status.pendingReboot)
     }
 
-    @Test
-    fun switchIsPendingUntilReboot() {
-        val status = zygiskStatusOf(mapOf(Vex to staged, Neo to removing), monitorRunning = true)
-        assertEquals(Vex, status.configured)
-        assertEquals(Neo, status.active)
+    @Test fun switchIsPendingUntilReboot() {
+        val status = zygiskStatusOf(mapOf(Re to staged, Neo to removing), true)
+        assertEquals(ZygiskBackend.Re, status.configured)
+        assertEquals(ZygiskBackend.Neo, status.active)
         assertTrue(status.pendingReboot)
     }
 
-    @Test
-    fun userInstalledModuleIsAConflictNotABackend() {
-        val status = zygiskStatusOf(mapOf(Neo to external), monitorRunning = true)
+    @Test fun userInstalledModuleIsAConflictNotABackend() {
+        val status = zygiskStatusOf(mapOf(Neo to external), true)
         assertNull(status.configured)
         assertNull(status.active)
         assertEquals("zygisksu", status.conflictId)
     }
 
-    @Test
-    fun safeModeDisableTurnsTheBackendOff() {
-        val status = zygiskStatusOf(mapOf(Vex to owned.copy(disabled = true)), monitorRunning = false)
+    @Test fun externalAddonIsNotClaimedOrRemoved() {
+        val flags = mapOf(Re to owned, NextNext to external)
+        val status = zygiskStatusOf(flags, true)
+        assertFalse(status.nextNextConfigured)
+        assertEquals("zygisknextsu", status.conflictId)
+        assertEquals(listOf(ZygiskStep.Uninstall(Re)), planZygiskChange(flags, null))
+    }
+
+    @Test fun safeModeDisableTurnsEverythingOff() {
+        val status = zygiskStatusOf(mapOf(Re to owned.copy(disabled = true), NextNext to owned.copy(disabled = true)), false)
         assertNull(status.configured)
         assertNull(status.active)
+        assertFalse(status.nextNextConfigured)
+        assertFalse(status.nextNextActive)
     }
 
-    @Test
-    fun enablingInstallsTheTarget() {
-        assertEquals(listOf(ZygiskStep.Install(Vex)), planZygiskChange(emptyMap(), Vex))
+    @Test fun enablingInstallsOnlyTheBackendByDefault() {
+        assertEquals(listOf(ZygiskStep.Install(Re)), planZygiskChange(emptyMap(), ZygiskBackend.Re))
     }
 
-    @Test
-    fun switchingStagesTheNewBackendBeforeRemovingTheOld() {
+    @Test fun switchingStagesTheNewBackendBeforeRemovingTheOld() {
         assertEquals(
-            listOf(ZygiskStep.Install(Neo), ZygiskStep.Uninstall(Vex)),
-            planZygiskChange(mapOf(Vex to owned), Neo),
+            listOf(ZygiskStep.Install(Neo), ZygiskStep.Uninstall(Re)),
+            planZygiskChange(mapOf(Re to owned), ZygiskBackend.Neo),
         )
     }
 
-    @Test
-    fun disablingMarksEveryOwnedBackendForRemoval() {
-        assertEquals(listOf(ZygiskStep.Uninstall(Vex)), planZygiskChange(mapOf(Vex to staged), null))
-        assertEquals(emptyList<ZygiskStep>(), planZygiskChange(mapOf(Vex to removing), null))
+    @Test fun disablingMarksEveryOwnedBackendForRemoval() {
+        assertEquals(listOf(ZygiskStep.Uninstall(Re)), planZygiskChange(mapOf(Re to staged), null))
+        assertEquals(emptyList<ZygiskStep>(), planZygiskChange(mapOf(Re to removing), null))
     }
 
-    @Test
-    fun reEnablingBeforeRebootRestoresInsteadOfReinstalling() {
-        // Reinstalling would rerun the installer, which stops the monitor that is running now.
-        assertEquals(listOf(ZygiskStep.Restore(Vex)), planZygiskChange(mapOf(Vex to removing), Vex))
-        assertEquals(
-            listOf(ZygiskStep.Restore(Vex)),
-            planZygiskChange(mapOf(Vex to owned.copy(disabled = true)), Vex),
-        )
+    @Test fun reEnablingBeforeRebootRestoresInsteadOfReinstalling() {
+        assertEquals(listOf(ZygiskStep.Restore(Re)), planZygiskChange(mapOf(Re to removing), ZygiskBackend.Re))
+        assertEquals(listOf(ZygiskStep.Restore(Re)), planZygiskChange(mapOf(Re to owned.copy(disabled = true)), ZygiskBackend.Re))
     }
 
-    @Test
-    fun selectingTheConfiguredBackendDoesNothing() {
-        assertEquals(emptyList<ZygiskStep>(), planZygiskChange(mapOf(Vex to owned), Vex))
+    @Test fun selectingTheConfiguredBackendDoesNothing() {
+        assertEquals(emptyList<ZygiskStep>(), planZygiskChange(mapOf(Re to owned), ZygiskBackend.Re))
     }
 
-    @Test
-    fun failedSwitchRemovesTheStagedBackend() {
-        // Leaving Neo staged while Vex stays configured would start both injectors after reboot.
-        assertEquals(
-            listOf("module uninstall zygisksu"),
-            zygiskRollback(
-                mapOf(Vex to owned),
-                done = listOf(ZygiskStep.Install(Neo)),
-                failed = ZygiskStep.Uninstall(Vex),
-                staged = false,
-            ),
-        )
+    @Test fun failedSwitchRemovesTheStagedBackend() {
+        assertEquals(listOf("module uninstall zygisksu"), zygiskRollback(
+            mapOf(Re to owned), listOf(ZygiskStep.Install(Neo)), ZygiskStep.Uninstall(Re), false,
+        ))
     }
 
-    @Test
-    fun failedInstallOnlyCleansUpWhatItStaged() {
-        val install = ZygiskStep.Install(Vex)
-        assertEquals(emptyList<String>(), zygiskRollback(emptyMap(), emptyList(), install, staged = false))
-        assertEquals(
-            listOf("module uninstall rezygisk"),
-            zygiskRollback(emptyMap(), emptyList(), install, staged = true),
-        )
+    @Test fun failedInstallOnlyCleansUpWhatItStaged() {
+        val install = ZygiskStep.Install(Re)
+        assertEquals(emptyList<String>(), zygiskRollback(emptyMap(), emptyList(), install, false))
+        assertEquals(listOf("module uninstall rezygisk"), zygiskRollback(emptyMap(), emptyList(), install, true))
     }
 
-    @Test
-    fun failedRestoreReappliesTheOriginalMarks() {
-        val before = mapOf(Neo to removing.copy(disabled = true), Vex to owned)
+    @Test fun failedRestoreReappliesTheOriginalMarks() {
+        val before = mapOf(Neo to removing.copy(disabled = true), Re to owned)
         val restore = ZygiskStep.Restore(Neo)
         val marks = listOf("module uninstall zygisksu", "module disable zygisksu")
-        assertEquals(marks, zygiskRollback(before, emptyList(), restore, staged = false))
-        assertEquals(marks, zygiskRollback(before, listOf(restore), ZygiskStep.Uninstall(Vex), staged = false))
+        assertEquals(marks, zygiskRollback(before, emptyList(), restore, false))
+        assertEquals(marks, zygiskRollback(before, listOf(restore), ZygiskStep.Uninstall(Re), false))
     }
 
-    @Test
-    fun parsesTheStatusScriptOutput() {
-        val (flags, monitor) = parseZygiskFlags(
-            listOf("module rezygisk 1 1 0 1 0", "module zygisksu 0 0 0 0 0", "monitor 1", "noise"),
-        )
-        assertEquals(removing, flags[Vex])
+    @Test fun addonStagesAfterItsBackend() {
+        assertEquals(listOf(ZygiskStep.Install(Re), ZygiskStep.Install(NextNext)), planZygiskChange(emptyMap(), ZygiskBackend.Re, true))
+    }
+
+    @Test fun addonCanBeToggledIndependently() {
+        assertEquals(listOf(ZygiskStep.Install(NextNext)), planZygiskChange(mapOf(Re to owned), ZygiskBackend.Re, true))
+        assertEquals(listOf(ZygiskStep.Uninstall(NextNext)), planZygiskChange(mapOf(Re to owned, NextNext to owned), ZygiskBackend.Re, false))
+    }
+
+    @Test fun disablingAlsoRemovesTheAddonBeforeTheBackend() {
+        assertEquals(listOf(ZygiskStep.Uninstall(NextNext), ZygiskStep.Uninstall(Re)), planZygiskChange(mapOf(Re to owned, NextNext to owned), null))
+    }
+
+    @Test fun switchingBackendsPreservesTheAddon() {
+        assertEquals(listOf(ZygiskStep.Install(Neo), ZygiskStep.Uninstall(Re)), planZygiskChange(mapOf(Re to owned, NextNext to owned), ZygiskBackend.Neo, true))
+    }
+
+    @Test(expected = IllegalArgumentException::class) fun addonCannotBeEnabledWithoutABackend() {
+        planZygiskChange(emptyMap(), null, true)
+    }
+
+    @Test fun addonOnlyChangesRequireReboot() {
+        val enabling = zygiskStatusOf(mapOf(Re to owned, NextNext to staged), true)
+        assertEquals(enabling.configured, enabling.active)
+        assertTrue(enabling.nextNextConfigured)
+        assertFalse(enabling.nextNextActive)
+        assertTrue(enabling.pendingReboot)
+        val disabling = zygiskStatusOf(mapOf(Re to owned, NextNext to removing), true)
+        assertFalse(disabling.nextNextConfigured)
+        assertTrue(disabling.nextNextActive)
+        assertTrue(disabling.pendingReboot)
+    }
+
+    @Test fun failedAddonInstallRollsBackTheNewBackendToo() {
+        assertEquals(listOf("module uninstall zygisknextsu", "module uninstall rezygisk"), zygiskRollback(
+            emptyMap(), listOf(ZygiskStep.Install(Re)), ZygiskStep.Install(NextNext), true,
+        ))
+    }
+
+    @Test fun failedBackendDisableRestoresTheAddon() {
+        assertEquals(listOf("module undo-uninstall zygisknextsu"), zygiskRollback(
+            mapOf(Re to owned, NextNext to owned), listOf(ZygiskStep.Uninstall(NextNext)), ZygiskStep.Uninstall(Re), false,
+        ))
+    }
+
+    @Test fun legacyVexMustBeRemovedBeforeInstallingRe() {
+        val flags = mapOf(Re to owned.copy(legacyVex = true))
+        assertTrue(zygiskStatusOf(flags, true).legacyVex)
+        assertTrue(requiresVexRemoval(flags, ZygiskBackend.Re))
+        assertTrue(requiresVexRemoval(mapOf(Re to removing.copy(legacyVex = true)), ZygiskBackend.Re))
+        assertFalse(requiresVexRemoval(flags, ZygiskBackend.Neo))
+        assertFalse(requiresVexRemoval(flags, null))
+        assertEquals(listOf(ZygiskStep.Uninstall(Re)), planZygiskChange(flags, null))
+    }
+
+    @Test(expected = IllegalArgumentException::class) fun plannerDoesNotOverwriteLegacyVex() {
+        planZygiskChange(mapOf(Re to owned.copy(legacyVex = true)), ZygiskBackend.Re)
+    }
+
+    @Test fun parsesTheStatusScriptOutput() {
+        val (flags, monitor) = parseZygiskFlags(listOf(
+            "module rezygisk 1 1 0 1 0 1", "module zygisksu 0 0 0 0 0 0",
+            "module zygisknextsu 1 1 1 0 0 0", "monitor 1", "noise",
+        ))
+        assertEquals(removing.copy(legacyVex = true), flags[Re])
         assertEquals(ZygiskModuleFlags(), flags[Neo])
+        assertEquals(staged, flags[NextNext])
         assertTrue(monitor)
     }
 
-    @Test
-    fun statusScriptChecksBothModuleDirectories() {
+    @Test fun statusScriptChecksAllThreeModuleDirectories() {
         val script = zygiskStatusScript()
-        ZygiskBackend.entries.forEach {
+        ZygiskModule.entries.forEach {
             assertTrue(script.contains("/data/adb/modules/${it.moduleId}"))
             assertTrue(script.contains("/data/adb/modules_update/${it.moduleId}"))
         }
         assertTrue(script.contains(ZYGISK_OWNER_MARKER))
+        assertTrue(script.contains("^name=VexZygisk"))
+    }
+
+    @Test fun addonSwitchIsGreyUntilBuiltInIsEnabled() {
+        val off = SettingsUiState(zygiskStatus = ZygiskStatus(), zygiskBackends = ZygiskBackend.entries)
+        assertFalse(off.zygiskNextNextEnabled)
+        assertFalse(off.zygiskNextNext)
+        val on = off.copy(zygiskStatus = ZygiskStatus(configured = ZygiskBackend.Re))
+        assertTrue(on.zygiskNextNextEnabled)
+        assertFalse(on.zygiskNextNext)
+        assertFalse(on.copy(zygiskBusy = true).zygiskNextNextEnabled)
+        assertFalse(on.copy(isLateLoadMode = true).zygiskNextNextEnabled)
+        assertFalse(on.copy(zygiskStatus = on.zygiskStatus!!.copy(conflictId = "zygisknextsu")).zygiskNextNextEnabled)
+        assertFalse(on.copy(zygiskStatus = on.zygiskStatus.copy(legacyVex = true)).zygiskNextNextEnabled)
     }
 }

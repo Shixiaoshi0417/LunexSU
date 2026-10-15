@@ -2,6 +2,7 @@ package com.shixiaoshi0417.lunexsu.ui.screen.settings
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -47,6 +48,16 @@ internal fun ZygiskCardMaterial(uiState: SettingsUiState, actions: SettingsScree
                     enabled = uiState.zygiskBackendEnabled,
                     selectedIndex = choices.indexOf(uiState.zygiskSelected).coerceAtLeast(0),
                     onItemSelected = { index -> choices.getOrNull(index)?.let(actions.onSetZygiskBackend) }
+                )
+            },
+            {
+                SegmentedSwitchItem(
+                    icon = Icons.Filled.Extension,
+                    title = stringResource(R.string.settings_zygisk_nextnext),
+                    summary = zygiskNextNextSummary(uiState),
+                    enabled = uiState.zygiskNextNextEnabled,
+                    checked = uiState.zygiskNextNext,
+                    onCheckedChange = actions.onSetZygiskNextNext,
                 )
             },
         )

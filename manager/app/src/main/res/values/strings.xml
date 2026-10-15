@@ -304,7 +304,7 @@
     <string name="settings_soft_reboot">Soft restart instead of reboot</string>
     <string name="settings_soft_reboot_summary">Use soft restart instead of a full reboot when installing, updating, or toggling modules.</string>
     <string name="settings_zygisk">Built-in Zygisk</string>
-    <string name="settings_zygisk_summary">Off by default. Turning it on uses VexZygisk. Every change takes effect after a reboot.</string>
+    <string name="settings_zygisk_summary">Off by default. Turning it on uses ReZygisk. Every change takes effect after a reboot.</string>
     <string name="settings_zygisk_running">%s is running</string>
     <string name="settings_zygisk_not_running">%s is enabled but not running</string>
     <string name="settings_zygisk_pending_enable">Pending reboot: %s will start</string>
@@ -315,7 +315,12 @@
     <string name="settings_zygisk_late_load">Unavailable in temporary root mode</string>
     <string name="settings_zygisk_failed">Couldn\'t apply the Zygisk change: %s</string>
     <string name="settings_zygisk_backend">Zygisk implementation</string>
-    <string name="settings_zygisk_backend_summary">VexZygisk by default (arm64 only). You can switch to NeoZygisk</string>
+    <string name="settings_zygisk_backend_summary">ReZygisk by default. You can switch to NeoZygisk</string>
+    <string name="settings_zygisk_nextnext">Use ZygiskNextNext</string>
+    <string name="settings_zygisk_nextnext_summary">Add Zygisk Next API support. Off by default; changes take effect after reboot</string>
+    <string name="settings_zygisk_nextnext_enable_first">Enable built-in Zygisk first to add Zygisk Next API support</string>
+    <string name="settings_zygisk_nextnext_pending">Zygisk Next API support changed. Reboot required</string>
+    <string name="settings_zygisk_legacy_vex">Old built-in Vex detected. Turn off built-in Zygisk and reboot before enabling ReZygisk</string>
     <string name="settings_zygisk_backend_single">This device only supports %s</string>
     <string name="settings_zygisk_reboot_title">Reboot required</string>
     <string name="settings_zygisk_reboot_message">This change takes effect after the device reboots.</string>
