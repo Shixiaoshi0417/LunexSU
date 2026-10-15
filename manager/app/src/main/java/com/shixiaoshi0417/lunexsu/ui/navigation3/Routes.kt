@@ -3,6 +3,8 @@ package com.shixiaoshi0417.lunexsu.ui.navigation3
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.Serializable
+import com.shixiaoshi0417.lunexsu.ui.screen.scriptrun.ScriptRunArg
+import com.shixiaoshi0417.lunexsu.ui.util.ScriptRunArgSerializer
 import com.shixiaoshi0417.lunexsu.ui.screen.flash.FlashIt
 import com.shixiaoshi0417.lunexsu.ui.screen.modulerepo.RepoModuleArg
 import com.shixiaoshi0417.lunexsu.ui.util.FlashItSerializer
@@ -95,4 +97,8 @@ sealed interface Route : NavKey, Parcelable {
     @Parcelize
     @Serializable
     data class ExecuteModuleAction(val moduleId: String, val fromShortcut: Boolean = false) : Route
+
+    @Parcelize
+    @Serializable
+    data class ScriptRun(@Serializable(with = ScriptRunArgSerializer::class) val arg: ScriptRunArg) : Route
 }
