@@ -36,6 +36,6 @@ The key is not placed in command-line arguments, preferences, logs, saved naviga
 
 ## Validation
 
-Manager JVM tests cover the PBKDF2/verifier vector, input rules, randomized salts, buffer clearing and LKM slot validation. The authorization host suite compiles the production identity/superkey gates against mocked kernel plumbing to check candidate/full-UID restrictions, revocation, rate limiting, allocation/crypto failures and unknown record versions. SHA-256 itself is mocked in that host harness; it does not validate kernel integration.
+Manager JVM tests cover the PBKDF2/verifier vector, input rules, randomized salts, buffer clearing and LKM slot validation. The authorization host suite compiles the production identity/superkey gates against mocked kernel plumbing to check candidate/full-UID restrictions, revocation, rate limiting, allocation/crypto failures and unknown record versions. It also exercises the native bridge with no driver FD, failed authentication and refreshed Manager identity; this path never attempts a reboot syscall. SHA-256 itself is mocked in that host harness; it does not validate kernel integration.
 
 Before release, test real patched images and direct/OTA installation with matching signed APK/Core, key disabled/enabled, wrong/correct keys, no Core, a different signing certificate, app restart versus reboot, and theme/native UI entry points. Host and build checks are not substitutes for this device coverage.

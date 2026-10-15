@@ -77,17 +77,9 @@ static int ksuctl(unsigned long op, Args &&... args) {
 
 static struct ksu_get_info_cmd g_version {};
 
-static void ensure_driver() {
-    if (fd < 0) fd = scan_driver_fd();
-    if (fd < 0) {
-        int installed = -1;
-        syscall(__NR_reboot, 0xDEADBEEF, 0xCAFEBABE, 0, &installed);
-        if (installed >= 0) fd = installed;
-    }
-}
-
 bool superkey_salt(uint8_t salt[16]) {
-    ensure_driver();
+    // Only use the FD installed for a package/certificate-verified candidate.
+    // A missing Core must fail normally, never invoke a seccomp-blocked syscall.
     ksu_superkey_salt_cmd cmd {};
     if (ksuctl(KSU_IOCTL_SUPERKEY_SALT, &cmd)) return false;
     memcpy(salt, cmd.salt, sizeof(cmd.salt));
@@ -95,7 +87,6 @@ bool superkey_salt(uint8_t salt[16]) {
 }
 
 bool superkey_auth(const uint8_t proof[32]) {
-    ensure_driver();
     ksu_superkey_auth_cmd cmd {};
     memcpy(cmd.proof, proof, sizeof(cmd.proof));
     bool ok = ksuctl(KSU_IOCTL_SUPERKEY_AUTH, &cmd) == 0;

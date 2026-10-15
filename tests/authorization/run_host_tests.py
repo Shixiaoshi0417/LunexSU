@@ -23,3 +23,4 @@ subprocess.run([sys.executable, str(root / "tests/authorization/run_path_tests.p
 subprocess.run([sys.executable, str(root / "tests/authorization/run_session_tracker_tests.py")], check=True)
 subprocess.run([sys.executable, str(root / "tests/authorization/run_dispatch_tests.py")], check=True)
 subprocess.run([sys.executable, str(root / "tests/authorization/run_superkey_tests.py")], check=True)
+subprocess.run([sys.executable, str(root / "tests/authorization/run_superkey_native_tests.py")], check=True)
