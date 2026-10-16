@@ -467,4 +467,14 @@
     <string name="superkey_prepare_failed">無法準備超級密鑰設定</string>
     <string name="superkey_enter">輸入超級密鑰</string>
     <string name="superkey_failed">可能未安裝或密碼錯誤</string>
+    <string name="superkey_remember">記住超級密鑰</string>
+    <string name="superkey_remember_hint">在本機加密儲存解鎖憑證，下次啟動自動解鎖。之後能開啟管理器的人亦可能使用其管理權限。</string>
+    <string name="superkey_saved">記住的超級密鑰</string>
+    <string name="superkey_saved_hint">本機已啟用自動解鎖，點擊可忘記憑證。</string>
+    <string name="superkey_not_saved">未儲存憑證，可在輸入超級密鑰時勾選記住。</string>
+    <string name="superkey_forget">忘記超級密鑰</string>
+    <string name="superkey_forget_hint">刪除本機加密儲存的憑證，不修改 Core 密鑰，亦不會撤銷已獲得的權限。裝置重新啟動後須再次手動輸入。</string>
+    <string name="superkey_storage_failed">無法儲存或刪除憑證，請檢查記住的超級密鑰設定；仍可手動解鎖。</string>
+    <string name="superkey_saved_invalid">已儲存的憑證失效或無法使用，請再次輸入超級密鑰。</string>
+    <string name="superkey_auto_failed">自動解鎖失敗，請手動輸入超級密鑰。</string>
 </resources>

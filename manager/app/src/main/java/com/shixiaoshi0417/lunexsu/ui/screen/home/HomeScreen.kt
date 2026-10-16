@@ -23,6 +23,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.data.HomeMetrics
+import com.shixiaoshi0417.lunexsu.data.SavedSuperkey
+import com.shixiaoshi0417.lunexsu.data.SuperkeyAuthenticationResult
+import com.shixiaoshi0417.lunexsu.ui.util.KsuCli
+import kotlinx.coroutines.CancellationException
 import com.shixiaoshi0417.lunexsu.data.model.HomeLayoutStyle
 import com.shixiaoshi0417.lunexsu.magica.MagicaService
 import com.shixiaoshi0417.lunexsu.ui.LocalMainPagerState
@@ -63,7 +67,29 @@ fun HomePager(
     val latestIsCurrentPage by rememberUpdatedState(isCurrentPage)
     val initialResumeHandled = rememberSaveable { mutableStateOf(false) }
     var showSuperkey by remember { mutableStateOf(false) }
-    if (showSuperkey) {
+    var autoUnlocking by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        try {
+            when (SavedSuperkey.tryAutomatic()) {
+                is SuperkeyAuthenticationResult.Accepted -> {
+                    withContext(Dispatchers.IO) { KsuCli.refreshAfterAuthentication() }
+                    viewModel.refresh()
+                    (context as? android.app.Activity)?.recreate()
+                }
+                SuperkeyAuthenticationResult.Invalidated -> {
+                    Toast.makeText(context, R.string.superkey_saved_invalid, Toast.LENGTH_LONG).show()
+                    showSuperkey = true
+                }
+                else -> Unit
+            }
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) {
+            // Keystore/unavailable Core errors never block the manual entry.
+            Toast.makeText(context, R.string.superkey_auto_failed, Toast.LENGTH_LONG).show()
+            showSuperkey = true
+        } finally { autoUnlocking = false }
+    }
+    if (showSuperkey && !autoUnlocking) {
         SuperkeyDialog(
             onDismiss = { showSuperkey = false },
             onAuthenticated = {

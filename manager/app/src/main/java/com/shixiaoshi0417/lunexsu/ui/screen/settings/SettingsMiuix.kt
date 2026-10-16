@@ -445,6 +445,7 @@ fun SettingPagerMiuix(
                         }
                     }
 
+                    com.shixiaoshi0417.lunexsu.ui.component.SavedSuperkeyCard(Modifier.padding(top = 12.dp))
                     Card(
                         modifier = Modifier
                             .padding(vertical = 12.dp)

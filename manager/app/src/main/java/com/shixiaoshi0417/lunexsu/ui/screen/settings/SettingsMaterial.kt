@@ -354,6 +354,9 @@ fun SettingPagerMaterial(
                 )
             }
 
+            com.shixiaoshi0417.lunexsu.ui.component.SavedSuperkeyCard(
+                Modifier.padding(start = 16.dp, end = 16.dp, bottom = 13.dp)
+            )
             SegmentedColumn(
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 13.dp),
                 content = listOf(

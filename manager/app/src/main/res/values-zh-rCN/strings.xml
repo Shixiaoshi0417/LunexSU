@@ -537,4 +537,14 @@
     <string name="script_param_below_min">不能小于 %d</string>
     <string name="script_param_above_max">不能大于 %d</string>
     <string name="script_param_invalid">无效的值</string>
+    <string name="superkey_remember">记住超级密钥</string>
+    <string name="superkey_remember_hint">在本机加密保存解锁凭据，下次启动自动解锁。之后能打开管理器的人也可能使用其管理权限。</string>
+    <string name="superkey_saved">记住的超级密钥</string>
+    <string name="superkey_saved_hint">本机已启用自动解锁，点击可忘记凭据。</string>
+    <string name="superkey_not_saved">未保存凭据，可在输入超级密钥时勾选记住。</string>
+    <string name="superkey_forget">忘记超级密钥</string>
+    <string name="superkey_forget_hint">删除本机加密保存的凭据，不修改 Core 密钥，也不会撤销已经获得的权限。设备重启后需重新手动输入。</string>
+    <string name="superkey_storage_failed">无法保存或删除凭据，请检查记住的超级密钥设置；仍可手动解锁。</string>
+    <string name="superkey_saved_invalid">已保存的凭据失效或不可用，请重新输入超级密钥。</string>
+    <string name="superkey_auto_failed">自动解锁失败，请手动输入超级密钥。</string>
 </resources>

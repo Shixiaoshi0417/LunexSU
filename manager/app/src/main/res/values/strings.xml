@@ -543,4 +543,14 @@
     <string name="script_param_below_min">Must be at least %d</string>
     <string name="script_param_above_max">Must be at most %d</string>
     <string name="script_param_invalid">Invalid value</string>
+    <string name="superkey_remember">Remember superkey</string>
+    <string name="superkey_remember_hint">Save an encrypted unlock credential on this device and unlock automatically next time. Anyone able to open this Manager may then use its permissions.</string>
+    <string name="superkey_saved">Remembered superkey</string>
+    <string name="superkey_saved_hint">Automatic unlock is enabled on this device. Tap to forget.</string>
+    <string name="superkey_not_saved">No saved credential. You can opt in after entering your superkey.</string>
+    <string name="superkey_forget">Forget superkey</string>
+    <string name="superkey_forget_hint">Remove the encrypted credential from this device. This does not change the Core superkey or revoke an already authenticated UID. After reboot, enter the key manually again.</string>
+    <string name="superkey_storage_failed">Could not save or remove the credential. Check the remembered superkey setting; manual unlock remains available.</string>
+    <string name="superkey_saved_invalid">The saved credential is invalid or unavailable. Please enter your superkey again.</string>
+    <string name="superkey_auto_failed">Automatic unlock failed. Please enter your superkey manually.</string>
 </resources>
