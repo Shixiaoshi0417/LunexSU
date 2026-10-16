@@ -178,19 +178,37 @@ fn kstat(path: &str, full_clone: bool, detection: &Detection, update: bool) -> R
     let md = fs::metadata(path)?;
     let mut payload = abi::Kstat {
         path: abi::bytes(path)?,
-        target_ino: md.ino().try_into().context("target inode exceeds SUSFS ABI")?,
+        target_ino: md
+            .ino()
+            .try_into()
+            .context("target inode exceeds SUSFS ABI")?,
         ino: md.ino().try_into().context("inode exceeds SUSFS ABI")?,
         dev: md.dev().try_into().context("device exceeds SUSFS ABI")?,
-        nlink: md.nlink().try_into().context("link count exceeds SUSFS ABI")?,
+        nlink: md
+            .nlink()
+            .try_into()
+            .context("link count exceeds SUSFS ABI")?,
         size: md.size().try_into().context("size exceeds SUSFS ABI")?,
         atime_sec: md.atime().try_into().context("atime exceeds SUSFS ABI")?,
-        atime_nsec: md.atime_nsec().try_into().context("invalid atime nanoseconds")?,
+        atime_nsec: md
+            .atime_nsec()
+            .try_into()
+            .context("invalid atime nanoseconds")?,
         mtime_sec: md.mtime().try_into().context("mtime exceeds SUSFS ABI")?,
-        mtime_nsec: md.mtime_nsec().try_into().context("invalid mtime nanoseconds")?,
+        mtime_nsec: md
+            .mtime_nsec()
+            .try_into()
+            .context("invalid mtime nanoseconds")?,
         ctime_sec: md.ctime().try_into().context("ctime exceeds SUSFS ABI")?,
-        ctime_nsec: md.ctime_nsec().try_into().context("invalid ctime nanoseconds")?,
+        ctime_nsec: md
+            .ctime_nsec()
+            .try_into()
+            .context("invalid ctime nanoseconds")?,
         blocks: md.blocks().try_into().context("blocks exceed SUSFS ABI")?,
-        blksize: md.blksize().try_into().context("block size exceeds SUSFS ABI")?,
+        blksize: md
+            .blksize()
+            .try_into()
+            .context("block size exceeds SUSFS ABI")?,
         flags: if full_clone && update { 0x0fff } else { 0x0ff3 },
         ..abi::Kstat::default()
     };
@@ -237,9 +255,9 @@ fn rule(rule: &Rule, detection: &Detection) -> Result<()> {
 }
 
 fn reconcile_failures(state: &mut State, desired: &BTreeMap<String, String>) {
-    state.failures.retain(|key, _| {
-        desired.contains_key(key) && state.applied.get(key) != desired.get(key)
-    });
+    state
+        .failures
+        .retain(|key, _| desired.contains_key(key) && state.applied.get(key) != desired.get(key));
 }
 
 pub fn apply(config: &Config, detection: &Detection, phase: Stage) -> Result<Report> {
@@ -386,9 +404,15 @@ mod tests {
     #[test]
     fn reverting_to_an_acknowledged_value_clears_stale_failure() {
         let mut state = State::default();
-        state.applied.insert("logging".to_owned(), "true".to_owned());
-        state.failures.insert("logging".to_owned(), "failed disabling".to_owned());
-        state.failures.insert("path:/removed".to_owned(), "old failure".to_owned());
+        state
+            .applied
+            .insert("logging".to_owned(), "true".to_owned());
+        state
+            .failures
+            .insert("logging".to_owned(), "failed disabling".to_owned());
+        state
+            .failures
+            .insert("path:/removed".to_owned(), "old failure".to_owned());
         let desired = BTreeMap::from([("logging".to_owned(), "false".to_owned())]);
         reconcile_failures(&mut state, &desired);
         assert!(state.failures.contains_key("logging"));
