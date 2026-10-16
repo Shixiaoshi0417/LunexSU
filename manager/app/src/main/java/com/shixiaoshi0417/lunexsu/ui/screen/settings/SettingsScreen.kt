@@ -66,6 +66,7 @@ fun SettingPager(
         onZygiskRebootLater = viewModel::dismissZygiskRebootDialog,
         onZygiskRebootNow = viewModel::rebootForZygisk,
         onOpenAbout = { navigator.push(Route.About) },
+        onOpenSusfs = { navigator.push(Route.Susfs) },
     )
 
     when (LocalUiMode.current) {

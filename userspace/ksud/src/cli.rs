@@ -29,6 +29,12 @@ enum Commands {
         command: Module,
     },
 
+    /// Manage an already available SUSFS engine (never installs or loads one)
+    Susfs {
+        #[command(subcommand)]
+        command: crate::susfs::Command,
+    },
+
     /// Trigger `post-fs-data` event
     PostFsData,
 
@@ -514,6 +520,7 @@ pub fn run() -> Result<()> {
     log::info!("command: {:?}", cli.command);
 
     let result = match cli.command {
+        Commands::Susfs { command } => crate::susfs::run(command),
         Commands::PostFsData => init_event::on_post_fs_data(),
         Commands::BootCompleted => {
             init_event::on_boot_completed();

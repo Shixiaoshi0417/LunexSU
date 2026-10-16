@@ -39,6 +39,9 @@ pub fn on_post_fs_data() -> Result<()> {
         // because we may need to operate the module dir in safe mode
         warn!("safe mode, skip common post-fs-data.d scripts");
     } else {
+        // Only an engine already present before any mount scripts can supply
+        // a genuine pre-mount snapshot. Do not load one or fabricate a snapshot.
+        crate::susfs::boot_stage("pre-mount");
         // Then exec common post-fs-data scripts
         if let Err(e) = crate::module::exec_common_scripts("post-fs-data.d", wait) {
             warn!("exec common post-fs-data scripts failed: {e}");
@@ -117,6 +120,7 @@ pub fn on_post_fs_data() -> Result<()> {
         warn!("execute metamodule mount failed: {e}");
     }
 
+    crate::susfs::boot_stage("post-mount");
     run_stage("post-mount", wait);
 
     std::env::set_current_dir("/").with_context(|| "failed to chdir to /")?;
@@ -149,6 +153,9 @@ pub fn run_stage(stage: &str, wait: ScriptWait) {
     // execute regular modules stage scripts
     if let Err(e) = crate::module::exec_stage_script(stage, wait) {
         warn!("Failed to exec {stage} scripts: {e}");
+    }
+    if matches!(stage, "service" | "boot-completed") {
+        crate::susfs::boot_stage(stage);
     }
 }
 

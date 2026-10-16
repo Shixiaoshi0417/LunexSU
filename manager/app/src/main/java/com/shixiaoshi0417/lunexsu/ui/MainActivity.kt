@@ -277,6 +277,7 @@ class MainActivity : ComponentActivity() {
                             }) {
                             themeEntry<Route.Main>(swipeDismiss = swipeDismiss) { mainScreenEntry() }
                             themeEntry<Route.About>(swipeDismiss = swipeDismiss) { AboutScreen() }
+                            themeEntry<Route.Susfs>(swipeDismiss = swipeDismiss) { com.shixiaoshi0417.lunexsu.ui.screen.susfs.SusfsScreen() }
                             themeEntry<Route.Sulog>(swipeDismiss = swipeDismiss) { SulogScreen() }
                             themeEntry<Route.ColorPalette>(swipeDismiss = swipeDismiss) { ColorPaletteScreen() }
                             themeEntry<Route.Font>(swipeDismiss = swipeDismiss) { FontScreen() }

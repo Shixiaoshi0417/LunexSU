@@ -128,4 +128,5 @@ data class SettingsScreenActions(
     val onZygiskRebootLater: () -> Unit,
     val onZygiskRebootNow: () -> Unit,
     val onOpenAbout: () -> Unit,
+    val onOpenSusfs: () -> Unit = {},
 )

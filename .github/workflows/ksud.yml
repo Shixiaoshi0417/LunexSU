@@ -69,9 +69,11 @@ jobs:
       with:
         ndk-version: r29
 
-    - name: Test hot-install script path handling on host
+    - name: Test hot-install paths and SUSFS management on host
       if: ${{ inputs.target == 'aarch64-linux-android' }}
-      run: cargo test -p ksud --test hot_install_script
+      run: |
+        cargo test -p ksud --test hot_install_script
+        cargo test -p ksud --bin ksud susfs::
 
     - name: Check Android Rust compilation, lints and formatting
       if: ${{ inputs.target == 'aarch64-linux-android' }}
