@@ -27,6 +27,10 @@ does not change ksud, the kernel, or the supercall interface.
 | Disable built-in Zygisk | Mark the companion first, then all owned backends for removal. |
 | Re-enable before reboot | Restore existing modules with `undo-uninstall` and `enable`; do not rerun installers. |
 
+An APK update does not overwrite an already installed companion. To upgrade an owned NextNext
+installation to the newly bundled release, disable the companion and reboot, then enable it again
+and reboot. Do not toggle it back on before the first reboot; that restores the existing payload.
+
 Steps are rolled back on failure, in reverse order, including a partially staged companion.
 Rollback failures are reported rather than silently claimed to have succeeded. Normal Zygisk
 modules are not removed by backend changes. Upstream backend uninstall scripts may remove their
@@ -64,23 +68,28 @@ proof that every module or the companion initialized correctly. Safe mode disabl
 the assets. Manager verifies the installation archive again. Python 3 with its standard `lzma`
 module is required at build time for the companion archive conversion described below.
 
+Before a release, check KernelSU upstream and each bundled component's latest non-prerelease
+GitHub Release. Update the fixed release URL, source commit, license and pinned archive hashes
+together; do not resolve a moving `latest` URL during a build. On 2026-10-17, the releases below
+were the latest stable releases of all three bundled components.
+
 | Component | Module id | Release | Source commit | License at that commit |
 |---|---|---|---|---|
 | ReZygisk | `rezygisk` | [v1.0.0](https://github.com/PerformanC/ReZygisk/releases/tag/v1.0.0) | [`333d423c`](https://github.com/PerformanC/ReZygisk/tree/333d423cde1a959958d9fce380bd017cf6c1cf64) | GPL-3.0 |
 | NeoZygisk | `zygisksu` | [v2.4](https://github.com/JingMatrix/NeoZygisk/releases/tag/v2.4) | [`08080ef7`](https://github.com/JingMatrix/NeoZygisk/tree/08080ef775c7fbbd1ad5c4a5d837f81933437abd) | GPL-3.0 |
-| ZygiskNextNext | `zygisknextsu` | [v1.8.3](https://github.com/VeryBaaad/ZygiskNextNext/releases/tag/v1.8.3) | [`e4da0823`](https://github.com/VeryBaaad/ZygiskNextNext/tree/e4da08237aa4a37a7cd53fd3243315ef24954618) | GPL-3.0 |
+| ZygiskNextNext | `zygisknextsu` | [v1.11.0](https://github.com/VeryBaaad/ZygiskNextNext/releases/tag/v1.11.0) | [`17a19d40`](https://github.com/VeryBaaad/ZygiskNextNext/tree/17a19d40e339a516cc65997e1fae86e35c0ab15e) | GPL-3.0 |
 
 SHA-256:
 
 - Re `ReZygisk-v1.0.0-release.zip`: `7904649b8dcaf2b060c3432df4fee302aeb1258da199d2b425335e82d49510e6`
 - Neo `NeoZygisk-v2.4-289-release.zip`: `93a1425c67bb89f58a0dcb9fc823ec93f6472214f221e667a70b67c6a6e061a1`
-- NextNext upstream `Zygisk-Next-Next-v1.8.3-184-e4da082-release.zip`: `5413ab654c1c167d843d480e61fce3fb01c01a277c5e10a23cb68801076f9fa4`
-- NextNext installation ZIP: `a9de2634f1688e8f3705513aafaffcc03fd69593db2ac31d2d8133b632d5fdf6`
+- NextNext upstream `Zygisk-Next-Next-v1.11.0-199-17a19d4-release.zip`: `1f031d9ba930b41c728700ef0a2be5d21c5b6b937a94935b48ce057ef0fd80f1`
+- NextNext installation ZIP: `cbf017fb18649aa161cf34cc95d9da45b2f3db12ab16d5e9c9a5f231c709e8f1`
 
 Re and Neo archives are unmodified. NextNext's upstream ZIP contains XZ-compressed ZIP entries
 (method 95). Its installer calls BusyBox unzip, which cannot decode those entries. After verifying
 the upstream archive, `scripts/normalize_zygisk_zip.py` deterministically repacks it using stored
-entries. File names and bytes, including all 36 upstream `.sha256` files, are unchanged; the outer
+entries. File names and bytes, including all 37 upstream `.sha256` files, are unchanged; the outer
 container, order, attributes and timestamps change. The normalized archive has its own pinned hash.
 
 Pinned license texts ship as `assets/zygisk/{re,neo,nextnext}-LICENSE`. Re's README historically

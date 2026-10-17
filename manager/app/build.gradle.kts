@@ -78,10 +78,10 @@ val neoZygiskZip = PinnedAsset(
     "93a1425c67bb89f58a0dcb9fc823ec93f6472214f221e667a70b67c6a6e061a1",
 )
 val nextNextZip = PinnedAsset(
-    "https://github.com/VeryBaaad/ZygiskNextNext/releases/download/v1.8.3/Zygisk-Next-Next-v1.8.3-184-e4da082-release.zip",
-    "5413ab654c1c167d843d480e61fce3fb01c01a277c5e10a23cb68801076f9fa4",
+    "https://github.com/VeryBaaad/ZygiskNextNext/releases/download/v1.11.0/Zygisk-Next-Next-v1.11.0-199-17a19d4-release.zip",
+    "1f031d9ba930b41c728700ef0a2be5d21c5b6b937a94935b48ce057ef0fd80f1",
 )
-val nextNextStoredSha256 = "a9de2634f1688e8f3705513aafaffcc03fd69593db2ac31d2d8133b632d5fdf6"
+val nextNextStoredSha256 = "cbf017fb18649aa161cf34cc95d9da45b2f3db12ab16d5e9c9a5f231c709e8f1"
 val zygiskAssets = mapOf(
     "zygisk/re.zip" to reZygiskZip,
     "zygisk/re-LICENSE" to PinnedAsset(
@@ -95,7 +95,7 @@ val zygiskAssets = mapOf(
     ),
     "zygisk/nextnext.zip" to nextNextZip,
     "zygisk/nextnext-LICENSE" to PinnedAsset(
-        "https://raw.githubusercontent.com/VeryBaaad/ZygiskNextNext/e4da08237aa4a37a7cd53fd3243315ef24954618/LICENSE",
+        "https://raw.githubusercontent.com/VeryBaaad/ZygiskNextNext/17a19d40e339a516cc65997e1fae86e35c0ab15e/LICENSE",
         "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
     ),
 )
