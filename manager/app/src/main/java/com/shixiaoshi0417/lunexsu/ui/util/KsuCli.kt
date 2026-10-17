@@ -741,49 +741,63 @@ fun isSepolicyValid(rules: String?): Boolean {
     if (rules == null) {
         return true
     }
+    if ('\u0000' in rules) return false
+    val command = ProfileCommand.build(getKsuDaemonPath(), "sepolicy", "check", "--", rules)
     return withRootShell {
         val result =
-            newJob().add("${getKsuDaemonPath()} sepolicy check '$rules'").to(ArrayList(), null)
+            newJob().add(command).to(ArrayList(), null)
                 .exec()
         result.isSuccess
     }
 }
 
-fun getSepolicy(pkg: String): String = withRootShell {
-    val result =
-        newJob().add("${getKsuDaemonPath()} profile get-sepolicy $pkg").to(ArrayList(), null)
-            .exec()
-    Log.i(TAG, "code: ${result.code}, out: ${result.out}, err: ${result.err}")
-    result.out.joinToString("\n")
+fun getSepolicy(pkg: String): String {
+    if (!ProfileCommand.isValidId(pkg)) return ""
+    val command = ProfileCommand.profile(getKsuDaemonPath(), "get-sepolicy", pkg)
+    return withRootShell {
+        val result = newJob().add(command).to(ArrayList(), null).exec()
+        Log.i(TAG, "code: ${result.code}, out: ${result.out}, err: ${result.err}")
+        result.out.joinToString("\n")
+    }
 }
 
-fun setSepolicy(pkg: String, rules: String): Boolean = withRootShell {
-    val result = newJob().add("${getKsuDaemonPath()} profile set-sepolicy $pkg '$rules'")
-        .to(ArrayList(), null).exec()
-    Log.i(TAG, "set sepolicy result: ${result.code}")
-    result.isSuccess
+fun setSepolicy(pkg: String, rules: String): Boolean {
+    if (!ProfileCommand.isValidId(pkg) || '\u0000' in rules) return false
+    val command = ProfileCommand.profile(getKsuDaemonPath(), "set-sepolicy", pkg, rules)
+    return withRootShell {
+        val result = newJob().add(command).to(ArrayList(), null).exec()
+        Log.i(TAG, "set sepolicy result: ${result.code}")
+        result.isSuccess
+    }
 }
 
 fun listAppProfileTemplates(): List<String> = withRootShell {
-    newJob().add("${getKsuDaemonPath()} profile list-templates").to(ArrayList(), null)
-        .exec().out
+    newJob().add(ProfileCommand.build(getKsuDaemonPath(), "profile", "list-templates"))
+        .to(ArrayList(), null).exec().out.filter(ProfileCommand::isValidId)
 }
 
-fun getAppProfileTemplate(id: String): String = withRootShell {
-    newJob().add("${getKsuDaemonPath()} profile get-template '${id}'")
-        .to(ArrayList(), null).exec().out.joinToString("\n")
+fun getAppProfileTemplate(id: String): String {
+    if (!ProfileCommand.isValidId(id)) return ""
+    val command = ProfileCommand.profile(getKsuDaemonPath(), "get-template", id)
+    return withRootShell {
+        newJob().add(command).to(ArrayList(), null).exec().out.joinToString("\n")
+    }
 }
 
-fun setAppProfileTemplate(id: String, template: String): Boolean = withRootShell {
-    val escapedTemplate = template.replace("'", "'\\''")
-    val cmd = """${getKsuDaemonPath()} profile set-template "$id" '$escapedTemplate'"""
-    newJob().add(cmd)
-        .to(ArrayList(), null).exec().isSuccess
+fun setAppProfileTemplate(id: String, template: String): Boolean {
+    if (!ProfileCommand.isValidId(id) || '\u0000' in template) return false
+    val command = ProfileCommand.profile(getKsuDaemonPath(), "set-template", id, template)
+    return withRootShell {
+        newJob().add(command).to(ArrayList(), null).exec().isSuccess
+    }
 }
 
-fun deleteAppProfileTemplate(id: String): Boolean = withRootShell {
-    newJob().add("${getKsuDaemonPath()} profile delete-template '${id}'")
-        .to(ArrayList(), null).exec().isSuccess
+fun deleteAppProfileTemplate(id: String): Boolean {
+    if (!ProfileCommand.isValidId(id)) return false
+    val command = ProfileCommand.profile(getKsuDaemonPath(), "delete-template", id)
+    return withRootShell {
+        newJob().add(command).to(ArrayList(), null).exec().isSuccess
+    }
 }
 
 fun forceStopApp(packageName: String, userId: Int? = null): Unit = withRootShell {

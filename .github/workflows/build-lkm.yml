@@ -24,7 +24,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Test Core version metadata
-        run: python3 tests/build_version/run_tests.py
+        run: |
+          python3 tests/build_version/run_tests.py
+          python3 tests/build_version/test_setup_ref.py
 
   build-lkm:
     needs: test-build-version

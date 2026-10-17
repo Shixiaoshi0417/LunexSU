@@ -163,6 +163,7 @@ internal fun SusfsRuleSection(kind: String, config: JSONObject?, status: SusfsSt
 @Composable
 private fun susfsUidLabel(uid: Int): String = stringResource(when (uid) {
     0 -> R.string.susfs_uid_non_app; 1 -> R.string.susfs_uid_root; 2 -> R.string.susfs_uid_non_su
+    3 -> R.string.susfs_uid_builtin_3; 4 -> R.string.susfs_uid_builtin_4
     else -> R.string.susfs_uid_unsupported
 })
 
@@ -176,8 +177,9 @@ private fun SusfsRuleDialog(kind: String, original: String?, status: SusfsStatus
     var clone by remember { mutableStateOf(rule?.optBoolean("full_clone") ?: false) }
     var uid by remember { mutableIntStateOf(rule?.optInt("uid_scheme") ?: 0) }
     val cloneSupported = status.implementation != "lkm" || status.proc("susfs_kstat")
+    val uidSchemes = SusfsInputs.redirectUidSchemes(status)
     val valid = SusfsInputs.validPath(path) && (kind != "redirect" ||
-        (SusfsInputs.validPath(destination) && destination != path && uid in 0..2)) &&
+        SusfsInputs.validRedirect(path, destination, uid, status)) &&
         (kind != "kstat" || !clone || cloneSupported)
     SusfsForm(stringResource(if (original == null) R.string.susfs_add_rule else R.string.susfs_edit_rule), dismiss, writable && valid, {
         val result = JSONObject().put("kind", kind).put("path", path)
@@ -195,10 +197,12 @@ private fun SusfsRuleDialog(kind: String, original: String?, status: SusfsStatus
                 label = { Text(stringResource(R.string.susfs_destination)) }, isError = destination.isNotEmpty() &&
                     (!SusfsInputs.validPath(destination) || destination == path))
             Text(stringResource(R.string.susfs_uid_selection), style = MaterialTheme.typography.titleSmall)
-            SegmentedColumn { (0..2).forEach { value -> item {
-                SegmentedListItem(selected = uid == value, onClick = { uid = value },
-                    headlineContent = { Text(susfsUidLabel(value)) }, trailingContent = { RadioButton(uid == value, null) })
+            SegmentedColumn { uidSchemes.forEach { value -> item {
+                SegmentedListItem(selected = uid == value, enabled = writable, onClick = { uid = value },
+                    headlineContent = { Text(susfsUidLabel(value)) },
+                    trailingContent = { RadioButton(uid == value, null, enabled = writable) })
             } } }
+            if (uid !in uidSchemes) Text(stringResource(R.string.susfs_uid_unsupported), color = MaterialTheme.colorScheme.error)
             Text(stringResource(R.string.susfs_uid_hint), style = MaterialTheme.typography.bodySmall)
         }
         if (kind == "path") {

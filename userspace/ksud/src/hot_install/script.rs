@@ -6,7 +6,7 @@ use std::{
 
 /// Resolve the actual file relative to the module root, so an absolute symlink into the
 /// staging directory is not followed again after that directory is moved into place.
-pub(super) fn check_run_script(staged_dir: &Path, script: &str) -> Result<Option<PathBuf>> {
+pub fn check_run_script(staged_dir: &Path, script: &str) -> Result<Option<PathBuf>> {
     let mut components = Path::new(script).components().peekable();
     while components.next_if_eq(&Component::CurDir).is_some() {}
     let relative: PathBuf = components.collect();

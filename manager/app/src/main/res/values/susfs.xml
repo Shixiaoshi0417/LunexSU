@@ -96,8 +96,10 @@
     <string name="susfs_uid_non_app">0 · Non-app UIDs</string>
     <string name="susfs_uid_root">1 · Root outside the KernelSU domain</string>
     <string name="susfs_uid_non_su">2 · Processes outside the KernelSU domain</string>
-    <string name="susfs_uid_unsupported">Unsupported saved UID scope · select 0–2 to edit</string>
-    <string name="susfs_uid_hint">Only verified scopes 0–2 are offered. Kernel acknowledgement does not prove the redirect affects every process in the scope.</string>
+    <string name="susfs_uid_builtin_3">3 · Built-in UID scheme 3</string>
+    <string name="susfs_uid_builtin_4">4 · Built-in UID scheme 4</string>
+    <string name="susfs_uid_unsupported">Saved UID scope unavailable on this implementation · select a listed scope to edit</string>
+    <string name="susfs_uid_hint">Built-in SUSFS offers scopes 0–4; LKM offers 0–2. Kernel acknowledgement does not prove the redirect affects every process in the scope.</string>
     <string name="susfs_lkm_only">Only available with the SUSFS LKM capability</string>
     <string name="susfs_lkm_only_hint">GKI or KernelSU LKM mode alone does not identify SUSFS LKM.</string>
     <string name="susfs_add_entry">Add entry</string>

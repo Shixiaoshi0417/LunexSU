@@ -1,0 +1,15 @@
+[package]
+name = "ksud-module-safety-tests"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+# Standalone host-only harness: no ksud build.rs, Android assets, device or root.
+[workspace]
+
+[dependencies]
+anyhow = "1"
+libc = "0.2"
+log = "0.4"
+regex-lite = "0.1"
+tempfile = "3"

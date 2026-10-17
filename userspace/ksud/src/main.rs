@@ -25,6 +25,9 @@ mod defs;
 mod feature;
 mod feature_id;
 #[cfg(target_os = "android")]
+#[path = "module/file_lock.rs"]
+mod file_lock;
+#[cfg(target_os = "android")]
 mod hot_install;
 #[cfg(target_os = "android")]
 mod init_event;

@@ -96,8 +96,10 @@
     <string name="susfs_uid_non_app">0 · 非应用 UID</string>
     <string name="susfs_uid_root">1 · KernelSU 域之外的 root</string>
     <string name="susfs_uid_non_su">2 · KernelSU 域之外的进程</string>
-    <string name="susfs_uid_unsupported">已保存的 UID 范围不受支持 · 编辑时请选择 0–2</string>
-    <string name="susfs_uid_hint">仅提供已核对的 0–2 范围。内核确认成功，不代表范围内所有进程的重定向效果均已验证。</string>
+    <string name="susfs_uid_builtin_3">3 · 内置 UID 方案 3</string>
+    <string name="susfs_uid_builtin_4">4 · 内置 UID 方案 4</string>
+    <string name="susfs_uid_unsupported">当前实现不支持已保存的 UID 范围 · 编辑时请选择列表中的范围</string>
+    <string name="susfs_uid_hint">内置 SUSFS 提供 0–4 范围，LKM 提供 0–2 范围。内核确认成功，不代表范围内所有进程的重定向效果均已验证。</string>
     <string name="susfs_lkm_only">仅支持具有 SUSFS LKM 能力的实现</string>
     <string name="susfs_lkm_only_hint">不能仅凭 GKI 或 KernelSU LKM 模式判断 SUSFS 为 LKM。</string>
     <string name="susfs_add_entry">添加条目</string>

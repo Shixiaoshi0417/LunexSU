@@ -785,7 +785,9 @@ static int prepare_allowlist_store(void *ctx)
             /* Appended, never rewritten: an earlier failed transaction stays guarded. */
             u32 uid = store->replacement->profile.curr_uid;
             loff_t pos = i_size_read(file_inode(guard));
-            if (kernel_write(guard, &uid, sizeof(uid), &pos) != sizeof(uid))
+            if (pos < 0 || !ksu_auth_guard_can_append(pos))
+                ret = -EINVAL;
+            else if (kernel_write(guard, &uid, sizeof(uid), &pos) != sizeof(uid))
                 ret = -EIO;
         }
         if (!ret)
@@ -1048,6 +1050,7 @@ static bool read_allowlist_guard(struct ksu_auth_guard *guard)
 {
     u32 uids[KSU_AUTH_GUARD_MAX_UIDS + 1];
     loff_t off = 0;
+    loff_t size;
     ssize_t len;
     struct file *fp = filp_open(KERNEL_SU_ALLOWLIST_PENDING, O_RDONLY | O_NOFOLLOW, 0);
 
@@ -1058,12 +1061,19 @@ static bool read_allowlist_guard(struct ksu_auth_guard *guard)
         guard->all = true;
         return true;
     }
-    len = kernel_read(fp, uids, sizeof(uids), &off);
-    filp_close(fp, 0);
-    if (len < 0)
+    size = i_size_read(file_inode(fp));
+    if (!S_ISREG(file_inode(fp)->i_mode) || size < 0 || size > (loff_t)sizeof(uids)) {
+        guard->all = true;
+        filp_close(fp, 0);
+        return true;
+    }
+    len = kernel_read(fp, uids, (size_t)size, &off);
+    /* Even an aligned short read can omit the uid of a failed transaction. */
+    if (len != size || i_size_read(file_inode(fp)) != size)
         guard->all = true;
     else
-        ksu_auth_guard_parse(guard, uids, len);
+        ksu_auth_guard_parse(guard, uids, (size_t)len);
+    filp_close(fp, 0);
     return true;
 }
 

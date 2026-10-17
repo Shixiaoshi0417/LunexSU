@@ -71,7 +71,7 @@ internal object FptContainer {
         }
         val config = entries.remove("theme.json") ?: error("theme.json is missing")
         val text = config.readText(Charsets.UTF_8)
-        requireJsonDepth(text)
+        StrictThemeJson.requireObject(text)
         return JSONObject(text) to entries
     }
 
@@ -132,23 +132,6 @@ internal object FptContainer {
     private fun drain(input: InputStream) {
         val sink = ByteArray(64 * 1024)
         while (input.read(sink) >= 0) { /* consume the trailing blocks */ }
-    }
-
-    private fun requireJsonDepth(text: String) {
-        var depth = 0
-        var quoted = false
-        var escaped = false
-        text.forEach { char ->
-            if (quoted) {
-                if (escaped) escaped = false
-                else if (char == '\\') escaped = true
-                else if (char == '"') quoted = false
-            } else when (char) {
-                '"' -> quoted = true
-                '{', '[' -> { depth++; require(depth <= 32) { "Theme configuration is too deeply nested" } }
-                '}', ']' -> depth--
-            }
-        }
     }
 
     private fun readFully(input: InputStream, size: Int): ByteArray? {

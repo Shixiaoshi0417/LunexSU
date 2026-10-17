@@ -17,15 +17,11 @@ use std::{
     collections::{BTreeMap, HashMap},
     env::var as env_var,
     fs::{File, Permissions, canonicalize, remove_dir_all, set_permissions},
-    io::Cursor,
+    io::{Cursor, Write},
     path::{Path, PathBuf},
     process::Command,
     str::FromStr,
     time::Instant,
-};
-use std::{
-    fs::{copy, rename},
-    io::Write,
 };
 use zip_extensions::inflate::zip_extract::zip_extract_file_to_memory;
 
@@ -33,15 +29,18 @@ use crate::defs::{MODULE_DIR, MODULE_UPDATE_DIR, UPDATE_FILE_NAME};
 use crate::module::ModuleType::{Active, All};
 use std::os::unix::{prelude::PermissionsExt, process::CommandExt};
 
+mod transaction;
+
+fn transaction_store() -> Result<transaction::Store> {
+    transaction::Store::open(
+        &Path::new(defs::WORKING_DIR).join("module_transactions"),
+        Path::new(MODULE_UPDATE_DIR),
+        Path::new(MODULE_DIR),
+    )
+}
+
 const INSTALLER_CONTENT: &str = include_str!("./installer.sh");
-const INSTALL_MODULE_SCRIPT: &str = concatcp!(
-    INSTALLER_CONTENT,
-    "\n",
-    "install_module",
-    "\n",
-    "exit 0",
-    "\n"
-);
+const INSTALL_MODULE_SCRIPT: &str = concatcp!(INSTALLER_CONTENT, "\n", "install_module", "\n");
 
 /// Validate module_id format and security
 /// Module ID must match: ^[a-zA-Z][a-zA-Z0-9._-]+$
@@ -94,19 +93,32 @@ pub fn get_common_script_envs(module_id: Option<&str>) -> Vec<(&'static str, Str
     envs
 }
 
-fn exec_install_script(module_file: &str, is_metamodule: bool, module_id: &str) -> Result<()> {
+fn exec_install_script(
+    module_file: &str,
+    is_metamodule: bool,
+    module_id: &str,
+    staging: &transaction::Install,
+) -> Result<()> {
     let realpath = std::fs::canonicalize(module_file)
         .with_context(|| format!("realpath: {module_file} failed"))?;
 
     // Get install script from metamodule module
     let install_script =
         metamodule::get_install_script(is_metamodule, INSTALLER_CONTENT, INSTALL_MODULE_SCRIPT)?;
+    // The metamodule wrapper used to append `exit 0`, masking a plain nonzero
+    // final command. Preserve the actual installer status instead.
+    let install_script = install_script
+        .strip_suffix("\nexit 0\n")
+        .unwrap_or(&install_script);
 
     let result = Command::new(assets::BUSYBOX_PATH)
-        .args(["sh", "-c", &install_script])
+        .args(["sh", "-c", install_script])
         .envs(get_common_script_envs(Some(module_id)))
         .env("OUTFD", "1")
         .env("ZIPFILE", realpath)
+        .env("KSU_MODULE_STAGING_ROOT", staging.modules())
+        .env("KSU_INSTALL_TMPDIR", staging.tmp())
+        .env("MODPATH", staging.module())
         .status()?;
     ensure!(result.success(), "Failed to install module script");
     Ok(())
@@ -142,6 +154,11 @@ pub fn foreach_module(
         let path = entry.path();
         if !path.is_dir() {
             warn!("{} is not a directory, skip", path.display());
+            continue;
+        }
+
+        if module_type == ModuleType::Updated && transaction::is_pending_publication(&path) {
+            warn!("{} has an unfinished publication, skip", path.display());
             continue;
         }
 
@@ -550,6 +567,11 @@ fn next_boot_modules() -> BTreeMap<String, PathBuf> {
             if !module_path.is_dir() {
                 continue;
             }
+            if src_dir == defs::MODULE_UPDATE_DIR
+                && transaction::is_pending_publication(&module_path)
+            {
+                continue;
+            }
             let Some(id) = module_path.file_name().and_then(|s| s.to_str()) else {
                 continue;
             };
@@ -649,6 +671,7 @@ pub fn regenerate_preinit() -> Result<()> {
 }
 
 pub fn handle_updated_modules() -> Result<()> {
+    let store = transaction_store()?;
     let modules_root = Path::new(MODULE_DIR);
     foreach_module(ModuleType::Updated, |updated_module| {
         if !updated_module.is_dir() {
@@ -657,26 +680,11 @@ pub fn handle_updated_modules() -> Result<()> {
 
         if let Some(name) = updated_module.file_name() {
             let module_dir = modules_root.join(name);
-            let mut disabled = false;
-            let mut removed = false;
-            if module_dir.exists() {
-                // If the old module is disabled, we need to also disable the new one
-                disabled = module_dir.join(defs::DISABLE_FILE_NAME).exists();
-                removed = module_dir.join(defs::REMOVE_FILE_NAME).exists();
-                remove_dir_all(&module_dir)?;
-            }
-            rename(updated_module, &module_dir)?;
-            if removed {
-                let path = module_dir.join(defs::REMOVE_FILE_NAME);
-                if let Err(e) = ensure_file_exists(&path) {
-                    warn!("Failed to create {}: {e}", path.display());
-                }
-            } else if disabled {
-                let path = module_dir.join(defs::DISABLE_FILE_NAME);
-                if let Err(e) = ensure_file_exists(&path) {
-                    warn!("Failed to create {}: {e}", path.display());
-                }
-            }
+            store.promote(
+                updated_module,
+                &module_dir,
+                &[defs::REMOVE_FILE_NAME, defs::DISABLE_FILE_NAME],
+            )?;
         }
         Ok(())
     })?;
@@ -694,6 +702,10 @@ fn install_module_to_system(zip: &str) -> Result<String> {
     // first check if working dir is usable
     ensure_dir_exists(defs::WORKING_DIR).with_context(|| "Failed to create working dir")?;
     ensure_dir_exists(defs::BINARY_DIR).with_context(|| "Failed to create bin dir")?;
+
+    // Serialize install/publication/boot recovery. Dead installers leave only
+    // private, non-promotable directories, cleaned under this same stable lock.
+    let store = transaction_store()?;
 
     // read the module_id from zip, if failed it will return early.
     let mut buffer: Vec<u8> = Vec::new();
@@ -786,21 +798,25 @@ fn install_module_to_system(zip: &str) -> Result<String> {
     ensure_dir_exists(defs::MODULE_UPDATE_DIR)?;
     setsyscon(defs::MODULE_UPDATE_DIR)?;
 
-    // Prepare target directory
+    // Unpacking and installer scripts must never write a promotion-eligible path.
+    // Keep any previous successful pending update until the new one is committed.
     println!("- Installing to {}", updated_dir.display());
-    ensure_clean_dir(&updated_dir)?;
-    info!("target dir: {}", updated_dir.display());
+    let staging = store.install(module_id)?;
+    let staging_dir = staging.module();
+    setsyscon(staging.modules())?;
+    setsyscon(staging_dir)?;
+    info!("private staging dir: {}", staging_dir.display());
 
     // Extract zip to target directory
     println!("- Extracting module files");
     let file = File::open(zip)?;
     let mut archive = zip::ZipArchive::new(file)?;
-    archive.extract(&updated_dir)?;
+    archive.extract(staging_dir)?;
     // Only installer.sh may request a hot install, not a file shipped in the zip
-    std::fs::remove_file(updated_dir.join(defs::HOT_INSTALL_MARKER)).ok();
+    std::fs::remove_file(staging_dir.join(defs::HOT_INSTALL_MARKER)).ok();
 
     // Set permission and selinux context for $MOD/system
-    let module_system_dir = updated_dir.join("system");
+    let module_system_dir = staging_dir.join("system");
     if module_system_dir.exists() {
         set_permissions(&module_system_dir, Permissions::from_mode(0o755))?;
         restore_syscon(&module_system_dir)?;
@@ -808,30 +824,69 @@ fn install_module_to_system(zip: &str) -> Result<String> {
 
     // Execute install script
     println!("- Running module installer");
-    exec_install_script(zip, is_metamodule, module_id)?;
+    exec_install_script(zip, is_metamodule, module_id, &staging)?;
+    let installed_prop = read_module_prop(staging_dir)?;
+    ensure!(
+        installed_prop
+            .get("id")
+            .is_some_and(|id| id.trim() == module_id),
+        "Installer changed or removed the module ID"
+    );
 
-    if let Some(request) = hot_install::take_request(&updated_dir)
-        && hot_install::apply(module_id, is_metamodule, &request)
-    {
-        println!("- Module installed successfully, no reboot required!");
-        info!("Module {module_id} installed successfully!");
-        return Ok(module_id.to_owned());
-    }
+    staging.prepare_hot_request(defs::HOT_INSTALL_MARKER)?;
+    let publication = staging.publish_guard(&updated_dir)?;
 
     let module_dir = Path::new(MODULE_DIR).join(module_id);
     // A metamodule doing its own hot install may have moved the marker into the live dir
     std::fs::remove_file(module_dir.join(defs::HOT_INSTALL_MARKER)).ok();
     ensure_dir_exists(&module_dir)?;
-    copy(
-        updated_dir.join("module.prop"),
-        module_dir.join("module.prop"),
+    publication.capture_metadata(
+        &module_dir,
+        &[
+            "module.prop",
+            UPDATE_FILE_NAME,
+            defs::REMOVE_FILE_NAME,
+            defs::DISABLE_FILE_NAME,
+        ],
     )?;
+    // Do not truncate the working module's metadata on a failed/short copy.
+    let mut source_prop = File::open(updated_dir.join("module.prop"))?;
+    let mut staged_prop = tempfile::NamedTempFile::new_in(&module_dir)?;
+    std::io::copy(&mut source_prop, staged_prop.as_file_mut())?;
+    staged_prop
+        .as_file()
+        .set_permissions(source_prop.metadata()?.permissions())?;
+    staged_prop.as_file().sync_all()?;
+    staged_prop.persist(module_dir.join("module.prop"))?;
     ensure_file_exists(module_dir.join(UPDATE_FILE_NAME))?;
+    // The default installer used to do these writes before its final success.
+    // Delay them until the update is safely published, preserving successful
+    // reinstall's enable/undo-remove behavior without modifying a failed install.
+    for flag in [defs::REMOVE_FILE_NAME, defs::DISABLE_FILE_NAME] {
+        match std::fs::remove_file(module_dir.join(flag)) {
+            Ok(()) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e).with_context(|| format!("Failed to clear {flag}")),
+        }
+    }
 
     // Create symlink for metamodule
     if is_metamodule {
         println!("- Creating metamodule symlink");
         metamodule::ensure_symlink(&module_dir)?;
+    }
+
+    // The synced commit record, not an in-memory guard flag, authorizes boot
+    // promotion and discarding the superseded pending copy. Only after recovery
+    // material is finalized may hot install consume/move the committed candidate.
+    publication.commit()?;
+    if staging.ready_for_hot_install()
+        && let Some(request) = hot_install::take_request(&updated_dir)
+        && hot_install::apply(module_id, is_metamodule, &request)
+    {
+        println!("- Module installed successfully, no reboot required!");
+        info!("Module {module_id} installed successfully!");
+        return Ok(module_id.to_owned());
     }
 
     println!("- Module installed successfully!");

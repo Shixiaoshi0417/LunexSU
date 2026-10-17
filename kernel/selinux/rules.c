@@ -84,14 +84,15 @@ void apply_kernelsu_rules()
 
     db = &pol->policydb;
 
-    ksu_type(db, KERNEL_SU_DOMAIN, "domain");
-    ksu_permissive(db, KERNEL_SU_DOMAIN);
+    if (!ksu_type(db, KERNEL_SU_DOMAIN, "domain") || !ksu_permissive(db, KERNEL_SU_DOMAIN))
+        goto out_drop_new_policy;
     ksu_typeattribute(db, KERNEL_SU_DOMAIN, "mlstrustedsubject");
     ksu_typeattribute(db, KERNEL_SU_DOMAIN, "netdomain");
     ksu_typeattribute(db, KERNEL_SU_DOMAIN, "bluetoothdomain");
 
     // Create unconstrained file type
-    ksu_type(db, KERNEL_SU_FILE, "file_type");
+    if (!ksu_type(db, KERNEL_SU_FILE, "file_type"))
+        goto out_drop_new_policy;
     ksu_typeattribute(db, KERNEL_SU_FILE, "mlstrustedobject");
     ksu_allow(db, "domain", KERNEL_SU_FILE, ALL, ALL);
 
@@ -161,6 +162,10 @@ void apply_kernelsu_rules()
     ksu_destroy_sepolicy(old_pol);
 
     reset_avc_cache();
+    goto out_unlock;
+out_drop_new_policy:
+    pr_err("failed to prepare required KernelSU types; keeping old policy\n");
+    ksu_destroy_sepolicy(pol);
 out_unlock:
     mutex_unlock(&selinux_state.policy_mutex);
 }
@@ -509,9 +514,12 @@ int handle_sepolicy(void __user *user_data, u64 data_len)
         ret = apply_one_sepolicy_cmd(db, &header, args);
         if (ret < 0) {
             pr_err("sepol: cmd #%u failed, cmd=%u subcmd=%u.\n", cmd_index, header.cmd, header.subcmd);
-        } else {
-            success_cmd_count++;
+            /* Helpers may have changed part of this private copy before an
+             * allocation failed. Never publish it, even if earlier commands
+             * succeeded (or a later command could succeed). */
+            goto out_drop_new_policy;
         }
+        success_cmd_count++;
         cmd_index++;
     }
 

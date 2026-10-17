@@ -5,12 +5,10 @@ import org.apache.commons.compress.compressors.xz.XZCompressorInputStream
 import org.apache.commons.io.IOUtils
 import com.shixiaoshi0417.lunexsu.core.utils.DataSourceChannel
 import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
-import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.charset.StandardCharsets
 import java.nio.file.StandardOpenOption
@@ -27,6 +25,8 @@ object BootKernelVersion {
     private const val INITIAL_REMOTE_PROBE = 256L * 1024
     private const val REMOTE_PROBE_GROWTH = 4L
     private const val KMI_SCAN_OVERLAP = 64
+    private const val MAX_RAW_PROBE = 64L * 1024 * 1024
+    private const val MAX_DECOMPRESSED_SCAN = 256L * 1024 * 1024
 
     // Boot header total sizes per header version (android_bootimg layouts)
     private val HEADER_TOTAL_SIZE = mapOf(
@@ -53,10 +53,11 @@ object BootKernelVersion {
                 val data = readRange(channel, kernelOffset.toLong(), probeSize) ?: return null
                 parseKmi(data)?.let { return it }
                 if (probeSize >= kernelSize) {
-                    decompressPartial(data)?.let { parseKmi(it) }?.let { return it }
+                    parseCompressedKmi(data)?.let { return it }
                     return null
                 }
-                probeSize = minOf(probeSize * 4, kernelSize.toLong())
+                if (probeSize >= MAX_RAW_PROBE) return null
+                probeSize = minOf(probeSize * 4, kernelSize.toLong(), MAX_RAW_PROBE)
             }
         }
     }
@@ -69,15 +70,16 @@ object BootKernelVersion {
         val (kernelOffset, kernelSize) = bootKernelBlock(header) ?: return null
         IOUtils.skipFully(stream, kernelOffset.toLong() - header.size)
 
-        var data = ByteArray(minOf(INITIAL_KERNEL_PROBE, kernelSize.toLong()).toInt())
+        val probeLimit = minOf(kernelSize.toLong(), MAX_RAW_PROBE)
+        var data = ByteArray(minOf(INITIAL_KERNEL_PROBE, probeLimit).toInt())
         var previousSize = 0
         while (true) {
             stream.readFully(data, previousSize, data.size - previousSize)
             parseKmi(data)?.let { return it }
-            decompressPartial(data)?.let { parseKmi(it) }?.let { return it }
-            if (data.size >= kernelSize) return null
+            parseCompressedKmi(data)?.let { return it }
+            if (data.size >= probeLimit) return null
             previousSize = data.size
-            data = data.copyOf(minOf(data.size.toLong() * 4, kernelSize.toLong()).toInt())
+            data = data.copyOf(minOf(data.size.toLong() * 4, probeLimit).toInt())
         }
     }
 
@@ -86,10 +88,15 @@ object BootKernelVersion {
      * only the boot header plus a small banner probe.
      */
     fun parseKmiFromBoot(channel: DataSourceChannel): String? {
-        val maxSize = channel.size()
+        val maxSize = minOf(channel.size(), MAX_RAW_PROBE)
+        val reader = PayloadReader(channel.size()) { buffer, position -> channel.read(buffer, position) }
         var probeSize = minOf(INITIAL_REMOTE_PROBE, maxSize)
         while (true) {
-            val data = channel.readFully(0, probeSize) ?: return null
+            val data = try {
+                reader.bytes(0, probeSize, MAX_RAW_PROBE)
+            } catch (_: IOException) {
+                return null
+            }
             parseKmiFromBootData(data)?.let { return it }
             if (probeSize >= maxSize) return null
             probeSize = minOf(probeSize * REMOTE_PROBE_GROWTH, maxSize)
@@ -119,7 +126,7 @@ object BootKernelVersion {
         // sits early in the output.
         if (isCompressedKernel(data, kernelOffset)) {
             val kernelData = data.copyOfRange(kernelOffset, kernelEnd)
-            decompressPartial(kernelData)?.let { parseKmi(it) }?.let { return it }
+            parseCompressedKmi(kernelData)?.let { return it }
         }
         return null
     }
@@ -141,7 +148,10 @@ object BootKernelVersion {
         val headerTotal = HEADER_TOTAL_SIZE[headerVersion] ?: return null
         val pageSize = if (headerVersion >= 3) 4096L else data.u32le(36)
         if (pageSize <= 0) return null
-        return align(headerTotal, pageSize).toInt() to kernelSize.toInt()
+        val kernelOffset = align(headerTotal, pageSize)
+        // These become Int indices below; reject uint32 narrowing and end-offset overflow first.
+        if (kernelOffset > Int.MAX_VALUE || kernelSize > Int.MAX_VALUE - kernelOffset) return null
+        return kernelOffset.toInt() to kernelSize.toInt()
     }
 
     private fun isCompressedKernel(data: ByteArray, offset: Int): Boolean {
@@ -151,24 +161,17 @@ object BootKernelVersion {
     }
 
     private fun readRange(channel: FileChannel, position: Long, length: Long): ByteArray? {
-        if (length > Int.MAX_VALUE) return null
-        val buffer = ByteBuffer.allocate(length.toInt())
-        var total = 0
-        while (total < buffer.capacity()) {
-            val read = channel.read(buffer, position + total)
-            if (read < 0) break
-            total += read
+        return try {
+            PayloadReader(channel.size()) { buffer, offset -> channel.read(buffer, offset) }
+                .bytes(position, length, MAX_RAW_PROBE)
+        } catch (_: IOException) {
+            null
         }
-        if (total == 0) return null
-        buffer.flip()
-        val data = ByteArray(total)
-        buffer.get(data)
-        return data
     }
 
-    private fun parseKmi(buffer: ByteArray, from: Int = 0, to: Int = buffer.size): String? {
+    private fun parseKmi(buffer: ByteArray, from: Int = 0, to: Int = buffer.size, startLimit: Int = to): String? {
         val end = minOf(to, buffer.size)
-        for (i in maxOf(0, from) until end - 3) {
+        for (i in maxOf(0, from) until minOf(end - 3, startLimit)) {
             val b0 = buffer[i].toInt() and 0xFF
             val b1 = buffer[i + 1].toInt() and 0xFF
             val b2 = buffer[i + 2].toInt() and 0xFF
@@ -177,8 +180,8 @@ object BootKernelVersion {
             if (b0 != '5'.code || b3 < '0'.code || b3 > '9'.code) {
                 if (b0 < '6'.code || b0 > '9'.code) continue
             }
-            val end = minOf(buffer.size, i + 100)
-            val nul = (i until end).firstOrNull { buffer[it] == 0.toByte() } ?: end
+            val textEnd = minOf(end, i + 100)
+            val nul = (i until textEnd).firstOrNull { buffer[it] == 0.toByte() } ?: textEnd
             val text = String(buffer, i, nul - i, StandardCharsets.UTF_8)
             kmiRegex.find(text)?.let { match ->
                 return "${match.groupValues[2]}-${match.groupValues[1]}"
@@ -187,33 +190,42 @@ object BootKernelVersion {
         return null
     }
 
-    private fun decompressPartial(data: ByteArray): ByteArray? {
+    @Suppress("DEPRECATION")
+    private fun parseCompressedKmi(data: ByteArray): String? {
         return try {
             val stream = when {
                 startsWith(data, gzipMagic) -> GZIPInputStream(ByteArrayInputStream(data))
-                startsWith(data, xzMagic) -> XZCompressorInputStream(ByteArrayInputStream(data))
+                startsWith(data, xzMagic) -> XZCompressorInputStream(ByteArrayInputStream(data), false, 64 * 1024)
                 startsWith(data, lz4FrameMagic) -> FramedLZ4CompressorInputStream(ByteArrayInputStream(data))
                 else -> return null
             }
-            stream.use { decompressPrefix(it) }
+            stream.use { scanKmiStream(it) }
         } catch (_: Exception) {
             null
         }
     }
 
-    private fun decompressPrefix(input: InputStream): ByteArray? {
-        val output = ByteArrayOutputStream()
-        val buffer = ByteArray(8192)
+    private fun scanKmiStream(input: InputStream): String? {
+        // Only a short banner is needed. Do not materialize a decompressed kernel in the heap.
+        val overlap = 100
+        val buffer = ByteArray(64 * 1024 + overlap)
+        var carried = 0
+        var scanned = 0L
         try {
-            while (true) {
-                val read = input.read(buffer)
-                if (read < 0) break
-                output.write(buffer, 0, read)
+            while (scanned < MAX_DECOMPRESSED_SCAN) {
+                val read = input.read(buffer, carried, minOf(64 * 1024L, MAX_DECOMPRESSED_SCAN - scanned).toInt())
+                if (read <= 0) break
+                scanned += read
+                val length = carried + read
+                // Defer the last window so a split "android15" is not mistaken for "android1".
+                parseKmi(buffer, 0, length, maxOf(0, length - overlap))?.let { return it }
+                carried = minOf(overlap, length)
+                System.arraycopy(buffer, length - carried, buffer, 0, carried)
             }
         } catch (_: IOException) {
-            // Truncated stream: keep the prefix decompressed so far.
+            // Truncated prefix: every successfully decoded chunk was already scanned.
         }
-        return if (output.size() > 0) output.toByteArray() else null
+        return parseKmi(buffer, 0, carried)
     }
 
     private fun align(value: Long, alignment: Long): Long {

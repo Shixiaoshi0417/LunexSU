@@ -1,0 +1,13 @@
+[package]
+name = "lunexsu-f01-profile-tests"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+anyhow = "1"
+log = "0.4"
+rustix = { version = "1", features = ["fs"] }
+tempfile = "3"

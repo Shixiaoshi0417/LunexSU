@@ -371,15 +371,22 @@ install_module() {
   fi
 
   # Extract prop file
-  unzip -o "$ZIPFILE" module.prop -d $TMPDIR >&2
+  unzip -o "$ZIPFILE" module.prop -d $TMPDIR >&2 || abort "! Unable to extract module properties!"
   [ ! -f $TMPDIR/module.prop ] && abort "! Unable to extract zip file!"
 
   local MODDIRNAME=modules
   $BOOTMODE && MODDIRNAME=modules_update
-  local MODULEROOT=$NVBASE/$MODDIRNAME
+  # ksud gives each install a private root, outside boot's modules_update scan.
+  # Keep NVBASE unchanged for module/metamodule compatibility.
+  local MODULEROOT=${KSU_MODULE_STAGING_ROOT:-$NVBASE/$MODDIRNAME}
   MODID=`grep_prop id $TMPDIR/module.prop`
   MODNAME=`grep_prop name $TMPDIR/module.prop`
   MODAUTH=`grep_prop author $TMPDIR/module.prop`
+  if [ -n "$KSU_MODULE_STAGING_ROOT" ]; then
+    # Rust validated this ID before creating the private transaction. A second
+    # parser (or a replaced ZIP) must not redirect MODPATH outside that root.
+    [ "$MODID" = "$KSU_MODULE" ] || abort "! Module ID changed during installation!"
+  fi
   MODPATH=$MODULEROOT/$MODID
 
   # Check managed features
@@ -393,11 +400,11 @@ install_module() {
     unzip -oj "$ZIPFILE" module.prop install.sh uninstall.sh 'common/*' -d $TMPDIR >&2
 
     # Load install script
-    . $TMPDIR/install.sh
+    . $TMPDIR/install.sh || abort "! Unable to load legacy installer!"
 
     # Callbacks
     print_modname
-    on_install
+    on_install || abort "! Legacy module installation failed!"
 
     [ -f $TMPDIR/uninstall.sh ] && cp -af $TMPDIR/uninstall.sh $MODPATH/uninstall.sh
     $SKIPMOUNT && touch $MODPATH/skip_mount
@@ -416,7 +423,7 @@ install_module() {
 
     if ! grep -q '^SKIPUNZIP=1$' $MODPATH/customize.sh 2>/dev/null; then
       ui_print "- Extracting module files"
-      unzip -o "$ZIPFILE" -x 'META-INF/*' -d $MODPATH >&2
+      unzip -o "$ZIPFILE" -x 'META-INF/*' -d $MODPATH >&2 || abort "! Unable to extract module files!"
 
       # Default permissions
       set_perm_recursive $MODPATH 0 0 0755 0644
@@ -427,7 +434,9 @@ install_module() {
     fi
 
     # Load customization script
-    [ -f $MODPATH/customize.sh ] && . $MODPATH/customize.sh
+    if [ -f $MODPATH/customize.sh ]; then
+      . $MODPATH/customize.sh || abort "! Module customization failed!"
+    fi
   fi
 
   # Handle replace folders
@@ -448,10 +457,14 @@ install_module() {
   handle_partition odm
 
   if $BOOTMODE; then
-    mktouch $NVBASE/modules/$MODID/update
-    rm -rf $NVBASE/modules/$MODID/remove 2>/dev/null
-    rm -rf $NVBASE/modules/$MODID/disable 2>/dev/null
-    cp -af $MODPATH/module.prop $NVBASE/modules/$MODID/module.prop
+    # Transactional installs publish and update live metadata in ksud only after
+    # the entire installer has succeeded. Preserve standalone/recovery behavior.
+    if [ -z "$KSU_MODULE_STAGING_ROOT" ]; then
+      mktouch $NVBASE/modules/$MODID/update
+      rm -rf $NVBASE/modules/$MODID/remove 2>/dev/null
+      rm -rf $NVBASE/modules/$MODID/disable 2>/dev/null
+      cp -af $MODPATH/module.prop $NVBASE/modules/$MODID/module.prop
+    fi
 
     # Tell ksud to apply the module right away
     if [ "$MODULE_HOT_INSTALL_REQUEST" = "true" ]; then
@@ -484,7 +497,7 @@ install_module() {
 [ -z $BOOTMODE ] && BOOTMODE=false
 
 NVBASE=/data/adb
-TMPDIR=/dev/tmp
+TMPDIR=${KSU_INSTALL_TMPDIR:-/dev/tmp}
 POSTFSDATAD=$NVBASE/post-fs-data.d
 SERVICED=$NVBASE/service.d
 

@@ -1,4 +1,5 @@
 #include <linux/compiler.h>
+#include <linux/delay.h>
 #include <linux/errno.h>
 #include <linux/kallsyms.h>
 #include <linux/kernel.h>
@@ -21,6 +22,39 @@ struct ksu_lsm_hook_entry {
 static DEFINE_MUTEX(ksu_lsm_hook_lock);
 static struct ksu_lsm_hook_entry ksu_lsm_hook_entries[16];
 static int ksu_lsm_hook_count;
+
+DEFINE_SRCU(ksu_hook_srcu);
+static void (*ksu_synchronize_rcu_tasks)(void);
+
+int ksu_hook_lifecycle_ready(void)
+{
+    void (*sync)(void) = READ_ONCE(ksu_synchronize_rcu_tasks);
+
+    if (!sync) {
+        sync = (void *)find_kernel_symbol_exact("synchronize_rcu_tasks");
+        if (!sync) {
+            pr_err("lsm_hook: Tasks RCU unavailable, refusing unsafe runtime hook\n");
+            return -EOPNOTSUPP;
+        }
+        WRITE_ONCE(ksu_synchronize_rcu_tasks, sync);
+    }
+    return 0;
+}
+
+void __nocfi ksu_hook_synchronize(void)
+{
+    void (*sync)(void) = READ_ONCE(ksu_synchronize_rcu_tasks);
+
+    if (!sync)
+        return; /* No replacement can have been installed. */
+    /* A task can fetch a function pointer before entering our SRCU section.
+     * Tasks RCU closes that window; SRCU then drains even sleeping callbacks.
+     * The last Tasks grace period covers return instructions after SRCU unlock.
+     */
+    sync();
+    synchronize_srcu(&ksu_hook_srcu);
+    sync();
+}
 
 static bool ksu_lsm_hook_is_tracked(struct ksu_lsm_hook *hook)
 {
@@ -66,21 +100,34 @@ static int ksu_lsm_hook_patch_slot(void **slot, void *value)
     void *patched = value;
     int ret;
 
+    /* Metadata must be visible before the stop_machine patch publishes it. */
+    smp_wmb();
     ret = ksu_patch_text(slot, &patched, sizeof(patched), KSU_PATCH_TEXT_FLUSH_DCACHE);
-    if (!ret)
-        smp_wmb();
 
     return ret;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
-typedef void (*ksu_static_call_update_t)(struct static_call_key *key, void *tramp, void *func);
-
-static int ksu_lsm_hook_update_scall(struct lsm_static_call *scall, void *value)
+void ksu_hook_restore_slot(void **slot, void *original, const char *name)
 {
-    __static_call_update(scall->key, scall->trampoline, value);
+    /* An installation error need not have changed the slot. Conversely, a
+     * patch error is not proof it stayed unchanged. Confirm restoration before
+     * allowing metadata or module memory to be released.
+     */
+    while (READ_ONCE(*slot) != original) {
+        int ret = ksu_lsm_hook_patch_slot(slot, original);
+
+        if (ret || READ_ONCE(*slot) != original) {
+            pr_err_ratelimited("lsm_hook: retrying restore of %s: %d\n", name, ret);
+            msleep(20);
+        }
+    }
+}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+static void ksu_lsm_hook_update_scall(struct lsm_static_call *scall, void *value)
+{
     smp_wmb();
-    return 0;
+    __static_call_update(scall->key, scall->trampoline, value);
 }
 #endif
 
@@ -89,6 +136,7 @@ int ksu_lsm_hook(struct ksu_lsm_hook *hook)
     int ret = 0;
     struct security_hook_list *entry;
     void *target;
+    void *saved_original;
     const char *target_name;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
     static unsigned long scalls_addr = 0;
@@ -111,6 +159,10 @@ int ksu_lsm_hook(struct ksu_lsm_hook *hook)
     if (!hook || !hook->replacement)
         return -EINVAL;
 
+    ret = ksu_hook_lifecycle_ready();
+    if (ret)
+        return ret;
+
     mutex_lock(&ksu_lsm_hook_lock);
 
     if (hook->entry) {
@@ -126,6 +178,7 @@ int ksu_lsm_hook(struct ksu_lsm_hook *hook)
     }
 
     target = hook->original;
+    saved_original = target;
     if (!target)
         target = ksu_resolve_symbol_for_functable_hook(target_name);
     if (!target) {
@@ -242,38 +295,33 @@ int ksu_lsm_hook(struct ksu_lsm_hook *hook)
         break;
     }
 
-    if (!selected_scall) {
+    if (!selected_scall || !selected_entry || !selected_origin) {
         pr_err("lsm_hook: target %s not found in head %s\n", target_name, hook->head_name ?: "unknown");
         ret = -ENOENT;
         goto out_unlock;
     }
 
+    if (READ_ONCE(*selected_slot) != selected_origin) {
+        ret = -EBUSY; /* Do not overwrite another tracked replacement. */
+        goto out_unlock;
+    }
     ret = ksu_lsm_hook_track(hook);
     if (ret) {
         pr_err("lsm_hook: too many hooks to track: %d\n", ret);
         goto out_unlock;
     }
 
+    hook->entry = selected_entry;
+    hook->scall = selected_scall;
+    smp_store_release(&hook->original, selected_origin);
     if (ksu_lsm_hook_patch_slot(selected_slot, hook->replacement)) {
         pr_err("lsm_hook: failed to patch %s\n", hook->head_name ?: "unknown");
         ret = -EFAULT;
         goto out_untrack;
     }
 
-    if (ksu_lsm_hook_update_scall(selected_scall, hook->replacement)) {
-        if (ksu_lsm_hook_patch_slot(selected_slot, selected_origin)) {
-            pr_err("lsm_hook: failed to roll back %s after static call update failure\n", hook->head_name ?: "unknown");
-        }
-        ret = -EFAULT;
-        goto out_untrack;
-    }
-
-    if (!selected_origin)
-        static_branch_enable(selected_scall->active);
-
-    hook->entry = selected_entry;
-    hook->scall = selected_scall;
-    hook->original = selected_origin;
+    /* __static_call_update() returns void; it has no recoverable error path. */
+    ksu_lsm_hook_update_scall(selected_scall, hook->replacement);
     pr_info("lsm_hook: patched %s hook slot %px from %px to %px\n", hook->head_name ?: "unknown", selected_slot,
             selected_origin, hook->replacement);
 #else
@@ -339,39 +387,33 @@ int ksu_lsm_hook(struct ksu_lsm_hook *hook)
                     selected_slot = (void **)((char *)selected_entry + hook->hook_offset);
                     selected_origin = *selected_slot;
                 } else {
-                    selected_entry = &hook->list;
-                    hook->list.head = head;
-                    hook->list.list.next = NULL;
-                    hook->list.list.pprev = &head->first;
-                    hook->list.lsm = "ksu";
-                    *(void **)((char *)selected_entry + hook->hook_offset) = hook->replacement;
-                    selected_slot = (void **)&head->first;
-                    selected_origin = NULL;
+                    ret = -ENOENT;
+                    goto out_unlock;
                 }
             }
             break;
         }
     }
 
-    if (!selected_entry) {
+    if (!selected_entry || !selected_origin) {
         pr_err("lsm_hook: target %s not found in head %s\n", target_name, hook->head_name ?: "unknown");
         ret = -ENOENT;
         goto out_unlock;
     }
 
+    if (READ_ONCE(*selected_slot) != selected_origin) {
+        ret = -EBUSY;
+        goto out_unlock;
+    }
     ret = ksu_lsm_hook_track(hook);
     if (ret) {
         pr_err("lsm_hook: too many hooks to track: %d\n", ret);
         goto out_unlock;
     }
 
-    if (selected_origin) {
-        pr_info("patch func addr\n");
-        ret = ksu_lsm_hook_patch_slot(selected_slot, hook->replacement);
-    } else {
-        pr_info("patch head->first\n");
-        ret = ksu_lsm_hook_patch_slot(selected_slot, &hook->list);
-    }
+    hook->entry = selected_entry;
+    smp_store_release(&hook->original, selected_origin);
+    ret = ksu_lsm_hook_patch_slot(selected_slot, hook->replacement);
 
     if (ret) {
         pr_err("lsm_hook: failed to patch %s\n", hook->head_name ?: "unknown");
@@ -379,13 +421,21 @@ int ksu_lsm_hook(struct ksu_lsm_hook *hook)
         goto out_untrack;
     }
 
-    hook->entry = selected_entry;
-    hook->original = selected_origin;
     pr_info("lsm_hook: patched %s hook slot %px from %px to %px\n", hook->head_name ?: "unknown", selected_slot,
             selected_origin, hook->replacement);
 #endif
     goto out_unlock;
 out_untrack:
+    /* A failed patch may have been visible. Restore and drain before rollback.
+     * Keep the descriptor tracked and its original valid until restoration.
+     */
+    ksu_hook_restore_slot(selected_slot, selected_origin, hook->head_name ?: "unknown");
+    ksu_hook_synchronize();
+    hook->entry = NULL;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
+    hook->scall = NULL;
+#endif
+    smp_store_release(&hook->original, saved_original);
     ksu_lsm_hook_untrack(hook);
 
 out_unlock:
@@ -396,6 +446,9 @@ out_unlock:
 void ksu_lsm_unhook(struct ksu_lsm_hook *hook)
 {
     void **slot;
+
+    if (!hook)
+        return;
     mutex_lock(&ksu_lsm_hook_lock);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
@@ -407,36 +460,18 @@ void ksu_lsm_unhook(struct ksu_lsm_hook *hook)
         return;
     }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
     slot = (void **)((char *)hook->entry + hook->hook_offset);
-#else
-    if (hook->entry == &hook->list) {
-        slot = (void **)&hook->list.head->first;
-        pr_info("unhook patch head->first\n");
-    } else {
-        slot = (void **)((char *)hook->entry + hook->hook_offset);
-        pr_info("unhook patch slot\n");
-    }
-#endif
-    if (ksu_lsm_hook_patch_slot(slot, hook->original)) {
-        pr_err("lsm_hook: failed to restore %s\n", hook->head_name ?: "unknown");
-        mutex_unlock(&ksu_lsm_hook_lock);
-        return;
-    }
+    ksu_hook_restore_slot(slot, hook->original, hook->head_name ?: "unknown");
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
-    if (ksu_lsm_hook_update_scall(hook->scall, hook->original)) {
-        if (ksu_lsm_hook_patch_slot(slot, hook->replacement))
-            pr_err("lsm_hook: failed to reapply %s after static call restore failure\n", hook->head_name ?: "unknown");
-        mutex_unlock(&ksu_lsm_hook_lock);
-        return;
-    }
+    ksu_lsm_hook_update_scall(hook->scall, hook->original);
 #endif
 
-    synchronize_rcu();
+    ksu_hook_synchronize();
     pr_info("lsm_hook: restored %s hook slot %px to %px\n", hook->head_name ?: "unknown", slot, hook->original);
     ksu_lsm_hook_untrack(hook);
     hook->entry = NULL;
+    smp_store_release(&hook->original, NULL);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
     hook->scall = NULL;
 #endif

@@ -32,6 +32,19 @@ object SusfsInputs {
     fun validText(value: String, capacity: Int): Boolean = value.isNotBlank() &&
         value.toByteArray(Charsets.UTF_8).size < capacity && value.none(Char::isISOControl)
 
+    /** Editor choices only; importing a saved built-in scope must not remap its numeric value. */
+    fun redirectUidSchemes(status: SusfsStatus): List<Int> {
+        if (!status.supports("OPEN_REDIRECT")) return emptyList()
+        return when (status.implementation) {
+            "builtin" -> (0..4).toList()
+            "lkm" -> (0..2).toList() // apply.rs intentionally rejects the different LKM 3/4 semantics.
+            else -> emptyList()
+        }
+    }
+
+    fun validRedirect(path: String, destination: String, uidScheme: Int, status: SusfsStatus): Boolean =
+        validPath(path) && validPath(destination) && destination != path && uidScheme in redirectUidSchemes(status)
+
     /** Match the entry shown to the user, never an index from an obsolete screen snapshot. */
     fun replaceRule(config: JSONObject, original: String?, replacement: JSONObject?) {
         val rules = config.getJSONArray("rules")

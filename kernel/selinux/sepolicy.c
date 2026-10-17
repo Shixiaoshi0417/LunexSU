@@ -5,6 +5,7 @@
 #include "ss/policydb.h"
 #include "ss/services.h"
 #include <linux/gfp.h>
+#include <linux/limits.h>
 #include <linux/printk.h>
 #include <linux/slab.h>
 #include <linux/version.h>
@@ -33,7 +34,7 @@ static bool add_rule(struct policydb *db, const char *s, const char *t, const ch
 static bool add_rule_raw(struct policydb *db, struct type_datum *src, struct type_datum *tgt, struct class_datum *cls,
                          struct perm_datum *perm, int effect, bool invert);
 
-static void add_xperm_rule_raw(struct policydb *db, struct type_datum *src, struct type_datum *tgt,
+static bool add_xperm_rule_raw(struct policydb *db, struct type_datum *src, struct type_datum *tgt,
                                struct class_datum *cls, uint16_t low, uint16_t high, int effect, bool invert);
 static bool add_xperm_rule(struct policydb *db, const char *s, const char *t, const char *c, const char *range,
                            int effect, bool invert);
@@ -49,7 +50,7 @@ static bool add_type(struct policydb *db, const char *type_name, bool attr);
 
 static bool set_type_state(struct policydb *db, const char *type_name, bool permissive);
 
-static void add_typeattribute_raw(struct policydb *db, struct type_datum *type, struct type_datum *attr);
+static bool add_typeattribute_raw(struct policydb *db, struct type_datum *type, struct type_datum *attr);
 
 static bool add_typeattribute(struct policydb *db, const char *type, const char *attr);
 
@@ -332,7 +333,7 @@ static bool add_rule_raw(struct policydb *db, struct type_datum *src, struct typ
 #define xperm_set(x, p) (p[x >> 5] |= (1 << (x & 0x1f)))
 #define xperm_clear(x, p) (p[x >> 5] &= ~(1 << (x & 0x1f)))
 
-static void add_xperm_rule_raw(struct policydb *db, struct type_datum *src, struct type_datum *tgt,
+static bool add_xperm_rule_raw(struct policydb *db, struct type_datum *src, struct type_datum *tgt,
                                struct class_datum *cls, uint16_t low, uint16_t high, int effect, bool invert)
 {
     if (src == NULL) {
@@ -341,7 +342,8 @@ static void add_xperm_rule_raw(struct policydb *db, struct type_datum *src, stru
         {
             struct type_datum *type = (struct type_datum *)(node->datum);
             if (type->attribute) {
-                add_xperm_rule_raw(db, type, tgt, cls, low, high, effect, invert);
+                if (!add_xperm_rule_raw(db, type, tgt, cls, low, high, effect, invert))
+                    return false;
             }
         };
     } else if (tgt == NULL) {
@@ -350,14 +352,16 @@ static void add_xperm_rule_raw(struct policydb *db, struct type_datum *src, stru
         {
             struct type_datum *type = (struct type_datum *)(node->datum);
             if (type->attribute) {
-                add_xperm_rule_raw(db, src, type, cls, low, high, effect, invert);
+                if (!add_xperm_rule_raw(db, src, type, cls, low, high, effect, invert))
+                    return false;
             }
         };
     } else if (cls == NULL) {
         struct hashtab_node *node;
         ksu_hashtab_for_each(db->p_classes.table, node)
         {
-            add_xperm_rule_raw(db, src, tgt, (struct class_datum *)(node->datum), low, high, effect, invert);
+            if (!add_xperm_rule_raw(db, src, tgt, (struct class_datum *)(node->datum), low, high, effect, invert))
+                return false;
         };
     } else {
         struct avtab_key key;
@@ -398,7 +402,7 @@ static void add_xperm_rule_raw(struct policydb *db, struct type_datum *src, stru
         node = get_avtab_node(db, &key, &xperms);
         if (!node) {
             pr_warn("add_xperm_rule_raw cannot found node!\n");
-            return;
+            return false;
         }
         datum = &node->datum;
 
@@ -406,6 +410,7 @@ static void add_xperm_rule_raw(struct policydb *db, struct type_datum *src, stru
         for (i = 0; i < ARRAY_SIZE(xperms.perms.p); i++)
             datum->u.xperms->perms.p[i] |= xperms.perms.p[i];
     }
+    return true;
 }
 
 static bool add_xperm_rule(struct policydb *db, const char *s, const char *t, const char *c, const char *range,
@@ -452,8 +457,7 @@ static bool add_xperm_rule(struct policydb *db, const char *s, const char *t, co
         high = 0xFFFF;
     }
 
-    add_xperm_rule_raw(db, src, tgt, cls, low, high, effect, invert);
-    return true;
+    return add_xperm_rule_raw(db, src, tgt, cls, low, high, effect, invert);
 }
 
 static bool add_type_rule(struct policydb *db, const char *s, const char *t, const char *c, const char *d, int effect)
@@ -631,100 +635,98 @@ static bool add_genfscon(struct policydb *db, const char *fs_name, const char *p
     return false;
 }
 
-// https://github.com/torvalds/linux/commit/590b9d576caec6b4c46bba49ed36223a399c3fc5#diff-cc9aa90e094e6e0f47bd7300db4f33cf4366b98b55d8753744f31eb69c691016R844-R845
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
-#define ksu_kvrealloc(p, new_size, _old_size) kvrealloc(p, new_size, GFP_KERNEL)
-// https://github.com/torvalds/linux/commit/de2860f4636256836450c6543be744a50118fc66#diff-fa19cdd9c3369d7f59aa2e8404628109408dbf8e1b568d1157a27328f75b8410R638-R652
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)
-#define ksu_kvrealloc(p, new_size, old_size) kvrealloc(p, old_size, new_size, GFP_KERNEL)
-#else
-// https://cs.android.com/android/_/android/kernel/common/+/f5f3e54f811679761c33526e695bd296190faade
-// Some 5.10 kernel don't have this backport, so copy one.
-void *ksu_kvrealloc_compat(const void *p, size_t oldsize, size_t newsize, gfp_t flags)
-{
-    void *newp;
-
-    if (oldsize >= newsize)
-        return (void *)p;
-    newp = kvmalloc(newsize, flags);
-    if (!newp)
-        return NULL;
-    memcpy(newp, p, oldsize);
-    kvfree(p);
-    return newp;
-}
-#define ksu_kvrealloc(p, new_size, old_size) ksu_kvrealloc_compat(p, old_size, new_size, GFP_KERNEL)
-#endif
-
 static bool add_type(struct policydb *db, const char *type_name, bool attr)
 {
     struct type_datum *type = symtab_search(&db->p_types, type_name);
+    struct ebitmap *new_type_attr_map_array = NULL, *role_types = NULL;
+    struct type_datum **new_type_val_to_struct = NULL;
+    char **new_val_to_name_types = NULL;
+    char *key = NULL;
+    u32 old_count = db->p_types.nprim, value;
+    u32 i;
+
     if (type) {
         pr_warn("Type %s already exists\n", type_name);
         return true;
     }
-
-    u32 value = ++db->p_types.nprim;
-    type = (struct type_datum *)kzalloc(sizeof(struct type_datum), GFP_KERNEL);
-    if (!type) {
-        pr_err("add_type: alloc type_datum failed.\n");
+    if (old_count == U32_MAX)
         return false;
-    }
+    value = old_count + 1;
 
+    /* Prepare everything without touching db. In particular, realloc can free
+     * an old array before a later allocation fails. The old bitmap nodes stay
+     * owned by db; only the new slot and the role copies are owned here. */
+    type = kzalloc(sizeof(*type), GFP_KERNEL);
+    if (!type)
+        goto out;
     type->primary = 1;
     type->value = value;
     type->attribute = attr;
 
-    char *key = kstrdup(type_name, GFP_KERNEL);
-    if (!key) {
-        pr_err("add_type: alloc key failed.\n");
-        return false;
+    key = kstrdup(type_name, GFP_KERNEL);
+    if (!key)
+        goto out;
+    new_type_attr_map_array = kvcalloc(value, sizeof(*new_type_attr_map_array), GFP_KERNEL);
+    new_type_val_to_struct = kvcalloc(value, sizeof(*new_type_val_to_struct), GFP_KERNEL);
+    new_val_to_name_types = kvcalloc(value, sizeof(*new_val_to_name_types), GFP_KERNEL);
+    if (!new_type_attr_map_array || !new_type_val_to_struct || !new_val_to_name_types)
+        goto out;
+
+    if (old_count) {
+        memcpy(new_type_attr_map_array, db->type_attr_map_array, old_count * sizeof(*new_type_attr_map_array));
+        memcpy(new_type_val_to_struct, db->type_val_to_struct, old_count * sizeof(*new_type_val_to_struct));
+        memcpy(new_val_to_name_types, db->sym_val_to_name[SYM_TYPES], old_count * sizeof(*new_val_to_name_types));
+    }
+    if (ebitmap_set_bit(&new_type_attr_map_array[old_count], old_count, 1))
+        goto out;
+    new_type_val_to_struct[old_count] = type;
+    new_val_to_name_types[old_count] = key;
+
+    if (db->p_roles.nprim) {
+        role_types = kvcalloc(db->p_roles.nprim, sizeof(*role_types), GFP_KERNEL);
+        if (!role_types)
+            goto out;
+        for (i = 0; i < db->p_roles.nprim; ++i) {
+            if (ebitmap_cpy(&role_types[i], &db->role_val_to_struct[i]->types) ||
+                ebitmap_set_bit(&role_types[i], old_count, 1))
+                goto out;
+        }
     }
 
-    if (symtab_insert(&db->p_types, key, type)) {
-        pr_err("add_type: insert symtab failed.\n");
-        return false;
-    }
+    /* Last fallible operation. On success the symbol table owns key/type and
+     * the following pointer/count swaps cannot fail. */
+    if (symtab_insert(&db->p_types, key, type))
+        goto out;
 
-    struct ebitmap *new_type_attr_map_array =
-        ksu_kvrealloc(db->type_attr_map_array, value * sizeof(struct ebitmap), (value - 1) * sizeof(struct ebitmap));
-
-    if (!new_type_attr_map_array) {
-        pr_err("add_type: alloc type_attr_map_array failed\n");
-        return false;
-    }
-
-    struct type_datum **new_type_val_to_struct = ksu_kvrealloc(
-        db->type_val_to_struct, sizeof(*db->type_val_to_struct) * value, sizeof(*db->type_val_to_struct) * (value - 1));
-
-    if (!new_type_val_to_struct) {
-        pr_err("add_type: alloc type_val_to_struct failed\n");
-        return false;
-    }
-
-    char **new_val_to_name_types =
-        ksu_kvrealloc(db->sym_val_to_name[SYM_TYPES], sizeof(char *) * value, sizeof(char *) * (value - 1));
-    if (!new_val_to_name_types) {
-        pr_err("add_type: alloc val_to_name failed\n");
-        return false;
-    }
-
+    kvfree(db->type_attr_map_array);
     db->type_attr_map_array = new_type_attr_map_array;
-    ebitmap_init(&db->type_attr_map_array[value - 1]);
-    ebitmap_set_bit(&db->type_attr_map_array[value - 1], value - 1, 1);
-
+    kvfree(db->type_val_to_struct);
     db->type_val_to_struct = new_type_val_to_struct;
-    db->type_val_to_struct[value - 1] = type;
-
+    kvfree(db->sym_val_to_name[SYM_TYPES]);
     db->sym_val_to_name[SYM_TYPES] = new_val_to_name_types;
-    db->sym_val_to_name[SYM_TYPES][value - 1] = key;
-
-    int i;
     for (i = 0; i < db->p_roles.nprim; ++i) {
-        ebitmap_set_bit(&db->role_val_to_struct[i]->types, value - 1, 1);
+        ebitmap_destroy(&db->role_val_to_struct[i]->types);
+        db->role_val_to_struct[i]->types = role_types[i];
     }
-
+    db->p_types.nprim = value;
+    kvfree(role_types);
     return true;
+
+out:
+    if (role_types) {
+        for (i = 0; i < db->p_roles.nprim; ++i)
+            ebitmap_destroy(&role_types[i]);
+    }
+    kvfree(role_types);
+    if (new_type_attr_map_array)
+        ebitmap_destroy(&new_type_attr_map_array[old_count]);
+    kvfree(new_type_attr_map_array);
+    kvfree(new_type_val_to_struct);
+    kvfree(new_val_to_name_types);
+    kfree(key);
+    kfree(type);
+    pr_err("add_type: failed to prepare type %s\n", type_name);
+    return false;
 }
 
 static bool set_type_state(struct policydb *db, const char *type_name, bool permissive)
@@ -752,10 +754,11 @@ static bool set_type_state(struct policydb *db, const char *type_name, bool perm
     return true;
 }
 
-static void add_typeattribute_raw(struct policydb *db, struct type_datum *type, struct type_datum *attr)
+static bool add_typeattribute_raw(struct policydb *db, struct type_datum *type, struct type_datum *attr)
 {
     struct ebitmap *sattr = &db->type_attr_map_array[type->value - 1];
-    ebitmap_set_bit(sattr, attr->value - 1, 1);
+    if (ebitmap_set_bit(sattr, attr->value - 1, 1))
+        return false;
 
     struct hashtab_node *node;
     struct constraint_node *n;
@@ -766,11 +769,13 @@ static void add_typeattribute_raw(struct policydb *db, struct type_datum *type, 
         for (n = cls->constraints; n; n = n->next) {
             for (e = n->expr; e; e = e->next) {
                 if (e->expr_type == CEXPR_NAMES && ebitmap_get_bit(&e->type_names->types, attr->value - 1)) {
-                    ebitmap_set_bit(&e->names, type->value - 1, 1);
+                    if (ebitmap_set_bit(&e->names, type->value - 1, 1))
+                        return false;
                 }
             }
         }
     };
+    return true;
 }
 
 static bool add_typeattribute(struct policydb *db, const char *type, const char *attr)
@@ -793,8 +798,7 @@ static bool add_typeattribute(struct policydb *db, const char *type, const char 
         return false;
     }
 
-    add_typeattribute_raw(db, type_d, attr_d);
-    return true;
+    return add_typeattribute_raw(db, type_d, attr_d);
 }
 
 //////////////////////////////////////////////////////////////////////////
