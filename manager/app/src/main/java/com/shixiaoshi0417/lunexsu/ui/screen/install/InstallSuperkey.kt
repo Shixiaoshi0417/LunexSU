@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,6 +19,7 @@ import com.shixiaoshi0417.lunexsu.ui.UiMode
 import com.shixiaoshi0417.lunexsu.ui.component.material.SegmentedCheckboxItem
 import top.yukonga.miuix.kmp.preference.CheckboxPreference
 import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 internal fun InstallSuperkey(state: InstallUiState, actions: InstallScreenActions) {
@@ -42,7 +44,21 @@ internal fun InstallSuperkey(state: InstallUiState, actions: InstallScreenAction
         if (state.superkeyEnabled) {
             SuperkeyField(state.superkey, actions.onSuperkeyChange, stringResource(R.string.superkey_set), !state.preparing)
             SuperkeyField(state.superkeyConfirmation, actions.onSuperkeyConfirmation, stringResource(R.string.superkey_confirm), !state.preparing)
-            Text(stringResource(R.string.superkey_validation), Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            val hint = stringResource(R.string.superkey_validation)
+            val modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            if (LocalUiMode.current == UiMode.Miuix) {
+                top.yukonga.miuix.kmp.basic.Text(
+                    text = hint,
+                    modifier = modifier,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                )
+            } else {
+                Text(
+                    text = hint,
+                    modifier = modifier,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
