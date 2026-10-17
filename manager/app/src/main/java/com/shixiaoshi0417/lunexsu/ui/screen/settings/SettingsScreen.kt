@@ -6,7 +6,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -31,6 +30,8 @@ fun SettingPager(
     LaunchedEffect(isCurrentPage) {
         if (isCurrentPage) {
             viewModel.refresh()
+        } else {
+            viewModel.dismissZnnRiskDialog()
         }
     }
 
@@ -39,7 +40,7 @@ fun SettingPager(
             viewModel.refresh()
         }
         initialResumeHandled.value = true
-        onPauseOrDispose { }
+        onPauseOrDispose { viewModel.dismissZnnRiskDialog() }
     }
 
     val actions = SettingsScreenActions(
@@ -67,10 +68,14 @@ fun SettingPager(
         onZygiskRebootNow = viewModel::rebootForZygisk,
         onOpenAbout = { navigator.push(Route.About) },
         onOpenSusfs = { navigator.push(Route.Susfs) },
+        onSetZnnRecoveryConfirmed = viewModel::setZnnRecoveryConfirmed,
+        onDismissZnnRisk = viewModel::dismissZnnRiskDialog,
+        onConfirmZnnRisk = viewModel::confirmZnnRisk,
     )
 
     when (LocalUiMode.current) {
         UiMode.Miuix -> SettingPagerMiuix(uiState, actions, bottomInnerPadding)
         UiMode.Material -> SettingPagerMaterial(uiState, actions, bottomInnerPadding)
     }
+    if (isCurrentPage) ZnnRiskDialog(uiState, actions)
 }

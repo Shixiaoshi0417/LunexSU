@@ -80,6 +80,9 @@ data class SettingsUiState(
     val zygiskBackends: List<ZygiskBackend> = emptyList(),
     val zygiskBusy: Boolean = false,
     val showZygiskRebootDialog: Boolean = false,
+    val showZnnRiskDialog: Boolean = false,
+    val znnRiskSecondsRemaining: Int = 10,
+    val znnRecoveryConfirmed: Boolean = false,
 ) {
     val zygiskEnabled: Boolean get() = zygiskStatus?.configured != null
 
@@ -99,6 +102,10 @@ data class SettingsUiState(
             zygiskStatus?.conflictId == null && zygiskBackends.size > 1
 
     val zygiskNextNext: Boolean get() = zygiskStatus?.nextNextConfigured == true
+
+    val canConfirmZnnRisk: Boolean
+        get() = showZnnRiskDialog && znnRecoveryConfirmed && znnRiskSecondsRemaining == 0 &&
+            zygiskNextNextEnabled && !zygiskNextNext
 
     val zygiskNextNextEnabled: Boolean
         get() = zygiskEnabled && !zygiskBusy && !isLateLoadMode &&
@@ -129,4 +136,7 @@ data class SettingsScreenActions(
     val onZygiskRebootNow: () -> Unit,
     val onOpenAbout: () -> Unit,
     val onOpenSusfs: () -> Unit = {},
+    val onSetZnnRecoveryConfirmed: (Boolean) -> Unit = {},
+    val onDismissZnnRisk: () -> Unit = {},
+    val onConfirmZnnRisk: () -> Unit = {},
 )

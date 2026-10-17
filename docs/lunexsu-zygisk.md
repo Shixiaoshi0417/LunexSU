@@ -8,6 +8,11 @@
   independent companion loader, not a third standard Zygisk backend. It defaults to off and is
   greyed out until built-in Zygisk is enabled. Switching Re/Neo preserves the companion selection;
   disabling built-in Zygisk also disables the companion. Re-enabling starts with the companion off.
+- **ZygiskNextNext is high risk:** boot failures have been reported. Each new enable request
+  requires an explicit recovery-capability acknowledgement and a fresh ten-second wait before the
+  red Continue button becomes available. Cancelling, leaving Settings or backgrounding the app
+  discards the confirmation. Disabling the companion does not require this wait. The warning uses
+  native MIUIX or Material/Fina dialogs; it is not a fix for the boot failure or a recovery guarantee.
 - Every successful change prompts for a full reboot, with "Reboot later" and "Reboot now".
   Pending changes remain visible. No injector is started, killed, or hot-switched by these actions.
 - The card, selector, companion switch (including its disabled state), and reboot dialog use the
@@ -30,6 +35,8 @@ does not change ksud, the kernel, or the supercall interface.
 An APK update does not overwrite an already installed companion. To upgrade an owned NextNext
 installation to the newly bundled release, disable the companion and reboot, then enable it again
 and reboot. Do not toggle it back on before the first reboot; that restores the existing payload.
+Do not attempt this on an affected device without a verified recovery path. Safe mode is not
+guaranteed to recover every boot failure.
 
 Steps are rolled back on failure, in reverse order, including a partially staged companion.
 Rollback failures are reported rather than silently claimed to have succeeded. Normal Zygisk

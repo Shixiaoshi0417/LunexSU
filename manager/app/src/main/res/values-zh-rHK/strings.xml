@@ -290,6 +290,13 @@
     <string name="settings_zygisk_backend_summary">預設 ReZygisk，可切換為 NeoZygisk</string>
     <string name="settings_zygisk_nextnext">使用 ZygiskNextNext</string>
     <string name="settings_zygisk_nextnext_summary">支援 Zygisk Next API。預設關閉，變更後需重新啟動生效</string>
+    <string name="settings_zygisk_nextnext_risk_summary">高危：可能無法開機，僅限具備救磚能力的使用者。</string>
+    <string name="settings_zygisk_nextnext_risk_title">ZNN 高危警告</string>
+    <string name="settings_zygisk_nextnext_risk_message">啟用 ZygiskNextNext（ZNN）可能導致卡在開機畫面、循環重新啟動或無法進入系統，已有無法開機的實際回報。安全模式不保證能夠恢復。只有在你能獨立透過可用的恢復環境停用故障模組，或恢復已知可用的啟動映像時，才可繼續。</string>
+    <string name="settings_zygisk_nextnext_risk_recovery">我確認具備救磚能力</string>
+    <string name="settings_zygisk_nextnext_risk_recovery_hint">我已準備可用的恢復環境或啟動映像，知道如何在無法進入系統時恢復裝置，並接受風險。</string>
+    <string name="settings_zygisk_nextnext_risk_continue">繼續</string>
+    <string name="settings_zygisk_nextnext_risk_countdown">繼續（%1$d 秒）</string>
     <string name="settings_zygisk_nextnext_enable_first">請先開啟內置 Zygisk，才能啟用 Zygisk Next API 支援</string>
     <string name="settings_zygisk_nextnext_pending">Zygisk Next API 支援已變更，需重新啟動後生效</string>
     <string name="settings_zygisk_legacy_vex">偵測到舊版內置 Vex，請先關閉內置 Zygisk 並重新啟動，再開啟以使用 ReZygisk</string>

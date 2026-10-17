@@ -37,13 +37,14 @@ internal fun zygiskSummary(state: SettingsUiState): String {
 @Composable
 internal fun zygiskNextNextSummary(state: SettingsUiState): String {
     val status = state.zygiskStatus
-    return when {
+    val summary = when {
         status?.conflictId != null -> stringResource(R.string.settings_zygisk_conflict, status.conflictId)
         status?.legacyVex == true -> stringResource(R.string.settings_zygisk_legacy_vex)
         status?.nextNextConfigured != status?.nextNextActive -> stringResource(R.string.settings_zygisk_nextnext_pending)
         !state.zygiskEnabled -> stringResource(R.string.settings_zygisk_nextnext_enable_first)
         else -> stringResource(R.string.settings_zygisk_nextnext_summary)
     }
+    return stringResource(R.string.settings_zygisk_nextnext_risk_summary) + "\n" + summary
 }
 
 @Composable

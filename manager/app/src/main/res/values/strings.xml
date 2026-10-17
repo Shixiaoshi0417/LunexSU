@@ -322,6 +322,13 @@
     <string name="settings_zygisk_backend_summary">ReZygisk by default. You can switch to NeoZygisk</string>
     <string name="settings_zygisk_nextnext">Use ZygiskNextNext</string>
     <string name="settings_zygisk_nextnext_summary">Add Zygisk Next API support. Off by default; changes take effect after reboot</string>
+    <string name="settings_zygisk_nextnext_risk_summary">High risk: may prevent booting. Device recovery skills required.</string>
+    <string name="settings_zygisk_nextnext_risk_title">ZNN: high-risk feature</string>
+    <string name="settings_zygisk_nextnext_risk_message">Enabling ZygiskNextNext (ZNN) may cause a boot loop or prevent Android from starting. Boot failures have been reported. Safe mode is not guaranteed to recover the device. Do not enable unless you can independently disable faulty modules through a working recovery environment or restore a known-working boot image.</string>
+    <string name="settings_zygisk_nextnext_risk_recovery">I confirm that I can recover my device</string>
+    <string name="settings_zygisk_nextnext_risk_recovery_hint">I have a usable recovery environment or boot image, know how to recover without Android starting, and accept the risk.</string>
+    <string name="settings_zygisk_nextnext_risk_continue">Continue</string>
+    <string name="settings_zygisk_nextnext_risk_countdown">Continue (%1$d s)</string>
     <string name="settings_zygisk_nextnext_enable_first">Enable built-in Zygisk first to add Zygisk Next API support</string>
     <string name="settings_zygisk_nextnext_pending">Zygisk Next API support changed. Reboot required</string>
     <string name="settings_zygisk_legacy_vex">Old built-in Vex detected. Turn off built-in Zygisk and reboot before enabling ReZygisk</string>
