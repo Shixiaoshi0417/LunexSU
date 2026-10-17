@@ -2,6 +2,7 @@
 #define __KSU_H_LSM_HOOK
 
 #include <linux/lsm_hooks.h>
+#include <linux/srcu.h>
 #include <linux/stddef.h>
 #include <linux/version.h>
 
@@ -17,6 +18,7 @@ struct ksu_lsm_hook {
     size_t head_offset;
     size_t hook_offset;
     void *replacement;
+    /* Published with release ordering before any replacement becomes callable. */
     void *original;
     struct security_hook_list *entry;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
@@ -30,6 +32,34 @@ struct ksu_lsm_hook {
     // to 1
     int offset;
 };
+
+/* Process-context replacements may sleep. Hold this across the complete
+ * callback, including calls to the original. Call sites must not voluntarily
+ * schedule between fetching the replacement and entering it. Do not acquire
+ * the hook-management mutex in callbacks.
+ * Use ksu_hook_read_lock(), then srcu_read_unlock(&ksu_hook_srcu, idx).
+ */
+extern struct srcu_struct ksu_hook_srcu;
+int ksu_hook_lifecycle_ready(void);
+void ksu_hook_synchronize(void);
+void ksu_hook_restore_slot(void **slot, void *original, const char *name);
+
+static inline int ksu_hook_read_lock(void)
+{
+    int idx = srcu_read_lock(&ksu_hook_srcu);
+
+    /* Core dispatchers do not acquire-load our patched function pointers.
+     * Order their load before callback metadata reads, pairing with the write
+     * barrier before publication. Do not rely on control dependencies alone.
+     */
+    smp_rmb();
+    return idx;
+}
+
+static inline void *ksu_lsm_hook_original(struct ksu_lsm_hook *hook)
+{
+    return smp_load_acquire(&hook->original);
+}
 
 // clang-format off
 #define KSU_LSM_HOOK_INIT(member, target_symbol, replacement_fn, off)                                                  \
@@ -55,10 +85,14 @@ struct ksu_lsm_hook {
 // points to @target_name with @replacement.
 // Saves the original handler into hook->original and records the patched entry
 // for restoration by ksu_lsm_unhook() or the global ksu_lsm_hook_exit().
+// Empty slots are rejected: successful registration always has an original.
 int ksu_lsm_hook(struct ksu_lsm_hook *hook);
 
 // Restore the LSM hook entry previously patched by ksu_lsm_hook() back to the
 // original handler saved in hook->original, and remove it from global tracking.
+// Waits for sleeping callbacks and pre-entry/return instruction windows before
+// clearing metadata. Restoration failures are retried rather than permitting
+// module unload with a live replacement. Forced module unload is unsupported.
 void ksu_lsm_unhook(struct ksu_lsm_hook *hook);
 
 // --- BPF LSM chaining API (register/unregister) ---

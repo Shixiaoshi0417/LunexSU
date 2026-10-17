@@ -28,10 +28,13 @@ val managerVersionCode = rootProject.extra["managerVersionCode"] as Int
 val managerVersionName = rootProject.extra["managerVersionName"] as String
 
 val isPrBuild = project.findProperty("IS_PR_BUILD")?.toString()?.toBoolean() ?: false
+val noRootDemo = providers.gradleProperty("NO_ROOT_DEMO").map(String::toBooleanStrict).getOrElse(false)
 val defaultManagerPackageName = if (isPrBuild) "com.shixiaoshi0417.lunexsu.pr" else "com.shixiaoshi0417.lunexsu"
 val defaultManagerName = if (isPrBuild) "LunexSU PR" else "LunexSU"
-val managerPackageName = project.findProperty("KSU_PACKAGE_NAME")?.toString() ?: defaultManagerPackageName
-val managerName = project.findProperty("KSU_NAME")?.toString() ?: defaultManagerName
+val managerPackageName = if (noRootDemo) "com.shixiaoshi0417.lunexsu.demo" else
+    project.findProperty("KSU_PACKAGE_NAME")?.toString() ?: defaultManagerPackageName
+val managerName = if (noRootDemo) "LunexSU No Root Demo" else
+    project.findProperty("KSU_NAME")?.toString() ?: defaultManagerName
 
 apksign {
     storeFileProperty = "KEYSTORE_FILE"
@@ -78,10 +81,10 @@ val neoZygiskZip = PinnedAsset(
     "93a1425c67bb89f58a0dcb9fc823ec93f6472214f221e667a70b67c6a6e061a1",
 )
 val nextNextZip = PinnedAsset(
-    "https://github.com/VeryBaaad/ZygiskNextNext/releases/download/v1.8.3/Zygisk-Next-Next-v1.8.3-184-e4da082-release.zip",
-    "5413ab654c1c167d843d480e61fce3fb01c01a277c5e10a23cb68801076f9fa4",
+    "https://github.com/VeryBaaad/ZygiskNextNext/releases/download/v1.11.0/Zygisk-Next-Next-v1.11.0-199-17a19d4-release.zip",
+    "1f031d9ba930b41c728700ef0a2be5d21c5b6b937a94935b48ce057ef0fd80f1",
 )
-val nextNextStoredSha256 = "a9de2634f1688e8f3705513aafaffcc03fd69593db2ac31d2d8133b632d5fdf6"
+val nextNextStoredSha256 = "cbf017fb18649aa161cf34cc95d9da45b2f3db12ab16d5e9c9a5f231c709e8f1"
 val zygiskAssets = mapOf(
     "zygisk/re.zip" to reZygiskZip,
     "zygisk/re-LICENSE" to PinnedAsset(
@@ -95,7 +98,7 @@ val zygiskAssets = mapOf(
     ),
     "zygisk/nextnext.zip" to nextNextZip,
     "zygisk/nextnext-LICENSE" to PinnedAsset(
-        "https://raw.githubusercontent.com/VeryBaaad/ZygiskNextNext/e4da08237aa4a37a7cd53fd3243315ef24954618/LICENSE",
+        "https://raw.githubusercontent.com/VeryBaaad/ZygiskNextNext/17a19d40e339a516cc65997e1fae86e35c0ab15e/LICENSE",
         "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
     ),
 )
@@ -170,8 +173,35 @@ val fetchZygiskAssets = tasks.register<FetchPinnedAssets>("fetchZygiskAssets") {
     normalizedSha256.set(nextNextStoredSha256)
 }
 
+// AGP's built-in Kotlin source-directory API has no per-file exclusion filter.
+// Stage a filtered, disposable source tree instead of compiling live backends in the demo.
+val noRootDemoSources = if (noRootDemo) tasks.register<Sync>("stageNoRootDemoSources") {
+    from("src/main/java") {
+        exclude("**/Natives.kt", "**/ui/util/KsuCli.kt", "**/data/zygisk/BuiltinZygisk.kt",
+            "**/data/repository/SuperUserRepositoryImpl.kt", "**/data/susfs/SusfsRepository.kt",
+            "**/ui/KsuService.kt", "**/magica/AppZygotePreload.java", "**/magica/BootCompletedReceiver.java")
+    }
+    from("src/noRootDemo/java")
+    into(layout.buildDirectory.dir("generated/noRootDemo/sources"))
+} else null
+
 android {
     namespace = "com.shixiaoshi0417.lunexsu"
+
+    if (noRootDemo) {
+        sourceSets.named("main") {
+            val staged = layout.buildDirectory.dir("generated/noRootDemo/sources").get().asFile.absolutePath
+            java.directories.clear()
+            java.directories.add(staged)
+            kotlin.directories.clear()
+            kotlin.directories.add(staged)
+            manifest.srcFile("src/noRootDemo/AndroidManifest.xml")
+        }
+        sourceSets.named("test") { kotlin.directories.add(file("src/noRootDemoTest/java").absolutePath) }
+        providers.gradleProperty("NO_ROOT_DEMO_KEYSTORE").orNull?.let { path ->
+            signingConfigs.getByName("debug").storeFile = file(path)
+        }
+    }
 
     buildTypes {
         debug {
@@ -182,6 +212,7 @@ android {
             }
         }
         release {
+            if (noRootDemo) signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
             vcsInfo.include = false
@@ -225,12 +256,15 @@ android {
         jniLibs {
             useLegacyPackaging = true
             excludes += "lib/*/libandroidx.graphics.path.so"
+            if (noRootDemo) excludes += listOf("lib/*/libksud.so", "lib/*/liblunexsu.so")
         }
     }
 
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
+    if (!noRootDemo) {
+        externalNativeBuild {
+            cmake {
+                path = file("src/main/cpp/CMakeLists.txt")
+            }
         }
     }
 
@@ -256,10 +290,11 @@ android {
         minSdk = androidMinSdkVersion
         targetSdk = androidTargetSdkVersion
         versionCode = managerVersionCode
-        versionName = managerVersionName
+        versionName = managerVersionName + if (noRootDemo) "-no-root-demo" else ""
         applicationId = managerPackageName
 
         buildConfigField("boolean", "IS_PR_BUILD", isPrBuild.toString())
+        buildConfigField("boolean", "NO_ROOT_DEMO", noRootDemo.toString())
         buildConfigField("String", "ZYGISK_RE_SHA256", "\"${reZygiskZip.sha256}\"")
         buildConfigField("String", "ZYGISK_NEO_SHA256", "\"${neoZygiskZip.sha256}\"")
         buildConfigField("String", "ZYGISK_NEXTNEXT_SHA256", "\"$nextNextStoredSha256\"")
@@ -291,12 +326,14 @@ android {
 
 androidComponents {
     onVariants {
-        it.sources.assets?.addGeneratedSourceDirectory(fetchZygiskAssets, FetchPinnedAssets::outputDir)
+        if (!noRootDemo) it.sources.assets?.addGeneratedSourceDirectory(fetchZygiskAssets, FetchPinnedAssets::outputDir)
     }
     onVariants(selector().withBuildType("release")) {
         it.packaging.resources.excludes.addAll(listOf("META-INF/**", "kotlin/**", "**.bin"))
     }
 }
+
+noRootDemoSources?.let { sources -> tasks.named("preBuild") { dependsOn(sources) } }
 
 base {
     archivesName.set(

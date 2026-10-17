@@ -106,6 +106,8 @@ internal object ThemePackDeviceTests {
         val prefs = context.getSharedPreferences("settings", 0)
         val passed = mutableListOf<String>()
         try {
+            FptJsonPlatformTests.run(context.cacheDir)
+            passed += "strict_bounded_json_on_android_parser"
             check(prefs.edit().putString("ui_mode", "miuix").putString("intent_token", "original")
                 .putBoolean("auto_jailbreak", false).commit())
             val source = fixture(context)

@@ -129,6 +129,9 @@ public final class SuFilePathHandler implements WebViewAssetLoader.PathHandler {
     }
 
     public static InputStream openFile(@NonNull File file, @NonNull Shell shell) throws IOException {
+        if (com.shixiaoshi0417.lunexsu.BuildConfig.NO_ROOT_DEMO) {
+            throw new IOException("NO ROOT DEMO: privileged file access is disabled");
+        }
         SuFile suFile = new SuFile(file.getAbsolutePath());
         suFile.setShell(shell);
         InputStream fis = SuFileInputStream.open(suFile);

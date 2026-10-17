@@ -53,16 +53,6 @@ macro_rules! debug_select {
     }};
 }
 
-pub fn ensure_clean_dir(dir: impl AsRef<Path>) -> Result<()> {
-    let path = dir.as_ref();
-    log::debug!("ensure_clean_dir: {}", path.display());
-    if path.exists() {
-        log::debug!("ensure_clean_dir: {} exists, remove it", path.display());
-        std::fs::remove_dir_all(path)?;
-    }
-    Ok(std::fs::create_dir_all(path)?)
-}
-
 pub fn ensure_file_exists<T: AsRef<Path>>(file: T) -> Result<()> {
     match File::options().write(true).create_new(true).open(&file) {
         std::result::Result::Ok(_) => Ok(()),
@@ -277,6 +267,22 @@ pub fn install(libadbroot: Option<PathBuf>, data_path: Option<PathBuf>) -> Resul
 }
 
 pub fn uninstall(package_name: &str) -> Result<()> {
+    boot_patch::restore_before_cleanup(
+        || {
+            println!("- Restore boot image before removing any userspace state..");
+            boot_patch::restore(BootRestoreArgs {
+                boot: None,
+                flash: true,
+                out: None,
+                out_name: None,
+            })
+            .context("Boot restore failed; userspace and backups retained for retry")
+        },
+        || uninstall_after_restore(package_name),
+    )
+}
+
+fn uninstall_after_restore(package_name: &str) -> Result<()> {
     if Path::new(defs::MODULE_DIR).exists() {
         println!("- Uninstall modules..");
         module::uninstall_all_modules()?;
@@ -289,13 +295,6 @@ pub fn uninstall(package_name: &str) -> Result<()> {
     std::fs::remove_dir_all(defs::PREINIT_DIR_VOLD).ok();
     std::fs::remove_dir_all(defs::PREINIT_DIR_WATCHDOG).ok();
     std::fs::remove_dir_all(defs::PREINIT_DIR_DEFAULT).ok();
-    println!("- Restore boot image..");
-    boot_patch::restore(BootRestoreArgs {
-        boot: None,
-        flash: true,
-        out: None,
-        out_name: None,
-    })?;
     println!("- Uninstall LunexSU manager..");
     Command::new("pm")
         .args(["uninstall", package_name])

@@ -5,14 +5,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.shixiaoshi0417.lunexsu.data.model.TemplateInfo
 import com.shixiaoshi0417.lunexsu.ksuApp
+import com.shixiaoshi0417.lunexsu.ui.util.ProfileCommand
 import com.shixiaoshi0417.lunexsu.ui.util.getAppProfileTemplate
 import com.shixiaoshi0417.lunexsu.ui.util.listAppProfileTemplates
 import com.shixiaoshi0417.lunexsu.ui.util.setAppProfileTemplate
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.IOException
 
-class TemplateRepositoryImpl : TemplateRepository {
+class TemplateRepositoryImpl(
+    private val storeTemplate: (String, String) -> Boolean = ::setAppProfileTemplate,
+) : TemplateRepository {
 
     companion object {
         private const val TAG = "TemplateRepository"
@@ -40,18 +44,27 @@ class TemplateRepositoryImpl : TemplateRepository {
                     val json = JSONObject(jsonString)
                     JSONArray().apply { put(json) }
                 } catch (e: Exception) {
-                    throw Exception("invalid templates: $jsonString")
+                    throw IllegalArgumentException("Invalid templates: expected a JSON object or array", e)
                 }
             }
 
-            (0 until array.length()).forEach { i ->
-                runCatching {
+            // Validate the entire batch before any write. Do not silently import only a subset.
+            val templates = (0 until array.length()).map { i ->
+                try {
                     val template = array.getJSONObject(i)
-                    val id = template.getString("id")
+                    val id = template.get("id") as? String
+                        ?: throw IllegalArgumentException("ID must be a string")
+                    ProfileCommand.requireValidId(id)
+                    requireNotNull(TemplateInfo.fromJSON(template)) { "Invalid template fields" }
                     template.put("local", true)
-                    setAppProfileTemplate(id, template.toString())
-                }.onFailure { e ->
-                    Log.e(TAG, "ignore invalid template: $array", e)
+                    id to template.toString()
+                } catch (e: Exception) {
+                    throw IllegalArgumentException("Invalid template at index $i: ${e.message}", e)
+                }
+            }
+            templates.forEachIndexed { i, (id, template) ->
+                if (!storeTemplate(id, template)) {
+                    throw IOException("Failed to save template $id (index $i); $i templates saved")
                 }
             }
         }
@@ -86,7 +99,11 @@ class TemplateRepositoryImpl : TemplateRepository {
                 val remoteTemplateIds = JSONArray(response.body.string())
                 Log.i(TAG, "fetchRemoteTemplates: $remoteTemplateIds")
                 (0 until remoteTemplateIds.length()).forEach { i ->
-                    val id = remoteTemplateIds.getString(i)
+                    val id = remoteTemplateIds.get(i) as? String
+                    if (id == null || !ProfileCommand.isValidId(id)) {
+                        Log.e(TAG, "Ignore invalid remote template ID at index $i")
+                        return@forEach
+                    }
                     Log.i(TAG, "fetch template: $id")
                     val templateJson = ksuApp.okhttpClient.newCall(
                         Request.Builder().url(TEMPLATE_URL.format(id)).build()
@@ -103,10 +120,13 @@ class TemplateRepositoryImpl : TemplateRepository {
                     // validate remote template
                     runCatching {
                         val json = JSONObject(templateJson)
-                        TemplateInfo.fromJSON(json)?.let {
+                        TemplateInfo.fromJSON(json)?.let { template ->
+                            require(json.get("id") == id && template.id == id && ProfileCommand.isValidId(template.id)) {
+                                "Remote template ID does not match its index entry"
+                            }
                             // force local template
                             json.put("local", false)
-                            setAppProfileTemplate(id, json.toString())
+                            check(storeTemplate(id, json.toString())) { "Failed to save remote template $id" }
                         }
                     }.onFailure {
                         Log.e(TAG, "ignore invalid template: $it", it)
@@ -119,7 +139,11 @@ class TemplateRepositoryImpl : TemplateRepository {
 
     private fun getTemplateInfoById(id: String): TemplateInfo? {
         return runCatching {
-            TemplateInfo.fromJSON(JSONObject(getAppProfileTemplate(id)))
+            ProfileCommand.requireValidId(id)
+            val json = JSONObject(getAppProfileTemplate(id))
+            TemplateInfo.fromJSON(json)?.also {
+                require(json.get("id") == id && it.id == id) { "Stored template ID does not match its filename" }
+            }
         }.onFailure {
             Log.e(TAG, "ignore invalid template: $it", it)
         }.getOrNull()

@@ -5,7 +5,7 @@ import android.util.Log
 import com.shixiaoshi0417.lunexsu.BuildConfig
 import com.shixiaoshi0417.lunexsu.ksuApp
 import com.shixiaoshi0417.lunexsu.ui.util.getKsuDaemonPath
-import com.shixiaoshi0417.lunexsu.ui.util.getRootShell
+import com.shixiaoshi0417.lunexsu.ui.util.withRootShell
 import com.shixiaoshi0417.lunexsu.ui.util.withNewRootShell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -39,6 +39,15 @@ object BuiltinZygisk {
     suspend fun status(): ZygiskStatus = withContext(Dispatchers.IO) {
         val (flags, monitor) = readFlags()
         zygiskStatusOf(flags, monitor)
+    }
+
+    /** Homepage diagnostics only: no module commands, installs or configuration writes. */
+    suspend fun overview(): ZygiskOverview = withContext(Dispatchers.IO) {
+        withRootShell {
+            if (!isRoot) return@withRootShell ZygiskOverview()
+            val result = newJob().add(zygiskOverviewScript()).to(ArrayList(), null).exec()
+            if (result.isSuccess) parseZygiskOverview(result.out) else ZygiskOverview()
+        }
     }
 
     /** Ids of the modules this switch installed, which the module list leaves to the settings card. */
@@ -90,13 +99,13 @@ object BuiltinZygisk {
     }
 
     private fun readFlags(): Pair<Map<ZygiskModule, ZygiskModuleFlags>, Boolean> {
-        val out = getRootShell().newJob().add(zygiskStatusScript()).to(ArrayList(), null).exec().out
+        val out = withRootShell { newJob().add(zygiskStatusScript()).to(ArrayList(), null).exec().out }
         return parseZygiskFlags(out)
     }
 
     private fun discardInstall(module: ZygiskModule): String? = try {
         val out = ArrayList<String>()
-        val result = getRootShell().newJob().add(zygiskDiscardInstallScript(module)).to(out, out).exec()
+        val result = withRootShell { newJob().add(zygiskDiscardInstallScript(module)).to(out, out).exec() }
         if (result.isSuccess) null else out.failureSummary(result.code)
     } catch (e: Exception) {
         Log.w(TAG, "discard ${module.moduleId} failed", e)
@@ -134,8 +143,9 @@ object BuiltinZygisk {
             // reboot moves modules_update/<id> into its place.
             val marker = ZYGISK_OWNER_MARKER
             val id = module.moduleId
-            val result = getRootShell().newJob()
-                .add("touch /data/adb/modules_update/$id/$marker /data/adb/modules/$id/$marker").exec()
+            val result = withRootShell {
+                newJob().add("touch /data/adb/modules_update/$id/$marker /data/adb/modules/$id/$marker").exec()
+            }
             return if (result.isSuccess) null else "${module.moduleId}: marker"
         } catch (e: Exception) {
             Log.w(TAG, "install ${module.moduleId} failed", e)

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="no_root_demo_notice">無 Root 示範版 · 運作中、權限與模組狀態均為模擬，不執行系統修改或指令。</string>
     <string name="home">主頁</string>
     <string name="home_not_installed">未安裝</string>
     <string name="home_click_to_install">按一下開始安裝</string>
@@ -276,6 +277,29 @@
     <string name="settings_soft_reboot">以軟重啟替代重新啟動</string>
     <string name="settings_soft_reboot_summary">安裝、更新或開關模組時以軟重啟替代完整重新啟動</string>
     <string name="settings_zygisk">內建 Zygisk</string>
+    <string name="home_zygisk_title">Zygisk 狀態</string>
+    <string name="home_zygisk_expand">已摺疊，點擊展開詳情</string>
+    <string name="home_zygisk_collapse">已展開，點擊收起詳情</string>
+    <string name="home_zygisk_unavailable">暫時無法查詢</string>
+    <string name="home_zygisk_safe_mode">安全模式：略過模組啟動</string>
+    <string name="home_zygisk_conflict">偵測到外部或舊版模組</string>
+    <string name="home_zygisk_pending">設定待重新啟動生效</string>
+    <string name="home_zygisk_monitor_detected">偵測到監視程序</string>
+    <string name="home_zygisk_configured">已設定後端</string>
+    <string name="home_zygisk_disabled">未設定內建後端</string>
+    <string name="home_zygisk_backend">下次啟動的後端設定</string>
+    <string name="home_zygisk_none">未設定</string>
+    <string name="home_zygisk_monitor">zygisk-ptrace 監視程序</string>
+    <string name="home_zygisk_detected">已偵測到</string>
+    <string name="home_zygisk_not_detected">未偵測到（並非所有後端的運行檢測）</string>
+    <string name="home_zygisk_znn">ZNN 設定</string>
+    <string name="home_zygisk_znn_configured">已設定（高危）</string>
+    <string name="home_zygisk_external">外部模組 ID</string>
+    <string name="home_zygisk_installed_version">已安裝：%1$s</string>
+    <string name="home_zygisk_staged_version">待套用：%1$s</string>
+    <string name="home_zygisk_version_unknown">未讀取到已安裝版本</string>
+    <string name="home_zygisk_observation_hint">模組標記及程序檢測不代表注入成功。未發現 ptrace 監視程序，亦不能判定 NeoZygisk 或 ZNN 是否運行。</string>
+    <string name="home_zygisk_query_hint">需要可用的 Core 授權與 Root Shell；已授權時可稍後重試。查詢失敗不代表已關閉。</string>
     <string name="settings_zygisk_summary">預設關閉，開啟後使用 ReZygisk。每次變更都需重新啟動後生效</string>
     <string name="settings_zygisk_running">%s 運行中</string>
     <string name="settings_zygisk_not_running">%s 已啟用，但目前未運行</string>
@@ -290,6 +314,13 @@
     <string name="settings_zygisk_backend_summary">預設 ReZygisk，可切換為 NeoZygisk</string>
     <string name="settings_zygisk_nextnext">使用 ZygiskNextNext</string>
     <string name="settings_zygisk_nextnext_summary">支援 Zygisk Next API。預設關閉，變更後需重新啟動生效</string>
+    <string name="settings_zygisk_nextnext_risk_summary">高危：可能無法開機，僅限具備救磚能力的使用者。</string>
+    <string name="settings_zygisk_nextnext_risk_title">ZNN 高危警告</string>
+    <string name="settings_zygisk_nextnext_risk_message">啟用 ZygiskNextNext（ZNN）可能導致卡在開機畫面、循環重新啟動或無法進入系統，已有無法開機的實際回報。安全模式不保證能夠恢復。只有在你能獨立透過可用的恢復環境停用故障模組，或恢復已知可用的啟動映像時，才可繼續。</string>
+    <string name="settings_zygisk_nextnext_risk_recovery">我確認具備救磚能力</string>
+    <string name="settings_zygisk_nextnext_risk_recovery_hint">我已準備可用的恢復環境或啟動映像，知道如何在無法進入系統時恢復裝置，並接受風險。</string>
+    <string name="settings_zygisk_nextnext_risk_continue">繼續</string>
+    <string name="settings_zygisk_nextnext_risk_countdown">繼續（%1$d 秒）</string>
     <string name="settings_zygisk_nextnext_enable_first">請先開啟內置 Zygisk，才能啟用 Zygisk Next API 支援</string>
     <string name="settings_zygisk_nextnext_pending">Zygisk Next API 支援已變更，需重新啟動後生效</string>
     <string name="settings_zygisk_legacy_vex">偵測到舊版內置 Vex，請先關閉內置 Zygisk 並重新啟動，再開啟以使用 ReZygisk</string>
@@ -471,4 +502,14 @@
     <string name="superkey_prepare_failed">無法準備超級密鑰設定</string>
     <string name="superkey_enter">輸入超級密鑰</string>
     <string name="superkey_failed">可能未安裝或密碼錯誤</string>
+    <string name="superkey_remember">記住超級密鑰</string>
+    <string name="superkey_remember_hint">在本機加密儲存解鎖憑證，下次啟動自動解鎖。之後能開啟管理器的人亦可能使用其管理權限。</string>
+    <string name="superkey_saved">記住的超級密鑰</string>
+    <string name="superkey_saved_hint">本機已啟用自動解鎖，點擊可忘記憑證。</string>
+    <string name="superkey_not_saved">未儲存憑證，可在輸入超級密鑰時勾選記住。</string>
+    <string name="superkey_forget">忘記超級密鑰</string>
+    <string name="superkey_forget_hint">刪除本機加密儲存的憑證，不修改 Core 密鑰，亦不會撤銷已獲得的權限。裝置重新啟動後須再次手動輸入。</string>
+    <string name="superkey_storage_failed">無法儲存或刪除憑證，請檢查記住的超級密鑰設定；仍可手動解鎖。</string>
+    <string name="superkey_saved_invalid">已儲存的憑證失效或無法使用，請再次輸入超級密鑰。</string>
+    <string name="superkey_auto_failed">自動解鎖失敗，請手動輸入超級密鑰。</string>
 </resources>

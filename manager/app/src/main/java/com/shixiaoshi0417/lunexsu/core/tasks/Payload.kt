@@ -12,12 +12,12 @@ import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.nio.channels.FileChannel
 import java.nio.file.StandardOpenOption
 import java.security.MessageDigest
 
 class Payload(private val channel: DataSourceChannel) {
+    private val reader = PayloadReader(channel.size()) { buffer, position -> channel.read(buffer, position) }
     private val manifest: DeltaArchiveManifest
     private var dataBase = 0L
 
@@ -60,9 +60,13 @@ class Payload(private val channel: DataSourceChannel) {
      * remote downloads pass an explicit --kmi to ksud.
      */
     fun kernelKmi(onProgress: ((String) -> Unit)? = null): String? {
-        for (name in BOOT_PARTITION_NAMES) {
-            val partition = manifest.partitionsList.find { it.partitionName == name } ?: continue
-            kernelKmi(partition, onProgress)?.let { return it }
+        try {
+            for (name in BOOT_PARTITION_NAMES) {
+                val partition = manifest.partitionsList.find { it.partitionName == name } ?: continue
+                kernelKmi(partition, onProgress)?.let { return it }
+            }
+        } catch (_: IOException) {
+            // A malformed range or short remote response is an unknown KMI, never padded data.
         }
         return null
     }
@@ -92,10 +96,7 @@ class Payload(private val channel: DataSourceChannel) {
         if (first.dataLength <= 0 || first.getType() !in KMI_OPERATION_TYPES) return null
 
         // Locate the kernel block from the first op's header.
-        val header = channel.readFully(
-            dataBase + first.dataOffset,
-            minOf(first.dataLength, HEADER_PROBE_LIMIT),
-        ) ?: return null
+        val header = reader.probe(dataBase, first.dataOffset, first.dataLength, HEADER_PROBE_LIMIT)
         val headerChunk = decodeChunk(header, first.getType()) ?: return null
         val (kernelOffset, kernelSize) = BootKernelVersion.bootKernelBlock(headerChunk) ?: return null
         if (kernelSize <= 0) return null
@@ -110,10 +111,7 @@ class Payload(private val channel: DataSourceChannel) {
             val operation = partition.operationsList[index]
             if (operation.dataLength <= 0 || operation.getType() !in KMI_OPERATION_TYPES) continue
             onProgress?.invoke("- Analyzing boot partition ${index + 1}/$count")
-            val data = channel.readFully(
-                dataBase + operation.dataOffset,
-                minOf(operation.dataLength, KMI_PROBE_LIMIT),
-            ) ?: return null
+            val data = reader.probe(dataBase, operation.dataOffset, operation.dataLength, KMI_PROBE_LIMIT)
             val chunk = decodeChunk(data, operation.getType()) ?: continue
             BootKernelVersion.scanKmi(chunk)?.let { return it }
         }
@@ -135,10 +133,10 @@ class Payload(private val channel: DataSourceChannel) {
             val type = operation.getType()
             if (type !in KMI_OPERATION_TYPES) continue
 
-            val readLength = minOf(operation.dataLength, KMI_PROBE_LIMIT)
-            val data = channel.readFully(dataBase + operation.dataOffset, readLength) ?: return null
+            val remaining = KMI_PROBE_LIMIT - prefix.size()
+            val data = reader.probe(dataBase, operation.dataOffset, operation.dataLength, remaining)
             val chunk = decodeChunk(data, type) ?: return null
-            prefix.write(chunk)
+            prefix.write(chunk, 0, minOf(chunk.size.toLong(), remaining).toInt())
             BootKernelVersion.parseKmiFromBootData(prefix.toByteArray(), scannedPrefix)
                 ?.let { return it }
             scannedPrefix = prefix.size()
@@ -158,12 +156,10 @@ class Payload(private val channel: DataSourceChannel) {
     }
 
     private fun opRanges(partition: PartitionUpdate): List<Pair<Long, Long>> {
-        var offset = 0L
+        PayloadReader.boundedLength(partition.newPartitionInfo.size, PayloadReader.MAX_PARTITION_BYTES)
         return partition.operationsList.map { operation ->
-            val size = operation.dstExtentsList.sumOf { it.numBlocks } * manifest.blockSize
-            val range = offset to (offset + size)
-            offset += size
-            range
+            val ranges = destinationRanges(operation, partition.newPartitionInfo.size)
+            ranges.minOf { it.first } to ranges.maxOf { it.first + it.second }
         }
     }
 
@@ -171,7 +167,7 @@ class Payload(private val channel: DataSourceChannel) {
         return try {
             val stream = when (type) {
                 InstallOperation.Type.REPLACE_BZ -> BZip2CompressorInputStream(ByteArrayInputStream(data))
-                InstallOperation.Type.REPLACE_XZ -> XZCompressorInputStream(ByteArrayInputStream(data))
+                InstallOperation.Type.REPLACE_XZ -> xzStream(ByteArrayInputStream(data))
                 else -> return null
             }
             stream.use { decompressPrefix(it) }
@@ -187,6 +183,7 @@ class Payload(private val channel: DataSourceChannel) {
             while (output.size() < KMI_PROBE_LIMIT) {
                 val read = input.read(buffer)
                 if (read < 0) break
+                if (read == 0) throw IOException("Payload operation read made no progress")
                 output.write(buffer, 0, minOf(read, (KMI_PROBE_LIMIT - output.size()).toInt()))
             }
         } catch (_: IOException) {
@@ -197,48 +194,10 @@ class Payload(private val channel: DataSourceChannel) {
 
     @Throws(IOException::class)
     private fun readPayloadHeader(): DeltaArchiveManifest {
-        val magicBuffer = ByteBuffer.allocate(4)
-        channel.read(magicBuffer)
-        magicBuffer.flip()
-        val magic = String(magicBuffer.array())
-        if (magic != "CrAU") {
-            throw IOException("Invalid payload: invalid magic")
-        }
-
-        val versionBuffer = ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN)
-        channel.read(versionBuffer)
-        versionBuffer.flip()
-        val version = versionBuffer.long
-        if (version != 2L) {
-            throw IOException("Invalid payload: unsupported version: $version")
-        }
-
-        val manifestLenBuffer = ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN)
-        channel.read(manifestLenBuffer)
-        manifestLenBuffer.flip()
-        val manifestLen = manifestLenBuffer.long.toInt()
-        if (manifestLen == 0) {
-            throw IOException("Invalid payload: manifest length is zero")
-        }
-
-        val manifestSigLenBuffer = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN)
-        channel.read(manifestSigLenBuffer)
-        manifestSigLenBuffer.flip()
-        val manifestSigLen = manifestSigLenBuffer.int
-        if (manifestSigLen == 0) {
-            throw IOException("Invalid payload: manifest signature length is zero")
-        }
-
-        val manifestBuffer = ByteBuffer.allocate(manifestLen)
-        channel.read(manifestBuffer)
-        manifestBuffer.flip()
-        val manifest = DeltaArchiveManifest.parseFrom(manifestBuffer.array())
-
-        channel.position(channel.position() + manifestSigLen)
-
-        dataBase = channel.position()
-
-        return manifest
+        val header = reader.header()
+        val bytes = reader.bytes(PayloadReader.HEADER_SIZE, header.manifestLength, PayloadReader.MAX_MANIFEST_BYTES)
+        dataBase = header.dataBase
+        return DeltaArchiveManifest.parseFrom(bytes)
     }
 
     @Throws(IOException::class)
@@ -253,6 +212,18 @@ class Payload(private val channel: DataSourceChannel) {
         partition: PartitionUpdate,
         console: (String) -> Unit,
     ): ByteArray {
+        val size = partition.newPartitionInfo.size
+        PayloadReader.boundedLength(size, PayloadReader.MAX_PARTITION_BYTES)
+        // Validate all ranges before creating/truncating the destination.
+        partition.operationsList.forEach { operation ->
+            destinationRanges(operation, size)
+            if (operation.getType() != InstallOperation.Type.ZERO) {
+                if (operation.getType() !in KMI_OPERATION_TYPES) {
+                    throw IOException("Unsupported operation type: ${operation.getType()}")
+                }
+                reader.operationPosition(dataBase, operation.dataOffset, operation.dataLength)
+            }
+        }
         FileChannel.open(
             outputFile.toPath(),
             StandardOpenOption.CREATE,
@@ -260,63 +231,90 @@ class Payload(private val channel: DataSourceChannel) {
             StandardOpenOption.READ,
             StandardOpenOption.TRUNCATE_EXISTING
         ).use { outChannel ->
-            val size = partition.newPartitionInfo.size
-            outChannel.write(ByteBuffer.allocate(1), size - 1)
+            writeFully(outChannel, ByteBuffer.allocate(1), size - 1)
 
             val count = partition.operationsCount
             partition.operationsList.forEachIndexed { index, operation ->
                 if (index % 5 == 0 || index == count - 1) {
                     console("- Downloading ${index + 1}/$count")
                 }
-                processOperation(outChannel, operation)
+                processOperation(outChannel, operation, size)
             }
 
             val digest = MessageDigest.getInstance("SHA-256")
-            val buffer = outChannel.map(FileChannel.MapMode.READ_WRITE, 0, size)
-            digest.update(buffer)
+            val buffer = ByteBuffer.allocate(64 * 1024)
+            var position = 0L
+            while (position < size) {
+                buffer.clear()
+                buffer.limit(minOf(buffer.capacity().toLong(), size - position).toInt())
+                val count = outChannel.read(buffer, position)
+                if (count <= 0) throw IOException("Cannot read extracted partition")
+                position += count
+                buffer.flip()
+                digest.update(buffer)
+            }
             return digest.digest()
         }
     }
 
     @Throws(IOException::class)
-    private fun processOperation(outChannel: FileChannel, operation: InstallOperation) {
+    private fun processOperation(outChannel: FileChannel, operation: InstallOperation, partitionSize: Long) {
         val dataType = operation.getType()
         if (dataType == InstallOperation.Type.ZERO) {
             return
         }
 
-        val dataBuffer = ByteBuffer.allocate(operation.dataLength.toInt())
-        channel.read(dataBuffer, dataBase + operation.dataOffset)
-        dataBuffer.flip()
-
-        val dstExtent = operation.getDstExtents(0)
-        val outOffset = dstExtent.startBlock * manifest.blockSize
-
-        when (dataType) {
-            InstallOperation.Type.REPLACE -> {
-                outChannel.write(dataBuffer, outOffset)
+        val position = reader.operationPosition(dataBase, operation.dataOffset, operation.dataLength)
+        channel.streamRead(position, operation.dataLength).use { source ->
+            val encoded = PayloadOperationInputStream(source, operation.dataLength)
+            val decoded = when (dataType) {
+                InstallOperation.Type.REPLACE -> encoded
+                InstallOperation.Type.REPLACE_BZ -> BZip2CompressorInputStream(encoded)
+                InstallOperation.Type.REPLACE_XZ -> xzStream(encoded)
+                else -> throw IOException("Unsupported operation type: $dataType")
             }
-
-            InstallOperation.Type.REPLACE_BZ, InstallOperation.Type.REPLACE_XZ -> {
-                val inputStream = dataBuffer.array().inputStream()
-                if (dataType == InstallOperation.Type.REPLACE_BZ) {
-                    BZip2CompressorInputStream(inputStream)
-                } else {
-                    XZCompressorInputStream(inputStream)
-                }.use { decompressor ->
-                    val bytes = ByteArray(8192)
-                    var bytesRead: Int
-                    var bytesWritten = 0
-                    while (decompressor.read(bytes).also { bytesRead = it } != -1) {
-                        val buffer = ByteBuffer.wrap(bytes, 0, bytesRead)
-                        bytesWritten += outChannel.write(buffer, outOffset + bytesWritten)
+            decoded.use { input ->
+                val ranges = destinationRanges(operation, partitionSize)
+                ranges.forEachIndexed { index, (offset, length) ->
+                    var written = 0L
+                    val padding = if (index == ranges.lastIndex) manifest.blockSize - 1L else 0L
+                    PayloadReader.copyToExtent(input, length, padding) { buffer ->
+                        val count = buffer.remaining()
+                        writeFully(outChannel, buffer, offset + written)
+                        written += count
                     }
                 }
+                if (input.read() != -1) throw IOException("Payload operation exceeds destination extents")
+                encoded.finish()
             }
-
-            else -> throw IOException("Unsupported operation type: $dataType")
         }
     }
+
+    private fun destinationRanges(operation: InstallOperation, size: Long): List<Pair<Long, Long>> {
+        if (operation.dstExtentsCount == 0) throw IOException("Payload operation has no destination extents")
+        var total = 0L
+        return operation.dstExtentsList.map { extent ->
+            val offset = PayloadReader.blockBytes(extent.startBlock, manifest.blockSize)
+            val length = PayloadReader.blockBytes(extent.numBlocks, manifest.blockSize)
+            PayloadReader.boundedLength(length, size)
+            PayloadReader.range(offset, length, size)
+            PayloadReader.range(total, length, size)
+            total += length
+            offset to length
+        }
+    }
+
+    private fun writeFully(output: FileChannel, buffer: ByteBuffer, offset: Long) {
+        var position = offset
+        while (buffer.hasRemaining()) {
+            val count = output.write(buffer, position)
+            if (count <= 0) throw IOException("Cannot write extracted partition")
+            position += count
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun xzStream(input: InputStream) = XZCompressorInputStream(input, false, 64 * 1024)
 
     companion object {
         // KMI comes from the kernel block; init_boot only carries the ramdisk.

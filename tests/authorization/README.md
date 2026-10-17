@@ -10,7 +10,17 @@ real files with partial/later-record write, fsync, rename and cleanup failures,
 interrupted transactions, stale staging hard links and safe retry. Reboot
 revokes Root from the UIDs of unfinished transactions rather than restoring
 rejected candidates or a stale Permanent snapshot, while an unrelated Permanent
-grant always survives. KEEP validation includes new/denied entries.
+grant survives a well-formed UID-scoped marker. A torn, unreadable or overflowing
+marker instead revokes Root conservatively for every saved record. KEEP
+validation includes new/denied entries.
+
+Independent marker regressions: `python3 tests/authorization/run_persistence_tests.py`.
+This uses ASan/UBSan, production pure helpers and extracted production guard I/O
+functions. It checks 1..7-byte tails, aligned short reads, partial writes,
+repeated transactions without losing earlier complete guard records, restart
+parsing, later-stage failures and clean restore. Appending to a torn marker is
+rejected without changing it; a full safe recovery snapshot may remove that
+marker only after durable commit. No real authorization paths are accessed.
 
 Device prerequisites:
 

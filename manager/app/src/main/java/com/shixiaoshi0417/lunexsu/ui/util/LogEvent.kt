@@ -12,7 +12,7 @@ import java.io.PrintWriter
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-fun getBugreportFile(context: Context): File {
+fun getBugreportFile(context: Context): File = withRootShell(true) {
 
     val bugreportDir = File(context.cacheDir, "bugreport")
     bugreportDir.mkdirs()
@@ -40,7 +40,7 @@ fun getBugreportFile(context: Context): File {
     val kernelConfig = File(bugreportDir, "defconfig.gz")
     val kallsyms = File(bugreportDir, "kallsyms.txt")
 
-    val shell = getRootShell(true)
+    val shell = this
 
     // busybox ps has very few features for embed devices
     shell.newJob().add("toybox ps -T -A -w -o PID,TID,UID,COMM,CMDLINE,CMD,LABEL,STAT,WCHAN > ${processFile.absolutePath}").exec()
@@ -113,6 +113,6 @@ fun getBugreportFile(context: Context): File {
     shell.newJob().add("rm -rf ${bugreportDir.absolutePath}").exec()
     shell.newJob().add("chmod 0644 ${targetFile.absolutePath}").exec()
 
-    return targetFile
+    targetFile
 }
 

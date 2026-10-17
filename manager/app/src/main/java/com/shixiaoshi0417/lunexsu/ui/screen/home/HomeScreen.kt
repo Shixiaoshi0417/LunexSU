@@ -23,7 +23,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.data.HomeMetrics
+import com.shixiaoshi0417.lunexsu.data.SavedSuperkey
+import com.shixiaoshi0417.lunexsu.data.SuperkeyAuthenticationResult
+import kotlinx.coroutines.CancellationException
 import com.shixiaoshi0417.lunexsu.data.model.HomeLayoutStyle
+import com.shixiaoshi0417.lunexsu.data.zygisk.ZygiskOverview
 import com.shixiaoshi0417.lunexsu.magica.MagicaService
 import com.shixiaoshi0417.lunexsu.ui.LocalMainPagerState
 import com.shixiaoshi0417.lunexsu.ui.LocalUiMode
@@ -46,7 +50,17 @@ fun HomePager(
 ) {
     val viewModel = viewModel<HomeViewModel>()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val authenticationGeneration by SavedSuperkey.authenticationGeneration.collectAsStateWithLifecycle()
+    LaunchedEffect(authenticationGeneration) {
+        if (authenticationGeneration > 0) viewModel.refresh()
+    }
     val uiMode = LocalUiMode.current
+    val zygiskOverview = if (isCurrentPage && uiState.isFullFeatured) {
+        viewModel.zygiskOverview.collectAsStateWithLifecycle().value
+    } else {
+        ZygiskOverview()
+    }
+    val homeState = uiState.copy(zygiskOverview = zygiskOverview)
     val mainPagerState = LocalMainPagerState.current
     val metrics = if (
         uiMode == UiMode.Material && isCurrentPage &&
@@ -63,7 +77,28 @@ fun HomePager(
     val latestIsCurrentPage by rememberUpdatedState(isCurrentPage)
     val initialResumeHandled = rememberSaveable { mutableStateOf(false) }
     var showSuperkey by remember { mutableStateOf(false) }
-    if (showSuperkey) {
+    var autoUnlocking by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        try {
+            when (SavedSuperkey.tryAutomatic()) {
+                is SuperkeyAuthenticationResult.Accepted -> {
+                    viewModel.refresh()
+                    (context as? android.app.Activity)?.recreate()
+                }
+                SuperkeyAuthenticationResult.Invalidated -> {
+                    Toast.makeText(context, R.string.superkey_saved_invalid, Toast.LENGTH_LONG).show()
+                    showSuperkey = true
+                }
+                else -> Unit
+            }
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) {
+            // Keystore/unavailable Core errors never block the manual entry.
+            Toast.makeText(context, R.string.superkey_auto_failed, Toast.LENGTH_LONG).show()
+            showSuperkey = true
+        } finally { autoUnlocking = false }
+    }
+    if (showSuperkey && !autoUnlocking) {
         SuperkeyDialog(
             onDismiss = { showSuperkey = false },
             onAuthenticated = {
@@ -94,6 +129,9 @@ fun HomePager(
         onInstallClick = { navigator.push(Route.Install) },
         onOpenUrl = uriHandler::openUri,
         onJailbreakClick = {
+            if (com.shixiaoshi0417.lunexsu.BuildConfig.NO_ROOT_DEMO) {
+                Toast.makeText(context, R.string.no_root_demo_notice, Toast.LENGTH_LONG).show()
+            } else {
             loadingDialog.showLoading()
             context.startService(Intent(context, MagicaService::class.java))
             // Manager will be force-stopped and restarted by late-load on success.
@@ -105,6 +143,7 @@ fun HomePager(
                     Toast.makeText(context, R.string.jailbreak_timeout, Toast.LENGTH_LONG).show()
                 }
             }
+            }
         },
         onOpenSuperUser = { mainPagerState.animateToPage(BottomBarDestination.SuperUser.ordinal) },
         onOpenModule = { mainPagerState.animateToPage(BottomBarDestination.Module.ordinal) },
@@ -112,16 +151,16 @@ fun HomePager(
     )
 
     if (LocalFinaThemeUi.current) {
-        FinaThemeHome(uiState, actions, bottomInnerPadding, superuserCount, moduleEnabledCount, metrics)
+        FinaThemeHome(homeState, actions, bottomInnerPadding, superuserCount, moduleEnabledCount, metrics)
     } else when (uiMode) {
         UiMode.Miuix -> HomePagerMiuix(
-            state = uiState,
+            state = homeState,
             actions = actions,
             bottomInnerPadding = bottomInnerPadding,
         )
 
         UiMode.Material -> HomePagerMaterial(
-            state = uiState,
+            state = homeState,
             actions = actions,
             bottomInnerPadding = bottomInnerPadding,
             superuserCount = superuserCount,

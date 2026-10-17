@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -84,6 +85,7 @@ class ModuleViewModel(
     private val searchQuery = MutableStateFlow("")
 
     private var fetchJob: Job? = null
+    private var environmentJob: Job? = null
 
     var isNeedRefresh = false
         private set
@@ -122,14 +124,25 @@ class ModuleViewModel(
     }
 
     fun refreshEnvironmentState() {
-        viewModelScope.launch {
-            val magiskInstalled = withContext(Dispatchers.IO) { hasMagisk() }
-            val isSafeMode = Natives.isSafeMode
-            _uiState.update {
-                it.copy(
-                    magiskInstalled = magiskInstalled,
-                    isSafeMode = isSafeMode,
-                )
+        environmentJob?.cancel()
+        // Unknown must not briefly offer installation before the environment probe finishes.
+        _uiState.update { it.copy(environmentChecked = false) }
+        environmentJob = viewModelScope.launch {
+            try {
+                val (magiskInstalled, isSafeMode) = withContext(Dispatchers.IO) {
+                    hasMagisk() to Natives.isSafeMode
+                }
+                _uiState.update {
+                    it.copy(
+                        environmentChecked = true,
+                        magiskInstalled = magiskInstalled,
+                        isSafeMode = isSafeMode,
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("ModuleViewModel", "Failed to check module installation environment", e)
             }
         }
     }

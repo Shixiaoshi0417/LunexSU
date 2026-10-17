@@ -39,17 +39,34 @@ perform_cleanup() {
 # Sets up or update LunexSU environment
 setup_kernelsu() {
     echo "[+] Setting up LunexSU..."
-    test -d "$GKI_ROOT/LunexSU" || git clone https://github.com/Shixiaoshi0417/LunexSU "$GKI_ROOT/LunexSU" && echo "[+] Repository cloned."
+    if ! test -d "$GKI_ROOT/LunexSU"; then
+        git clone https://github.com/Shixiaoshi0417/LunexSU "$GKI_ROOT/LunexSU" || return 1
+        echo "[+] Repository cloned."
+    fi
     cd "$GKI_ROOT/LunexSU"
-    git stash && echo "[-] Stashed current changes."
+    # Never hide or discard a caller's local changes while selecting a revision.
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        echo '[ERROR] LunexSU has local changes; select a revision in a clean checkout.' >&2
+        return 1
+    fi
     # The fork's tags are upstream KernelSU releases, which expect the upstream
     # Manager package and certificate. The default is therefore LunexSU's main.
-    if [ -z "${1-}" ] || [ "$(git status | grep -Po 'v\d+(\.\d+)*' | head -n1)" ]; then
-        git checkout main && echo "[-] Switched to main branch."
-    fi
-    git pull && echo "[+] Repository updated."
     if [ -n "${1-}" ]; then
-        git checkout "$1" && echo "[-] Checked out $1." || echo "[-] Checkout default branch"
+        case "$1" in
+            -*) echo '[ERROR] A revision cannot start with an option prefix.' >&2; return 1 ;;
+        esac
+        # Resolve only the successfully fetched request, not a stale local ref.
+        git fetch -- origin "$1" || return 1
+        requested_commit=$(git rev-parse --verify 'FETCH_HEAD^{commit}') || return 1
+        git checkout --detach "$requested_commit" || return 1
+        test "$(git rev-parse HEAD)" = "$requested_commit" || return 1
+        echo "[-] Checked out $requested_commit."
+    else
+        git fetch origin main || return 1
+        requested_commit=$(git rev-parse --verify 'FETCH_HEAD^{commit}') || return 1
+        git checkout main || return 1
+        git merge --ff-only "$requested_commit" || return 1
+        test "$(git rev-parse HEAD)" = "$requested_commit" || return 1
     fi
     cd "$DRIVER_DIR"
     ln -sf "$(realpath --relative-to="$DRIVER_DIR" "$GKI_ROOT/LunexSU/kernel")" "kernelsu" && echo "[+] Symlink created."
