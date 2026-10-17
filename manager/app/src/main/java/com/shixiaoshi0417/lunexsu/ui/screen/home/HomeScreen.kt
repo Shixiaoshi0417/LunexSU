@@ -27,6 +27,7 @@ import com.shixiaoshi0417.lunexsu.data.SavedSuperkey
 import com.shixiaoshi0417.lunexsu.data.SuperkeyAuthenticationResult
 import kotlinx.coroutines.CancellationException
 import com.shixiaoshi0417.lunexsu.data.model.HomeLayoutStyle
+import com.shixiaoshi0417.lunexsu.data.zygisk.ZygiskOverview
 import com.shixiaoshi0417.lunexsu.magica.MagicaService
 import com.shixiaoshi0417.lunexsu.ui.LocalMainPagerState
 import com.shixiaoshi0417.lunexsu.ui.LocalUiMode
@@ -54,6 +55,12 @@ fun HomePager(
         if (authenticationGeneration > 0) viewModel.refresh()
     }
     val uiMode = LocalUiMode.current
+    val zygiskOverview = if (isCurrentPage && uiState.isFullFeatured) {
+        viewModel.zygiskOverview.collectAsStateWithLifecycle().value
+    } else {
+        ZygiskOverview()
+    }
+    val homeState = uiState.copy(zygiskOverview = zygiskOverview)
     val mainPagerState = LocalMainPagerState.current
     val metrics = if (
         uiMode == UiMode.Material && isCurrentPage &&
@@ -140,16 +147,16 @@ fun HomePager(
     )
 
     if (LocalFinaThemeUi.current) {
-        FinaThemeHome(uiState, actions, bottomInnerPadding, superuserCount, moduleEnabledCount, metrics)
+        FinaThemeHome(homeState, actions, bottomInnerPadding, superuserCount, moduleEnabledCount, metrics)
     } else when (uiMode) {
         UiMode.Miuix -> HomePagerMiuix(
-            state = uiState,
+            state = homeState,
             actions = actions,
             bottomInnerPadding = bottomInnerPadding,
         )
 
         UiMode.Material -> HomePagerMaterial(
-            state = uiState,
+            state = homeState,
             actions = actions,
             bottomInnerPadding = bottomInnerPadding,
             superuserCount = superuserCount,

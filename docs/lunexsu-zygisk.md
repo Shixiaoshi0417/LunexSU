@@ -19,6 +19,20 @@
   native Material/MIUIX UI or the FinaSU theme palette and wallpaper overlay.
 - The card is hidden without Core and disabled in temporary root (late-load) mode.
 
+### Homepage overview
+
+A separate, read-only Zygisk status card sits after the homepage device information. It starts
+collapsed and expands on tap, with height/fade, arrow and press animations in Material, native
+MIUIX and Fina. It shows next-boot backend configuration, pending changes, the observed
+`zygisk-ptrace` monitor and installed/staged module versions read from their respective directories.
+It never enables a backend or ZNN, and it does not bypass the high-risk confirmation.
+
+The overview refreshes every five seconds only while an authorized homepage is visible. Failed or
+incomplete queries are unavailable, not disabled. Configuration and process observations do not
+prove injection succeeded; missing ptrace processes cannot determine NeoZygisk or ZNN health.
+Versions are not inferred from the APK's bundled payloads. Safe mode and external/legacy module
+warnings take precedence over optimistic status labels.
+
 ## Installation and recovery
 
 The payloads are bundled APK assets installed through ksud's normal module flow. This feature

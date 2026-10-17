@@ -2,6 +2,7 @@ package com.shixiaoshi0417.lunexsu.ui.screen.home
 
 import androidx.compose.runtime.Immutable
 import com.shixiaoshi0417.lunexsu.KernelVersion
+import com.shixiaoshi0417.lunexsu.data.zygisk.ZygiskOverview
 import com.shixiaoshi0417.lunexsu.ui.util.module.LatestVersionInfo
 
 @Immutable
@@ -24,6 +25,7 @@ data class HomeUiState(
     val latestVersionInfo: LatestVersionInfo,
     val currentManagerVersionCode: Long,
     val systemInfo: SystemInfo,
+    val zygiskOverview: ZygiskOverview = ZygiskOverview(),
 ) {
     val isSELinuxPermissive: Boolean
         get() = systemInfo.selinuxStatus == "Permissive"

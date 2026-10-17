@@ -41,6 +41,15 @@ object BuiltinZygisk {
         zygiskStatusOf(flags, monitor)
     }
 
+    /** Homepage diagnostics only: no module commands, installs or configuration writes. */
+    suspend fun overview(): ZygiskOverview = withContext(Dispatchers.IO) {
+        withRootShell {
+            if (!isRoot) return@withRootShell ZygiskOverview()
+            val result = newJob().add(zygiskOverviewScript()).to(ArrayList(), null).exec()
+            if (result.isSuccess) parseZygiskOverview(result.out) else ZygiskOverview()
+        }
+    }
+
     /** Ids of the modules this switch installed, which the module list leaves to the settings card. */
     suspend fun ownedModuleIds(): Set<String> = withContext(Dispatchers.IO) {
         readFlags().first.filterValues { it.isOwned }.keys.mapTo(mutableSetOf()) { it.moduleId }
