@@ -1,4 +1,5 @@
 {
+  // Workers Builds: main branch, root website, yarn test && yarn docs:build:cloudflare.
   "name": "lunexsu",
   "compatibility_date": "2026-10-17",
   "workers_dev": false,
