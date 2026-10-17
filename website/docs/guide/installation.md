@@ -6,7 +6,7 @@
 
 Download LunexSU manager from [GitHub Releases](https://github.com/Shixiaoshi0417/LunexSU/releases) and install it on your device:
 
-- If the app shows `Unsupported`, it means that **you should compile the kernel yourself**, LunexSU won't and never provide a boot.img file for you to flash.
+- If the app shows `Unsupported`, it means that **you should compile the kernel yourself**, LunexSU won't and will never provide a boot.img file for you to flash.
 - If the app shows `Not installed`, then your device is officially supported by LunexSU.
 
 ::: info
