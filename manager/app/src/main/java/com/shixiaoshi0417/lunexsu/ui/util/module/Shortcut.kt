@@ -20,7 +20,7 @@ import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.data.repository.SettingsRepositoryImpl
 import com.shixiaoshi0417.lunexsu.ui.MainActivity
 import com.shixiaoshi0417.lunexsu.ui.screen.module.ShortcutType
-import com.shixiaoshi0417.lunexsu.ui.util.getRootShell
+import com.shixiaoshi0417.lunexsu.ui.util.withRootShell
 import com.shixiaoshi0417.lunexsu.ui.util.isColorOS
 import com.shixiaoshi0417.lunexsu.ui.util.isHyperOS
 import com.shixiaoshi0417.lunexsu.ui.util.isMiui
@@ -204,11 +204,12 @@ object Shortcut {
             val rawBitmap = if (uri.scheme.equals("su", ignoreCase = true)) {
                 val path = uri.path ?: ""
                 if (path.isNotBlank()) {
-                    val shell = getRootShell(true)
-                    val suFile = SuFile(path)
-                    suFile.shell = shell
-                    SuFileInputStream.open(suFile).use { input ->
-                        BitmapFactory.decodeStream(input)
+                    withRootShell(true) {
+                        val suFile = SuFile(path)
+                        suFile.shell = this
+                        SuFileInputStream.open(suFile).use { input ->
+                            BitmapFactory.decodeStream(input)
+                        }
                     }
                 } else null
             } else {
@@ -370,8 +371,7 @@ object Shortcut {
         val pkg = context.applicationContext.packageName
         val cmd = "appops set $pkg 10017 allow"
         return try {
-            val shell = getRootShell()
-            val result = shell.newJob().add(cmd).exec()
+            val result = withRootShell { newJob().add(cmd).exec() }
             Log.d(TAG, "tryGrantMiuiShortcutPermissionByRoot: cmd=$cmd, code=${result.code}, isSuccess=${result.isSuccess}")
             result.isSuccess
         } catch (t: Throwable) {

@@ -4,7 +4,7 @@ package com.shixiaoshi0417.lunexsu.data.susfs
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import com.shixiaoshi0417.lunexsu.ui.util.getRootShell
+import com.shixiaoshi0417.lunexsu.ui.util.submitRootShell
 import com.shixiaoshi0417.lunexsu.ui.util.getKsuDaemonPath
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
@@ -51,17 +51,18 @@ class SusfsRepository(private val dispatcher: CoroutineDispatcher = Dispatchers.
     private suspend fun command(action: String, input: String? = null): String = withContext(dispatcher) {
         require(action in setOf("status", "export", "import", "apply"))
         require(input == null || input.toByteArray().size <= 128 * 1024)
-        val shell = getRootShell()
-        check(shell.isRoot) { "Root is unavailable" }
         val path = getKsuDaemonPath()
         fun quote(value: String) = "'" + value.replace("'", "'\\''") + "'"
         val output = mutableListOf<String>()
         val errors = mutableListOf<String>()
         val invocation = "${quote(path)} susfs $action"
-        val job = shell.newJob().add(if (input == null) invocation else "printf '%s' ${quote(input)} | $invocation")
         // Bound the wait without killing the shared shell or an in-flight kernel operation.
         // A timed-out apply may still finish; the next status query is authoritative.
-        val future = job.to(output, errors).enqueue()
+        val future = submitRootShell {
+            check(isRoot) { "Root is unavailable" }
+            newJob().add(if (input == null) invocation else "printf '%s' ${quote(input)} | $invocation")
+                .to(output, errors).exec()
+        }
         val result = try { future.get(15, TimeUnit.SECONDS) }
             finally { if (!future.isDone) future.cancel(false) }
         check(result.isSuccess) { errors.joinToString("\n").ifEmpty { "SUSFS command failed (${result.code})" } }

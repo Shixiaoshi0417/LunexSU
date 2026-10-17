@@ -74,6 +74,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import com.shixiaoshi0417.lunexsu.Natives
+import com.shixiaoshi0417.lunexsu.data.SavedSuperkey
 import com.shixiaoshi0417.lunexsu.ui.component.bottombar.BottomBar
 import com.shixiaoshi0417.lunexsu.ui.component.bottombar.FloatingBar
 import com.shixiaoshi0417.lunexsu.ui.component.bottombar.FloatingBarConfig
@@ -186,8 +187,9 @@ class MainActivity : ComponentActivity() {
             val selectedMainPage by viewModel.selectedMainPage.collectAsStateWithLifecycle()
             val appSettings = uiState.appSettings
             // Probe the current Core, never a saved "installed once" flag or the presence of a pack.
-            var coreInstalled by remember { mutableStateOf(Natives.isManager) }
-            LifecycleResumeEffect(Unit) {
+            val authenticationGeneration by SavedSuperkey.authenticationGeneration.collectAsStateWithLifecycle()
+            var coreInstalled by remember(authenticationGeneration) { mutableStateOf(Natives.isManager) }
+            LifecycleResumeEffect(authenticationGeneration) {
                 coreInstalled = Natives.isManager
                 onPauseOrDispose { }
             }
@@ -360,6 +362,7 @@ fun MainScreen(
         pagerState = pagerState,
         animatePageChanges = !useNavigationRail,
     )
+    val authenticationGeneration by SavedSuperkey.authenticationGeneration.collectAsStateWithLifecycle()
     val isFullFeatured = Natives.isFullFeatured()
     val pagerMode = PagerInterceptionMode.entries.getOrElse(pagerInterceptionMode) {
         PagerInterceptionMode.Native
@@ -380,7 +383,7 @@ fun MainScreen(
     }.collectAsStateWithLifecycle(0)
 
     var startupPreloadStarted by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(isFullFeatured) {
+    LaunchedEffect(isFullFeatured, authenticationGeneration) {
         if (!isFullFeatured || startupPreloadStarted) {
             return@LaunchedEffect
         }

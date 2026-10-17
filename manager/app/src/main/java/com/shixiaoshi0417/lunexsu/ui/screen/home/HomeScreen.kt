@@ -25,7 +25,6 @@ import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.data.HomeMetrics
 import com.shixiaoshi0417.lunexsu.data.SavedSuperkey
 import com.shixiaoshi0417.lunexsu.data.SuperkeyAuthenticationResult
-import com.shixiaoshi0417.lunexsu.ui.util.KsuCli
 import kotlinx.coroutines.CancellationException
 import com.shixiaoshi0417.lunexsu.data.model.HomeLayoutStyle
 import com.shixiaoshi0417.lunexsu.magica.MagicaService
@@ -50,6 +49,10 @@ fun HomePager(
 ) {
     val viewModel = viewModel<HomeViewModel>()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val authenticationGeneration by SavedSuperkey.authenticationGeneration.collectAsStateWithLifecycle()
+    LaunchedEffect(authenticationGeneration) {
+        if (authenticationGeneration > 0) viewModel.refresh()
+    }
     val uiMode = LocalUiMode.current
     val mainPagerState = LocalMainPagerState.current
     val metrics = if (
@@ -72,7 +75,6 @@ fun HomePager(
         try {
             when (SavedSuperkey.tryAutomatic()) {
                 is SuperkeyAuthenticationResult.Accepted -> {
-                    withContext(Dispatchers.IO) { KsuCli.refreshAfterAuthentication() }
                     viewModel.refresh()
                     (context as? android.app.Activity)?.recreate()
                 }

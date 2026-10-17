@@ -6,12 +6,7 @@ import android.security.keystore.KeyProperties
 import android.util.AtomicFile
 import com.shixiaoshi0417.lunexsu.Natives
 import com.shixiaoshi0417.lunexsu.ksuApp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
+import com.shixiaoshi0417.lunexsu.ui.util.KsuCli
 import java.io.File
 import java.security.KeyStore
 import javax.crypto.KeyGenerator
@@ -19,7 +14,7 @@ import javax.crypto.SecretKey
 
 internal class AndroidSuperkeyCredentialStore(context: Context) : SuperkeyCredentialStore {
     // Android excludes noBackupFilesDir from both cloud backup and device transfer.
-    private val file = AtomicFile(File(context.noBackupFilesDir, "remembered-superkey.enc"))
+    private val file by lazy { AtomicFile(File(context.noBackupFilesDir, "remembered-superkey.enc")) }
     private val alias = "${context.packageName}.remembered-superkey.v1"
 
     private fun keyStore() = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
@@ -78,28 +73,18 @@ internal class AndroidSuperkeyCredentialStore(context: Context) : SuperkeyCreden
 
 /** All disk, Keystore and kernel work stays off the UI thread and shares one lock. */
 internal object SavedSuperkey {
-    private val mutex = Mutex()
-    private val store by lazy { AndroidSuperkeyCredentialStore(ksuApp) }
-    private val auth by lazy {
-        RememberedSuperkey(store, object : SuperkeyAuthenticationBackend {
+    private val session by lazy {
+        SuperkeySession(AndroidSuperkeyCredentialStore(ksuApp), object : SuperkeyAuthenticationBackend {
             override fun isManager() = Natives.isManager
             override fun salt() = Natives.superkeySalt()
             override fun authenticate(proof: ByteArray) = Natives.authenticateSuperkey(proof)
-        })
+        }, onAuthenticated = KsuCli::refreshAfterAuthentication)
     }
-    private val _isSaved = MutableStateFlow(false)
-    val isSaved = _isSaved.asStateFlow()
+    val isSaved get() = session.isSaved
+    val authenticationGeneration get() = session.authenticationGeneration
 
-    private suspend fun <T> locked(block: () -> T): T = withContext(Dispatchers.IO) {
-        mutex.withLock {
-            try { block() } finally { _isSaved.value = store.exists() }
-        }
-    }
-
-    suspend fun refresh() = locked { Unit }
-    suspend fun authenticate(key: CharArray, remember: Boolean): SuperkeyAuthenticationResult = try {
-        locked { auth.authenticate(key, remember) }
-    } finally { key.fill('\u0000') }
-    suspend fun tryAutomatic() = locked { auth.tryAutomatic() }
-    suspend fun forget() = locked { store.clear() }
+    suspend fun refresh() = session.refresh()
+    suspend fun authenticate(key: CharArray, remember: Boolean) = session.authenticate(key, remember)
+    suspend fun tryAutomatic() = session.tryAutomatic()
+    suspend fun forget() = session.forget()
 }
