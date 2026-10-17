@@ -71,6 +71,10 @@
     <string name="jailbreak_timeout">越獄可能失敗，請檢查日誌</string>
     <string name="jailbreak_reboot_warning">現正處於越獄模式，重新啟動將失去 Root 權限，開機後需重新越獄。確定要重啟嗎？</string>
     <string name="safe_mode_module_disabled">安全模式下禁止安裝模組</string>
+    <string name="module_preinit_no_space">preinit 未生效：/metadata 空間不足</string>
+    <string name="module_preinit_error">preinit 未生效：preinit 目錄無效</string>
+    <string name="module_preinit_bootloop">多次啟動失敗，preinit 已停用</string>
+    <string name="module_preinit_unsupported">preinit 未生效：目前核心不支援</string>
     <string name="reboot_to_apply">重新啟動後生效</string>
     <string name="module_magisk_conflict">模組已停用，因與 Magisk 有衝突！</string>
     <string name="home_learn_kernelsu">深入了解 LunexSU</string>

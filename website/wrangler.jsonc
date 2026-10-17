@@ -1,0 +1,14 @@
+{
+  // Workers Builds: main branch, root website, yarn test && yarn docs:build:cloudflare.
+  "name": "lunexsu",
+  "compatibility_date": "2026-10-17",
+  "workers_dev": false,
+  "preview_urls": false,
+  "keep_vars": true,
+  // The existing Custom Domain is managed in Cloudflare, not by deployments.
+  // Do not add routes here: non-interactive Wrangler can overwrite DNS conflicts.
+  "assets": {
+    "directory": "./docs/.vitepress/dist",
+    "not_found_handling": "404-page"
+  }
+}
