@@ -1,0 +1,43 @@
+name: Test Website
+
+on:
+  pull_request:
+    branches: [main, website]
+    paths:
+      - 'website/**'
+      - '.github/workflows/test-website.yml'
+      - '.github/workflows/deploy-website.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [pages, cloudflare]
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: yarn
+          cache-dependency-path: website/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn test
+      - name: Build GitHub Pages
+        if: matrix.target == 'pages'
+        run: yarn docs:build
+      - name: Build Cloudflare Worker assets
+        if: matrix.target == 'cloudflare'
+        run: yarn docs:build:cloudflare
+      - name: Validate Worker configuration without deployment
+        if: matrix.target == 'cloudflare'
+        env:
+          WRANGLER_WRITE_LOGS: 'false'
+        run: npx --yes wrangler@4.151.1 deploy --dry-run
