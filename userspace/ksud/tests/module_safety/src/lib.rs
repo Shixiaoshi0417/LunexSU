@@ -931,6 +931,12 @@ mod tests {
             fs::write(live.join("version"), if committed { "new" } else { "old" }).unwrap();
             if committed {
                 fs::write(live.join(".ksu-promotion-token"), "promote-fixture").unwrap();
+            } else {
+                fs::write(
+                    journal.join("payload/.ksu-promotion-token"),
+                    "promote-fixture",
+                )
+                .unwrap();
             }
             let _store = transaction::Store::open(&transactions, &updates, &modules).unwrap();
             assert_eq!(

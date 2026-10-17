@@ -46,7 +46,7 @@ impl Store {
                 continue;
             }
             let path = entry.path();
-            if name.starts_with("gc-install-v2-") {
+            if name.starts_with("gc-install-v2-") || name.starts_with("gc-promote-") {
                 // This name is written only after durable commit or a proven rollback.
                 sync_dir(&self.root)?;
                 fs::remove_dir_all(path)?;
@@ -58,39 +58,7 @@ impl Store {
                     path.display()
                 );
             } else if name.starts_with("promote-") {
-                let id_file = path.join("module-id");
-                if !id_file.exists() {
-                    ensure!(
-                        !path.join("payload").try_exists()?,
-                        "Incomplete boot journal with payload retained: {}",
-                        path.display()
-                    );
-                    // Interrupted before the journal was complete and before moving anything.
-                    fs::remove_dir_all(path)?;
-                    continue;
-                }
-                let id = fs::read_to_string(id_file)?;
-                validate_id(&id)?;
-                let live = modules.join(&id);
-                let payload = path.join("payload");
-                let committed = fs::read(live.join(PROMOTION_TOKEN))
-                    .is_ok_and(|token| token == name.as_bytes());
-                if !committed && payload.exists() {
-                    fs::create_dir_all(updates)?;
-                    let update = updates.join(&id);
-                    if update.exists() {
-                        anyhow::bail!("Conflicting boot promotion retained: {}", path.display());
-                    }
-                    fs::rename(&payload, update)?;
-                    sync_dir(updates)?;
-                }
-                fs::remove_dir_all(path)?;
-                if committed {
-                    // The backup/journal must be durably gone before dropping
-                    // the token that distinguishes an old backup from an update.
-                    sync_dir(&self.root)?;
-                    fs::remove_file(live.join(PROMOTION_TOKEN)).ok();
-                }
+                recover_promotion(&path, updates, modules)?;
             }
         }
         sync_dir(&self.root)
@@ -137,23 +105,27 @@ impl Store {
             .and_then(|id| id.to_str())
             .context("Invalid update path")?;
         validate_id(id)?;
+        let updates = update.parent().context("Missing updates directory")?;
+        let modules = live.parent().context("Missing modules directory")?;
         ensure!(
             fs::symlink_metadata(update)?.is_dir(),
             "Update is not a real directory"
         );
+        // Promotion journals are explicitly managed; Drop must never remove
+        // recovery material after a mutation or an uncertain sync result.
         let directory = tempfile::Builder::new()
             .prefix("promote-")
-            .tempdir_in(&self.root)?;
+            .tempdir_in(&self.root)?
+            .keep();
         let token = directory
-            .path()
             .file_name()
             .context("Invalid journal path")?
             .as_bytes();
-        let payload = directory.path().join("payload");
-        write_synced(&directory.path().join("module-id"), id.as_bytes())?;
+        let payload = directory.join("payload");
+        write_synced(&directory.join("module-id"), id.as_bytes())?;
         write_synced(&update.join(PROMOTION_TOKEN), token)?;
         sync_dir(update)?;
-        sync_dir(directory.path())?;
+        sync_dir(&directory)?;
         sync_dir(&self.root)?;
         fs::rename(update, &payload)?;
         let result = (|| {
@@ -169,36 +141,75 @@ impl Store {
                     break;
                 }
             }
-            sync_dir(directory.path())?;
-            sync_dir(update.parent().context("Missing updates directory")?)?;
+            sync_dir(&payload)?;
+            sync_dir(&directory)?;
+            sync_dir(updates)?;
             replace(&payload, live)
         })();
         if let Err(error) = result {
-            if let Err(rollback) = fs::rename(&payload, update) {
-                // Keep the journal for the next locked recovery attempt.
-                let kept = directory.keep();
+            if let Err(rollback) = recover_promotion(&directory, updates, modules) {
                 return Err(error).context(format!(
                     "Update retained at {} after rollback failed: {rollback}",
-                    kept.display()
+                    directory.display()
                 ));
             }
             return Err(error);
         }
-        // From this point the new module is committed. Sync/cleanup failures must
+        // From this point the new module is visible. Sync/cleanup failures must
         // not be reported as a failed promotion (and trigger an incorrect rollback).
-        if let Err(error) = sync_dir(live.parent().context("Missing modules directory")?) {
-            log::warn!("Failed to sync module promotion: {error:#}");
-        }
-        if let Err(error) = directory.close() {
-            log::warn!("Promotion cleanup will be retried: {error}");
-        } else if let Err(error) = sync_dir(&self.root) {
-            // Retain the token if durable journal removal could not be confirmed.
-            log::warn!("Failed to sync promotion cleanup: {error:#}");
-        } else {
-            fs::remove_file(live.join(PROMOTION_TOKEN)).ok();
+        if let Err(error) = recover_promotion(&directory, updates, modules) {
+            log::warn!("Promotion durability/cleanup will be retried: {error:#}");
         }
         Ok(())
     }
+}
+
+fn recover_promotion(directory: &Path, updates: &Path, modules: &Path) -> Result<()> {
+    let Some(bytes) = read_optional(&directory.join("module-id"))? else {
+        // Only an empty, never-started journal is disposable without an ID.
+        // Missing/partially deleted records cannot authorize deleting payloads.
+        ensure!(
+            fs::read_dir(directory)?.next().is_none(),
+            "Incomplete boot journal retained: {}",
+            directory.display()
+        );
+        return discard_transaction(directory);
+    };
+    let id = std::str::from_utf8(&bytes)?;
+    validate_id(id)?;
+    let token = directory
+        .file_name()
+        .context("Invalid promotion journal")?
+        .as_bytes();
+    let live = modules.join(id);
+    let payload = directory.join("payload");
+    let committed = read_optional(&live.join(PROMOTION_TOKEN))?.as_deref() == Some(token);
+    if !committed && directory_id(&payload)?.is_some() {
+        // A missing/unreadable live token must not turn an old backup into an update.
+        ensure!(
+            read_optional(&payload.join(PROMOTION_TOKEN))?.as_deref() == Some(token),
+            "Unidentified boot payload retained: {}",
+            directory.display()
+        );
+        fs::create_dir_all(updates)?;
+        let update = updates.join(id);
+        ensure!(
+            directory_id(&update)?.is_none(),
+            "Conflicting boot promotion retained: {}",
+            directory.display()
+        );
+        fs::rename(&payload, update)?;
+    }
+    // Both rename parents must be durable, even on re-entry with no payload
+    // after an earlier rollback rename whose sync failed. Keep the live token
+    // and old backup until the promotion's two parents are confirmed as well.
+    sync_dir(directory)?;
+    sync_dir(if committed { modules } else { updates })?;
+    discard_transaction(directory)?;
+    if committed {
+        fs::remove_file(live.join(PROMOTION_TOKEN)).ok();
+    }
+    Ok(())
 }
 
 pub struct Install {
@@ -330,7 +341,7 @@ impl Drop for Install {
         // A published transaction is cleaned ONLY by identity-checked recovery.
         // In particular a rollback/commit I/O error must not run remove_dir_all.
         if matches!(has_recovery_hints(&self.directory), Ok(false))
-            && let Err(error) = discard_install(&self.directory)
+            && let Err(error) = discard_transaction(&self.directory)
         {
             log::warn!(
                 "Failed to clean private staging {}: {error:#}",
@@ -529,7 +540,7 @@ fn recover_install(directory: &Path, updates: &Path, live: &Path) -> Result<()> 
             "Missing publication journal; retained {}",
             directory.display()
         );
-        return discard_install(directory);
+        return discard_transaction(directory);
     };
     let record = PublicationRecord::decode(&bytes)
         .with_context(|| format!("Invalid journal retained at {}", directory.display()))?;
@@ -606,12 +617,12 @@ fn recover_install(directory: &Path, updates: &Path, live: &Path) -> Result<()> 
     // delete the candidate before the restored/new destination is durable.
     sync_dir(&directory.join("modules"))?;
     sync_dir(updates)?;
-    discard_install(directory)
+    discard_transaction(directory)
 }
 
 /// Classify garbage by a synced directory rename before recursive deletion.
-/// Partial cleanup cannot turn an ambiguous install journal into disposable data.
-fn discard_install(directory: &Path) -> Result<()> {
+/// Partial cleanup cannot turn an ambiguous journal into disposable data.
+fn discard_transaction(directory: &Path) -> Result<()> {
     if !directory.try_exists()? {
         return Ok(());
     }
@@ -621,7 +632,7 @@ fn discard_install(directory: &Path) -> Result<()> {
         .context("Invalid transaction name")?
         .to_string_lossy();
     ensure!(
-        name.starts_with("install-v2-"),
+        name.starts_with("install-v2-") || name.starts_with("promote-"),
         "Refusing to discard unknown transaction"
     );
     let garbage = root.join(format!("gc-{name}"));
@@ -633,7 +644,11 @@ fn discard_install(directory: &Path) -> Result<()> {
     fs::rename(directory, &garbage)?;
     sync_dir(root)?;
     #[cfg(test)]
-    pause_for_test("publication-garbage");
+    pause_for_test(if name.starts_with("promote-") {
+        "promotion-garbage"
+    } else {
+        "publication-garbage"
+    });
     fs::remove_dir_all(garbage)?;
     sync_dir(root)
 }
@@ -802,6 +817,8 @@ fn write_synced(path: &Path, contents: &[u8]) -> Result<()> {
 }
 
 fn sync_dir(path: &Path) -> Result<()> {
+    #[cfg(test)]
+    tests::check_sync(path)?;
     File::open(path)?.sync_all()?;
     Ok(())
 }
@@ -842,29 +859,360 @@ fn replace_dir(source: &Path, destination: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::cell::RefCell;
+
+    thread_local! {
+        static SYNC_FAILURE: RefCell<Option<(PathBuf, usize)>> = const { RefCell::new(None) };
+    }
+
+    pub(super) fn check_sync(path: &Path) -> Result<()> {
+        SYNC_FAILURE.with_borrow_mut(|failure| {
+            if let Some((target, hits)) = failure
+                && target == path
+            {
+                *hits += 1;
+                anyhow::bail!("Injected directory sync failure: {}", path.display());
+            }
+            Ok(())
+        })
+    }
+
+    struct SyncFailure;
+
+    impl SyncFailure {
+        fn at(path: &Path) -> Self {
+            SYNC_FAILURE.with_borrow_mut(|failure| {
+                assert!(failure.is_none());
+                *failure = Some((path.to_owned(), 0));
+            });
+            Self
+        }
+
+        fn hits() -> usize {
+            SYNC_FAILURE.with_borrow(|failure| failure.as_ref().unwrap().1)
+        }
+    }
+
+    impl Drop for SyncFailure {
+        fn drop(&mut self) {
+            SYNC_FAILURE.with_borrow_mut(|failure| *failure = None);
+        }
+    }
+
+    struct PromotionFixture {
+        temp: tempfile::TempDir,
+        new: DirectoryId,
+        old: Option<DirectoryId>,
+    }
+
+    impl PromotionFixture {
+        fn new(previous: bool) -> Self {
+            let fixtures = std::env::var_os("KSUD_MODULE_FIXTURE_ROOT").map_or_else(
+                || Path::new(env!("CARGO_MANIFEST_DIR")).join("fixtures"),
+                PathBuf::from,
+            );
+            fs::create_dir_all(&fixtures).unwrap();
+            let temp = tempfile::tempdir_in(fixtures).unwrap();
+            let update = temp.path().join("modules_update/example");
+            let live = temp.path().join("modules/example");
+            fs::create_dir_all(&update).unwrap();
+            fs::create_dir_all(live.parent().unwrap()).unwrap();
+            fs::write(update.join("version"), "new").unwrap();
+            if previous {
+                fs::create_dir(&live).unwrap();
+                fs::write(live.join("version"), "old").unwrap();
+            }
+            Self {
+                new: directory_id(&update).unwrap().unwrap(),
+                old: directory_id(&live).unwrap(),
+                temp,
+            }
+        }
+
+        fn root(&self) -> PathBuf {
+            self.temp.path().join("transactions")
+        }
+
+        fn update(&self) -> PathBuf {
+            self.temp.path().join("modules_update/example")
+        }
+
+        fn live(&self) -> PathBuf {
+            self.temp.path().join("modules/example")
+        }
+
+        fn open(&self) -> Result<Store> {
+            Store::open(
+                &self.root(),
+                self.update().parent().unwrap(),
+                self.live().parent().unwrap(),
+            )
+        }
+
+        fn journal(&self, garbage: bool) -> PathBuf {
+            let entries: Vec<_> = fs::read_dir(self.root())
+                .unwrap()
+                .map(|entry| entry.unwrap())
+                .filter(|entry| entry.file_type().unwrap().is_dir())
+                .collect();
+            assert_eq!(entries.len(), 1);
+            assert!(
+                entries[0]
+                    .file_name()
+                    .to_str()
+                    .unwrap()
+                    .starts_with(if garbage { "gc-promote-" } else { "promote-" })
+            );
+            entries[0].path()
+        }
+
+        fn assert_payloads(&self, journal: Option<&Path>, promoted: bool) {
+            assert_eq!(
+                directory_id(&self.live()).unwrap(),
+                if promoted { Some(self.new) } else { self.old }
+            );
+            if promoted || self.old.is_some() {
+                assert_eq!(
+                    fs::read_to_string(self.live().join("version")).unwrap(),
+                    if promoted { "new" } else { "old" }
+                );
+            }
+            assert_eq!(
+                directory_id(&self.update()).unwrap(),
+                if promoted { None } else { Some(self.new) }
+            );
+            if !promoted {
+                assert_eq!(
+                    fs::read_to_string(self.update().join("version")).unwrap(),
+                    "new"
+                );
+            }
+            if let Some(journal) = journal {
+                assert_eq!(
+                    directory_id(&journal.join("payload")).unwrap(),
+                    if promoted { self.old } else { None }
+                );
+                if promoted && self.old.is_some() {
+                    assert_eq!(
+                        fs::read_to_string(journal.join("payload/version")).unwrap(),
+                        "old"
+                    );
+                }
+            }
+        }
+
+        fn assert_retained(&self, journal: &Path, promoted: bool) {
+            assert_eq!(
+                fs::read_to_string(journal.join("module-id")).unwrap(),
+                "example"
+            );
+            let module = if promoted { self.live() } else { self.update() };
+            assert_eq!(
+                fs::read(module.join(PROMOTION_TOKEN)).unwrap(),
+                journal.file_name().unwrap().as_bytes()
+            );
+            self.assert_payloads(Some(journal), promoted);
+        }
+
+        fn recover_twice(&self, promoted: bool) {
+            for _ in 0..2 {
+                let _store = self.open().unwrap();
+                self.assert_payloads(None, promoted);
+                assert_eq!(fs::read_dir(self.root()).unwrap().count(), 1);
+            }
+        }
+    }
 
     #[test]
     fn failed_boot_exchange_restores_update_and_keeps_working_module() {
-        let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("fixtures");
-        fs::create_dir_all(&fixtures).unwrap();
-        let temp = tempfile::tempdir_in(fixtures).unwrap();
-        let updates = temp.path().join("modules_update");
-        let modules = temp.path().join("modules");
-        let update = updates.join("example");
-        let live = modules.join("example");
-        fs::create_dir_all(&update).unwrap();
-        fs::create_dir_all(&live).unwrap();
-        fs::write(update.join("version"), "new").unwrap();
-        fs::write(live.join("version"), "old").unwrap();
-        let store = Store::open(&temp.path().join("transactions"), &updates, &modules).unwrap();
-        assert!(
+        for previous in [false, true] {
+            let fixture = PromotionFixture::new(previous);
+            let store = fixture.open().unwrap();
+            assert!(
+                store
+                    .promote_with(&fixture.update(), &fixture.live(), &[], |_, _| {
+                        anyhow::bail!("injected exchange failure")
+                    })
+                    .is_err()
+            );
+            drop(store);
+            fixture.recover_twice(false);
+        }
+    }
+
+    #[test]
+    fn promotion_parent_sync_failures_preserve_success_and_both_payloads() {
+        for previous in [false, true] {
+            for parent in ["journal", "modules"] {
+                let fixture = PromotionFixture::new(previous);
+                let store = fixture.open().unwrap();
+                let mut failure = None;
+                store
+                    .promote_with(&fixture.update(), &fixture.live(), &[], |source, target| {
+                        replace_dir(source, target)?;
+                        failure = Some(SyncFailure::at(if parent == "journal" {
+                            source.parent().unwrap()
+                        } else {
+                            target.parent().unwrap()
+                        }));
+                        Ok(())
+                    })
+                    .unwrap();
+                let journal = fixture.journal(false);
+                fixture.assert_retained(&journal, true);
+                drop(store);
+                for _ in 0..2 {
+                    assert!(fixture.open().is_err());
+                    fixture.assert_retained(&journal, true);
+                }
+                assert_eq!(SyncFailure::hits(), 3);
+                drop(failure);
+                fixture.recover_twice(true);
+                assert!(!fixture.live().join(PROMOTION_TOKEN).exists());
+            }
+        }
+    }
+
+    #[test]
+    fn rollback_parent_sync_failures_retain_journal_even_after_payload_moved_back() {
+        for previous in [false, true] {
+            for parent in ["journal", "updates"] {
+                let fixture = PromotionFixture::new(previous);
+                let store = fixture.open().unwrap();
+                let mut failure = None;
+                let error = store
+                    .promote_with(&fixture.update(), &fixture.live(), &[], |source, _| {
+                        let update = fixture.update();
+                        failure = Some(SyncFailure::at(if parent == "journal" {
+                            source.parent().unwrap()
+                        } else {
+                            update.parent().unwrap()
+                        }));
+                        anyhow::bail!("injected exchange failure")
+                    })
+                    .unwrap_err();
+                assert!(format!("{error:#}").contains("injected exchange failure"));
+                let journal = fixture.journal(false);
+                fixture.assert_retained(&journal, false);
+                drop(store);
+                for _ in 0..2 {
+                    assert!(fixture.open().is_err());
+                    fixture.assert_retained(&journal, false);
+                }
+                assert_eq!(SyncFailure::hits(), 3);
+                drop(failure);
+                fixture.recover_twice(false);
+            }
+        }
+    }
+
+    #[test]
+    fn promotion_garbage_is_synced_before_deletion_and_survives_partial_cleanup() {
+        for previous in [false, true] {
+            for promoted in [false, true] {
+                let fixture = PromotionFixture::new(previous);
+                let store = fixture.open().unwrap();
+                let mut failure = None;
+                let result = store.promote_with(
+                    &fixture.update(),
+                    &fixture.live(),
+                    &[],
+                    |source, target| {
+                        if promoted {
+                            replace_dir(source, target)?;
+                        }
+                        failure = Some(SyncFailure::at(&fixture.root()));
+                        ensure!(promoted, "injected exchange failure");
+                        Ok(())
+                    },
+                );
+                assert_eq!(result.is_ok(), promoted);
+                let garbage = fixture.journal(true);
+                assert!(garbage.join("module-id").is_file());
+                fixture.assert_payloads(Some(&garbage), promoted);
+                drop(store);
+                for _ in 0..2 {
+                    assert!(fixture.open().is_err());
+                    assert!(garbage.join("module-id").is_file());
+                    fixture.assert_payloads(Some(&garbage), promoted);
+                }
+                assert_eq!(SyncFailure::hits(), 3);
+                drop(failure);
+                // Simulate interrupted recursive deletion AFTER durable classification.
+                sync_dir(&fixture.root()).unwrap();
+                fs::remove_file(garbage.join("module-id")).unwrap();
+                let failure = SyncFailure::at(&fixture.root());
+                for _ in 0..2 {
+                    assert!(fixture.open().is_err());
+                    assert!(garbage.exists());
+                    fixture.assert_payloads(Some(&garbage), promoted);
+                }
+                assert_eq!(SyncFailure::hits(), 2);
+                drop(failure);
+                fixture.recover_twice(promoted);
+            }
+        }
+    }
+
+    #[test]
+    fn ambiguous_promotion_records_and_tokens_retain_all_material() {
+        for corruption in [
+            "missing-id",
+            "invalid-id",
+            "dangling-id",
+            "missing-token",
+            "invalid-token",
+        ] {
+            let fixture = PromotionFixture::new(true);
+            let store = fixture.open().unwrap();
+            let mut failure = None;
             store
-                .promote_with(&update, &live, &[], |_, _| {
-                    anyhow::bail!("injected exchange failure")
+                .promote_with(&fixture.update(), &fixture.live(), &[], |source, target| {
+                    replace_dir(source, target)?;
+                    failure = Some(SyncFailure::at(target.parent().unwrap()));
+                    Ok(())
                 })
-                .is_err()
-        );
-        assert_eq!(fs::read_to_string(live.join("version")).unwrap(), "old");
-        assert_eq!(fs::read_to_string(update.join("version")).unwrap(), "new");
+                .unwrap();
+            let journal = fixture.journal(false);
+            drop(failure);
+            drop(store);
+            match corruption {
+                "missing-id" => fs::remove_file(journal.join("module-id")).unwrap(),
+                "invalid-id" => fs::write(journal.join("module-id"), "../invalid").unwrap(),
+                "dangling-id" => {
+                    fs::remove_file(journal.join("module-id")).unwrap();
+                    std::os::unix::fs::symlink("missing", journal.join("module-id")).unwrap();
+                }
+                "missing-token" => fs::remove_file(fixture.live().join(PROMOTION_TOKEN)).unwrap(),
+                "invalid-token" => {
+                    fs::remove_file(fixture.live().join(PROMOTION_TOKEN)).unwrap();
+                    fs::create_dir(fixture.live().join(PROMOTION_TOKEN)).unwrap();
+                }
+                _ => unreachable!(),
+            }
+            for _ in 0..2 {
+                assert!(fixture.open().is_err());
+                fixture.assert_payloads(Some(&journal), true);
+                assert!(journal.exists());
+            }
+        }
+        let fixture = PromotionFixture::new(false);
+        let store = fixture.open().unwrap();
+        let journal = fixture.root().join("promote-incomplete");
+        fs::create_dir(&journal).unwrap();
+        fs::write(
+            journal.join("unidentified"),
+            "retain incomplete journal data",
+        )
+        .unwrap();
+        drop(store);
+        for _ in 0..2 {
+            assert!(fixture.open().is_err());
+            assert_eq!(
+                fs::read_to_string(journal.join("unidentified")).unwrap(),
+                "retain incomplete journal data"
+            );
+            fixture.assert_payloads(None, false);
+        }
     }
 }

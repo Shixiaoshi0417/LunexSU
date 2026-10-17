@@ -15,8 +15,8 @@ transaction helpers, without ksud's Android build script/assets. Transaction
 fixtures use `KSUD_MODULE_FIXTURE_ROOT` (otherwise ignored `fixtures/`); config
 fixtures use ignored `fixtures/configs/`. It never accesses `/data/adb`, a device,
 root, mounts or real modules. No installer, module script or shell is invoked by
-the Rust harness. The older Python installer-stub harness is separate and was
-**not run for the publication-interruption follow-up**.
+the Rust harness. The separate Python installer-stub harness was also run for
+the boot-promotion durability follow-up.
 
 ## Publication protocol and recovery
 
@@ -49,6 +49,30 @@ directory inodes, payload contents, metadata modes/flags and promotion exclusion
 Additional cases inject rollback failure through both guard/install Drop, replace
 the candidate with an unrelated directory, corrupt/remove journals or commit
 records, and retain legacy backups.
+
+## Boot-promotion durability and recovery
+
+- Promotion journals use an explicitly managed PathBuf. Failed syncs cannot
+  trigger unconditional TempDir cleanup of an old backup or the journal.
+- Once the new payload is visible, promotion still reports success. Recovery
+  confirms both the journal and live parent before discarding the old payload.
+- A failed exchange restores the pending update, then syncs both rename parents.
+  Recovery repeats those syncs even when a previous rollback already moved the
+  payload out of the journal; another sync failure retains the journal again.
+- Recursive cleanup requires a synced `gc-promote-*` rename. Recovery re-syncs
+  garbage classification before deleting, including after partial cleanup has
+  removed the module ID. A leftover live token after interrupted garbage cleanup
+  is harmless because its uniquely named promotion journal is no longer active.
+- Missing/invalid journal records, unreadable live tokens and unidentified staged
+  payloads fail closed. Only an entirely empty journal is disposable without an ID.
+
+Thread-local directory-sync fault injection exercises both parents after promotion
+and rollback, with and without an old live payload. Each case verifies directory
+identities, contents and retained journals through two failing recovery retries,
+then successful recovery twice. Additional cases cover garbage-root sync failures,
+partial garbage deletion, missing/corrupt records and tokens, and the existing
+exchange-failure rollback path. The production source is compiled directly by this
+harness; sync faults are test-only and do not affect other test threads.
 
 Coverage: failed extraction/customization/legacy callbacks, explicit nonzero
 exit and abort, successful private hot-install requests, killed installer

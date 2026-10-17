@@ -14,7 +14,7 @@ device-specific kernel, boot, OTA, WebView, or module compatibility.
 | F03-F04 | Track installed hooks independently of feature enablement; publish originals before replacements; restore and drain callbacks before retiring metadata | Hook publication/rollback tests for hlist and static-call layouts |
 | F05 | Stage SELinux allocations before publishing type metadata; discard a private policy if any command in its batch fails | Allocation fault injection and first/middle/last batch failures |
 | F06 | Remove private PR signing keys and cross-job secret outputs; make PR artifacts compile-only | PR signing workflow fixtures and identity checks |
-| F07 | Journal publication identities and live metadata before changes; exclude provisional updates until durable commit; retain recovery material on uncertainty | Isolated installer failures, filesystem rollback, and process death at six publication boundaries with/without an older pending update |
+| F07 | Journal publication identities and live metadata before changes; exclude provisional updates until durable commit; retain recovery material until both promotion/rollback parents are synced | Isolated installer failures, repeated directory-sync faults, filesystem rollback, and process death at six publication boundaries with/without an older pending update |
 | F08 | Lock the complete configuration read-modify-write; use unique temporary files and atomic publication | Multiple writers/readers and killed lock holders |
 | F09 | Restore and verify boot backups before deleting the working/backup directory | Fake restore and cleanup order/failure tests |
 | F10 | Validate slots before flashing; pass bootctl arguments separately and check its status | Fake bootctl argument and failure tests |
@@ -56,11 +56,18 @@ device-specific kernel, boot, OTA, WebView, or module compatibility.
   case passed separately against a real POSIX shell.
 - Host authorization/sanitizer, SELinux allocation/batch, hook protocol, profile,
   boot/Magica, build-reference, signing and workflow checks passed. Native POSIX
-  module tests passed all 9 installer fixtures and 18 Rust tests; the ignored
+  module tests passed all 9 installer fixtures and 22 Rust tests; the ignored
   Rust entry point is a worker explicitly invoked by the process tests. Atomic
   exchange assertions were executed, not skipped on an unsupported filesystem.
 - Both Manager variants' build-time source hashes and APK/native isolation were
   checked. Local daemon inputs were restored after compilation.
+
+The first GitHub review identified two additional boot-promotion durability
+windows: cleanup after a failed live-parent sync, and cleanup before a rollback's
+parent syncs. Both now retain recovery material, retry syncs on recovery, and
+require durable garbage classification before recursive cleanup. Fault injection
+covers both parents, existing/absent live modules, repeated failures and recovery,
+and interrupted garbage deletion. It does not emulate physical power loss.
 
 ## Validation limits
 
