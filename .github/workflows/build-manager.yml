@@ -43,9 +43,48 @@ on:
       - 'Cargo.toml'
   workflow_call:
   workflow_dispatch:
+    inputs:
+      no_root_demo:
+        description: 'Build the independent No Root UI demo (simulated operations only)'
+        type: boolean
+        required: false
+        default: false
 
 jobs:
+  build-no-root-demo:
+    if: github.event_name == 'workflow_dispatch' && inputs.no_root_demo == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Create isolated demo signing key
+        run: |
+          keytool -genkeypair -keystore "$RUNNER_TEMP/demo.jks" -alias androiddebugkey \
+            -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 30 \
+            -dname "CN=LunexSU No Root Demo" -storetype JKS
+      - name: Build and test the demo without native root payloads
+        working-directory: manager
+        run: |
+          ./gradlew clean assembleRelease testDebugUnitTest assembleDebugAndroidTest \
+            -PNO_ROOT_DEMO=true -PNO_ROOT_DEMO_KEYSTORE="$RUNNER_TEMP/demo.jks"
+      - name: Verify demo APK isolation
+        run: python3 scripts/verify_no_root_demo_apk.py manager/app/build/outputs/apk/release
+      - uses: actions/upload-artifact@v7
+        with:
+          name: manager-no-root-demo
+          path: manager/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
   generate-key:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.no_root_demo == true) }}
     runs-on: ubuntu-latest
     outputs:
       expected_size: ${{ steps.extract.outputs.expected_size || steps.extract_prod.outputs.expected_size }}
@@ -154,6 +193,7 @@ jobs:
     secrets: inherit
 
   build-ksuinit:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.no_root_demo == true) }}
     uses: ./.github/workflows/ksuinit.yml
 
   build-ksud:

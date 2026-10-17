@@ -202,6 +202,7 @@ object Shortcut {
             val uri = iconUri.toUri()
             Log.d(TAG, "loadShortcutBitmap: loading bitmap from uri=$uri")
             val rawBitmap = if (uri.scheme.equals("su", ignoreCase = true)) {
+                if (com.shixiaoshi0417.lunexsu.BuildConfig.NO_ROOT_DEMO) return null
                 val path = uri.path ?: ""
                 if (path.isNotBlank()) {
                     withRootShell(true) {

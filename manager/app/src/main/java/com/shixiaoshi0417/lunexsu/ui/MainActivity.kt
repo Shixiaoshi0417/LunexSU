@@ -18,6 +18,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -73,6 +74,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import com.shixiaoshi0417.lunexsu.BuildConfig
 import com.shixiaoshi0417.lunexsu.Natives
 import com.shixiaoshi0417.lunexsu.data.SavedSuperkey
 import com.shixiaoshi0417.lunexsu.ui.component.bottombar.BottomBar
@@ -180,6 +182,9 @@ class MainActivity : ComponentActivity() {
         if (isManager && Natives.kernelUAPIVersion == Natives.managerUAPIVersion) install()
 
         if (savedInstanceState == null) intent?.let { intentChannel.trySend(it) }
+
+        val demoPreferences = if (BuildConfig.NO_ROOT_DEMO) getSharedPreferences("no_root_demo_ui", MODE_PRIVATE) else null
+        val showDemoNotice = demoPreferences?.getBoolean("notice_dismissed", false) == false
 
         setContent {
             val viewModel = viewModel<MainActivityViewModel>()
@@ -320,15 +325,29 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    Box(Modifier.fillMaxSize().clipToBounds()) {
-                        when (uiMode) {
-                            UiMode.Material -> androidx.compose.material3.Scaffold(
-                                containerColor = if (LocalThemePackBackground.current) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer
-                            ) { navDisplay() }
+                    val scaffoldContent = @Composable {
+                            when (uiMode) {
+                                UiMode.Material -> androidx.compose.material3.Scaffold(
+                                    containerColor = if (LocalThemePackBackground.current) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer
+                                ) { navDisplay() }
 
-                            // Ordinary MIUIX keeps its native scaffold, including overlay dialogs.
-                            UiMode.Miuix -> Scaffold { navDisplay() }
+                                // Ordinary MIUIX keeps its native scaffold, including overlay dialogs.
+                                UiMode.Miuix -> Scaffold { navDisplay() }
+                            }
+                    }
+                    if (showDemoNotice) {
+                        Column(Modifier.fillMaxSize()) {
+                            com.shixiaoshi0417.lunexsu.ui.component.NoRootDemoBanner(onDismiss = {
+                                demoPreferences?.edit()?.putBoolean("notice_dismissed", true)?.apply()
+                                // Recreate backdrop/navigation layers at their final full-window size.
+                                // Keeping resized layers from the banner layout can retain a stale blur.
+                                recreate()
+                            })
+                            Box(Modifier.weight(1f).fillMaxWidth().clipToBounds()) { scaffoldContent() }
                         }
+                    } else {
+                        // Restore the ordinary full-window root, with no banner/inset wrapper left behind.
+                        Box(Modifier.fillMaxSize().clipToBounds()) { scaffoldContent() }
                     }
                     SideEffect { contentReady = true }
                 }

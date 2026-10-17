@@ -95,6 +95,7 @@ internal fun resolveSulogFileCleanAction(
 }
 
 fun listSulogFiles(): List<SulogFile> {
+    if (com.shixiaoshi0417.lunexsu.BuildConfig.NO_ROOT_DEMO) return listOf(SulogFile("sulog-2026-10-18.log", "demo://sulog"))
     val directory = SuFile(SULOG_DIR)
     val fileNames = directory.list().orEmpty().toList()
     return parseSulogFileNames(fileNames).map { name ->
@@ -103,6 +104,10 @@ fun listSulogFiles(): List<SulogFile> {
 }
 
 fun readSulogFile(path: String): List<String> {
+    if (com.shixiaoshi0417.lunexsu.BuildConfig.NO_ROOT_DEMO) return listOf(
+        "type=daemon_start seq=1 restart=0 boot_id=DEMO message=SIMULATED_NO_ROOT",
+        "type=root_execve seq=2 uid=10101 comm=DEMO command=UI_PREVIEW_ONLY",
+    )
     val suFile = SuFile(path)
     if (!suFile.isFile) {
         return emptyList()
@@ -326,11 +331,13 @@ internal fun String.toSulogDisplayName(): String {
 }
 
 fun cleanSulogFile(path: String): Boolean {
+    if (com.shixiaoshi0417.lunexsu.BuildConfig.NO_ROOT_DEMO) return true
     val suFile = SuFile(path)
     return suFile.clear()
 }
 
 fun deleteSulogFile(path: String): Boolean {
+    if (com.shixiaoshi0417.lunexsu.BuildConfig.NO_ROOT_DEMO) return true
     val suFile = SuFile(path)
     return suFile.delete()
 }

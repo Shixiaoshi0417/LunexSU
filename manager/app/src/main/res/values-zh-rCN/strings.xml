@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="no_root_demo_notice">无 Root 演示版 · 工作中、权限和模块状态均为模拟，不执行系统修改或命令。</string>
     <string name="home">主页</string>
     <string name="home_not_installed">未安装</string>
     <string name="home_click_to_install">点击安装</string>

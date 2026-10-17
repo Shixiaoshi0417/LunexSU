@@ -129,6 +129,9 @@ fun HomePager(
         onInstallClick = { navigator.push(Route.Install) },
         onOpenUrl = uriHandler::openUri,
         onJailbreakClick = {
+            if (com.shixiaoshi0417.lunexsu.BuildConfig.NO_ROOT_DEMO) {
+                Toast.makeText(context, R.string.no_root_demo_notice, Toast.LENGTH_LONG).show()
+            } else {
             loadingDialog.showLoading()
             context.startService(Intent(context, MagicaService::class.java))
             // Manager will be force-stopped and restarted by late-load on success.
@@ -139,6 +142,7 @@ fun HomePager(
                     loadingDialog.hide()
                     Toast.makeText(context, R.string.jailbreak_timeout, Toast.LENGTH_LONG).show()
                 }
+            }
             }
         },
         onOpenSuperUser = { mainPagerState.animateToPage(BottomBarDestination.SuperUser.ordinal) },
