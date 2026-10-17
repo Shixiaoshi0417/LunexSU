@@ -21,6 +21,7 @@ import com.shixiaoshi0417.lunexsu.data.registry.RegistryDownloadStore
 import com.shixiaoshi0417.lunexsu.data.registry.copyForInstall
 import com.shixiaoshi0417.lunexsu.BuildConfig
 import com.shixiaoshi0417.lunexsu.Natives
+import com.shixiaoshi0417.lunexsu.data.LkmFilePreparation
 import com.shixiaoshi0417.lunexsu.data.SessionResourceCache
 import com.shixiaoshi0417.lunexsu.core.tasks.BootKernelVersion
 import com.shixiaoshi0417.lunexsu.core.tasks.ExtractImage
@@ -377,24 +378,17 @@ sealed class LkmSelection : Parcelable {
 
 private fun writeLkmFile(lkm: LkmSelection, record: ByteArray? = null, detectedKmi: String? = null): File? {
     if (lkm !is LkmSelection.LkmUri && record == null) return null
-    val file = File(ksuApp.cacheDir, "kernelsu-tmp-lkm.ko")
-    try {
+    return LkmFilePreparation.prepare(ksuApp.cacheDir, record) { source ->
         if (lkm is LkmSelection.LkmUri) {
             requireNotNull(ksuApp.contentResolver.openInputStream(lkm.uri)).use { input ->
-                file.outputStream().use { output -> input.copyTo(output) }
+                source.outputStream().use { output -> input.copyTo(output) }
             }
         } else {
-            val kmi = (lkm as? LkmSelection.KmiString)?.value ?: detectedKmi
-            require(kmi != null && Regex("android[0-9]+-[0-9]+\\.[0-9]+").matches(kmi)) { "Missing or invalid KMI" }
+            val kmi = LkmFilePreparation.requireKmi((lkm as? LkmSelection.KmiString)?.value, detectedKmi)
             val result = Shell.getShell().newJob()
-                .add("${getKsuDaemonPath()} debug extract-binary ${kmi}_kernelsu.ko ${file.absolutePath}").exec()
-            check(result.isSuccess && file.isFile) { "Cannot extract matching LKM" }
+                .add("${getKsuDaemonPath()} debug extract-binary ${kmi}_kernelsu.ko ${source.absolutePath}").exec()
+            check(result.isSuccess && source.isFile) { "Cannot extract matching LKM" }
         }
-        if (record != null) file.writeBytes(com.shixiaoshi0417.lunexsu.data.Superkey.patch(file.readBytes(), record))
-        return file
-    } catch (e: Exception) {
-        file.delete()
-        throw e
     }
 }
 
@@ -500,11 +494,13 @@ fun installBoot(
         cmd += " --partition $part"
     }
 
-    val result = flashWithIO("${getKsuDaemonPath()} $cmd", onStdout, onStderr)
+    val result = try {
+        flashWithIO("${getKsuDaemonPath()} $cmd", onStdout, onStderr)
+    } finally {
+        bootFile?.delete()
+        lkmFile?.delete()
+    }
     Log.i("LunexSU", "install boot result: ${result.isSuccess}")
-
-    bootFile?.delete()
-    lkmFile?.delete()
 
     // if boot uri is empty, it is direct install, when success, we should show reboot button
     val showReboot = bootUri == null && result.isSuccess // we create a temporary val here, to avoid calc showReboot double
@@ -610,9 +606,12 @@ fun downloadBoot(
         }
     }
 
-    val result = Shell.getShell().newJob().add(cmd).to(stdoutCallback, stderrCallback).exec()
-    lkmFile?.delete()
-    bootFile.delete()
+    val result = try {
+        Shell.getShell().newJob().add(cmd).to(stdoutCallback, stderrCallback).exec()
+    } finally {
+        lkmFile?.delete()
+        bootFile.delete()
+    }
     return FlashResult(result, false)
 }
 
