@@ -52,11 +52,9 @@ object BootKernelVersion {
             while (true) {
                 val data = readRange(channel, kernelOffset.toLong(), probeSize) ?: return null
                 parseKmi(data)?.let { return it }
-                if (probeSize >= kernelSize) {
-                    parseCompressedKmi(data)?.let { return it }
-                    return null
-                }
-                if (probeSize >= MAX_RAW_PROBE) return null
+                // A bounded compressed prefix may already contain the banner.
+                parseCompressedKmi(data)?.let { return it }
+                if (probeSize >= kernelSize || probeSize >= MAX_RAW_PROBE) return null
                 probeSize = minOf(probeSize * 4, kernelSize.toLong(), MAX_RAW_PROBE)
             }
         }
