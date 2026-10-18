@@ -29,8 +29,12 @@ mod module {
 mod file_lock;
 #[path = "../../../src/hot_install/script.rs"]
 mod hot_install;
+#[path = "../../../src/boot_lifecycle.rs"]
+mod lifecycle;
 #[path = "../../../src/module_config.rs"]
 mod module_config;
+#[path = "../../../src/ota_hook.rs"]
+mod ota_hook;
 #[path = "../../../src/module/transaction.rs"]
 mod transaction;
 

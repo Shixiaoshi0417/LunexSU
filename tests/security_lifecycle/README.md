@@ -18,6 +18,14 @@ errors and unwind fallback; missing/nonzero shell status and argument quoting;
 both A/B slots, malformed/inconsistent slot output, separate bootctl argv and
 each spawn/status failure; restore-before-cleanup and verified read-back.
 
+OTA activation now prepares the completion hook before selecting the new slot.
+Preparation errors must never activate it; an activation error restores the old
+slot before removing the hook. An ambiguous rollback retains the recovery hook.
+The module-safety host fixture additionally exercises the real hook filesystem
+implementation, durability failures and abrupt process exits using fake bootctl
+responses only. These checks do not establish physical power-loss or bootloader
+behavior on a device.
+
 Magica explicitly requires `--magica-allow-network`: connecting to localhost
 does not prove that vendor adbd binds only localhost. Normal exits restore the
 initiator's snapshot independently of the child. SIGKILL, abort, power loss, or

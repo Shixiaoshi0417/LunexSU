@@ -76,6 +76,8 @@ data class DownloadProgress(
     val overallProgress: Float,
     val status: DownloadStatus,
     val errorMessage: String? = null,
+    // Published with COMPLETED, before a separate library refresh can finish.
+    val completedTheme: LocalTheme? = null,
 )
 
 enum class DownloadStatus {

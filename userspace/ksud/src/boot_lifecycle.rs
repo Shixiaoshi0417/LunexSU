@@ -32,7 +32,14 @@ pub fn other_slot_suffix(current: &str) -> io::Result<&'static str> {
 }
 
 pub struct OtaPlan {
+    current: &'static str,
     target: &'static str,
+}
+
+pub trait OtaHook {
+    /// Return only after the complete executable hook and its directory are durable.
+    fn prepare(&mut self, target: &str) -> io::Result<()>;
+    fn remove(&mut self) -> io::Result<()>;
 }
 
 pub fn prepare_ota(bootctl: &mut impl Bootctl, suffix: &str) -> io::Result<OtaPlan> {
@@ -42,20 +49,39 @@ pub fn prepare_ota(bootctl: &mut impl Bootctl, suffix: &str) -> io::Result<OtaPl
     let current = std::str::from_utf8(&output)
         .map_err(io::Error::other)?
         .trim();
-    let target = match (current, suffix) {
-        ("0", "_a") => "1",
-        ("1", "_b") => "0",
+    let (current, target) = match (current, suffix) {
+        ("0", "_a") => ("0", "1"),
+        ("1", "_b") => ("1", "0"),
         _ => {
             return Err(io::Error::other(format!(
                 "invalid or inconsistent bootctl current slot {current:?} and suffix {suffix:?}"
             )));
         }
     };
-    Ok(OtaPlan { target })
+    Ok(OtaPlan { current, target })
 }
 
-pub fn activate_ota(bootctl: &mut impl Bootctl, plan: &OtaPlan) -> io::Result<()> {
-    checked(bootctl, &["set-active-boot-slot", plan.target])?;
+pub fn activate_ota(
+    bootctl: &mut impl Bootctl,
+    hook: &mut impl OtaHook,
+    plan: &OtaPlan,
+) -> io::Result<()> {
+    hook.prepare(plan.target)?;
+    if let Err(activation) = checked(bootctl, &["set-active-boot-slot", plan.target]) {
+        // A failed command can still have changed the slot. Never remove the
+        // success hook until restoring the original slot has succeeded.
+        if let Err(rollback) = checked(bootctl, &["set-active-boot-slot", plan.current]) {
+            return Err(io::Error::other(format!(
+                "{activation}; original slot restoration failed: {rollback}; OTA hook retained"
+            )));
+        }
+        if let Err(cleanup) = hook.remove() {
+            return Err(io::Error::other(format!(
+                "{activation}; original slot restored, but OTA hook cleanup failed: {cleanup}"
+            )));
+        }
+        return Err(activation);
+    }
     Ok(())
 }
 

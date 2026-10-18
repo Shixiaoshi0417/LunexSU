@@ -23,6 +23,9 @@ use crate::feature_id::{FeatureId, parse_feature_id};
 #[path = "boot_lifecycle.rs"]
 mod lifecycle;
 #[cfg(target_os = "android")]
+#[path = "ota_hook.rs"]
+mod ota_hook;
+#[cfg(target_os = "android")]
 pub use lifecycle::restore_before_cleanup;
 
 #[cfg(target_os = "android")]
@@ -38,7 +41,6 @@ mod android {
     use std::fs::{File, OpenOptions};
     use std::io::Write;
     use std::os::fd::AsRawFd;
-    use std::os::unix::fs::PermissionsExt;
     use std::path::{Path, PathBuf};
     use std::process::Command;
 
@@ -316,24 +318,10 @@ mod android {
     pub(super) fn post_ota(plan: &OtaPlan) -> Result<()> {
         use crate::assets::BOOTCTL_PATH;
         use crate::defs::ADB_DIR;
-        lifecycle::activate_ota(&mut AndroidBootctl, plan).context("activate OTA boot slot")?;
-
-        let post_fs_data = Path::new(ADB_DIR).join("post-fs-data.d");
-        utils::ensure_dir_exists(&post_fs_data)?;
-        let post_ota_sh = post_fs_data.join("post_ota.sh");
-
-        // A failed mark must preserve bootctl and this hook for retry.
-        let sh_content = format!(
-            "#!/system/bin/sh\n\
-             {BOOTCTL_PATH} mark-boot-successful || exit $?\n\
-             rm -f {BOOTCTL_PATH} || exit $?\n\
-             rm -f /data/adb/post-fs-data.d/post_ota.sh\n"
-        );
-
-        std::fs::write(&post_ota_sh, sh_content)?;
-        std::fs::set_permissions(post_ota_sh, std::fs::Permissions::from_mode(0o755))?;
-
-        Ok(())
+        let mut hook = super::ota_hook::FileHook::new(Path::new(ADB_DIR), Path::new(BOOTCTL_PATH))
+            .context("lock OTA completion hook")?;
+        lifecycle::activate_ota(&mut AndroidBootctl, &mut hook, plan)
+            .context("prepare completion hook and activate OTA boot slot")
     }
 }
 

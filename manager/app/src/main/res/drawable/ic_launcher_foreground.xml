@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The system supplies the final icon mask. -->
+<!-- Preserve 18/108 safe padding at every preview size; the system supplies the mask. -->
 <inset xmlns:android="http://schemas.android.com/apk/res/android"
     android:drawable="@drawable/lunexsu_logo"
-    android:inset="18dp" />
+    android:inset="16.666667%" />

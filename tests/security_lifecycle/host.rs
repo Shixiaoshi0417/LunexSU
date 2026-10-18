@@ -351,6 +351,32 @@ fn output(success: bool, stdout: &[u8]) -> boot::BootctlOutput {
     }
 }
 
+#[derive(Default)]
+struct FakeHook {
+    calls: Vec<&'static str>,
+    fail_prepare: bool,
+    fail_remove: bool,
+}
+
+impl boot::OtaHook for FakeHook {
+    fn prepare(&mut self, target: &str) -> io::Result<()> {
+        assert!(matches!(target, "0" | "1"));
+        self.calls.push("prepare");
+        if self.fail_prepare {
+            return Err(io::Error::other("hook preparation failed"));
+        }
+        Ok(())
+    }
+
+    fn remove(&mut self) -> io::Result<()> {
+        self.calls.push("remove");
+        if self.fail_remove {
+            return Err(io::Error::other("hook cleanup failed"));
+        }
+        Ok(())
+    }
+}
+
 #[test]
 fn ota_passes_separate_argv_for_each_valid_slot() {
     for (suffix, current, target) in [
@@ -367,7 +393,9 @@ fn ota_passes_separate_argv_for_each_valid_slot() {
             calls: vec![],
         };
         let plan = boot::prepare_ota(&mut fake, suffix).unwrap();
-        boot::activate_ota(&mut fake, &plan).unwrap();
+        let mut hook = FakeHook::default();
+        boot::activate_ota(&mut fake, &mut hook, &plan).unwrap();
+        assert_eq!(hook.calls, ["prepare"]);
         assert_eq!(
             fake.calls,
             vec![
@@ -422,6 +450,7 @@ fn ota_checks_every_process_spawn_and_exit_status_before_next_step() {
                 Ok(output(true, b"")),
                 Ok(output(true, b"0")),
                 Ok(output(true, b"")),
+                Ok(output(true, b"")), // Roll back even a partially applied activation.
             ];
             responses[failed_step] = if spawn_error {
                 Err(io::Error::other("injected fake process spawn failure"))
@@ -432,17 +461,69 @@ fn ota_checks_every_process_spawn_and_exit_status_before_next_step() {
                 results: responses.into(),
                 calls: vec![],
             };
-            let script_written = Cell::new(false);
+            let mut hook = FakeHook::default();
             let result = boot::prepare_ota(&mut fake, "_a").and_then(|plan| {
-                boot::activate_ota(&mut fake, &plan)?;
-                script_written.set(true);
-                Ok(())
+                boot::activate_ota(&mut fake, &mut hook, &plan)
             });
             assert!(result.is_err());
-            assert_eq!(fake.calls.len(), failed_step + 1);
-            assert!(!script_written.get());
+            assert_eq!(fake.calls.len(), if failed_step == 2 { 4 } else { failed_step + 1 });
+            if failed_step == 2 {
+                assert_eq!(hook.calls, ["prepare", "remove"]);
+                assert_eq!(fake.calls[3], ["set-active-boot-slot", "0"]);
+            } else {
+                assert!(hook.calls.is_empty());
+            }
         }
     }
+}
+
+#[test]
+fn ota_hook_preparation_failure_never_activates_a_slot() {
+    let mut fake = FakeBootctl {
+        results: [Ok(output(true, b"")), Ok(output(true, b"0"))].into(),
+        calls: vec![],
+    };
+    let plan = boot::prepare_ota(&mut fake, "_a").unwrap();
+    let mut hook = FakeHook { fail_prepare: true, ..FakeHook::default() };
+    assert!(boot::activate_ota(&mut fake, &mut hook, &plan).is_err());
+    assert_eq!(fake.calls.len(), 2);
+    assert_eq!(hook.calls, ["prepare"]);
+}
+
+#[test]
+fn ota_uncertain_slot_rollback_retains_the_success_hook() {
+    for rollback_spawn_error in [false, true] {
+        let rollback = if rollback_spawn_error {
+            Err(io::Error::other("rollback spawn failed"))
+        } else {
+            Ok(output(false, b""))
+        };
+        let mut fake = FakeBootctl {
+            results: [Ok(output(true, b"")), Ok(output(true, b"1")), Ok(output(false, b"")), rollback].into(),
+            calls: vec![],
+        };
+        let plan = boot::prepare_ota(&mut fake, "_b").unwrap();
+        let mut hook = FakeHook::default();
+        let error = boot::activate_ota(&mut fake, &mut hook, &plan).unwrap_err();
+        assert!(error.to_string().contains("OTA hook retained"));
+        assert_eq!(fake.calls[2], ["set-active-boot-slot", "0"]);
+        assert_eq!(fake.calls[3], ["set-active-boot-slot", "1"]);
+        assert_eq!(hook.calls, ["prepare"]);
+    }
+}
+
+#[test]
+fn ota_cleanup_failure_is_reported_only_after_original_slot_restoration() {
+    let mut fake = FakeBootctl {
+        results: [Ok(output(true, b"")), Ok(output(true, b"0")), Ok(output(false, b"")), Ok(output(true, b""))].into(),
+        calls: vec![],
+    };
+    let plan = boot::prepare_ota(&mut fake, "_a").unwrap();
+    let mut hook = FakeHook { fail_remove: true, ..FakeHook::default() };
+    let error = boot::activate_ota(&mut fake, &mut hook, &plan).unwrap_err();
+    assert!(error.to_string().contains("original slot restored, but OTA hook cleanup failed"));
+    assert_eq!(fake.calls[3], ["set-active-boot-slot", "0"]);
+    assert_eq!(hook.calls, ["prepare", "remove"]);
 }
 
 #[test]
@@ -532,7 +613,10 @@ fn android_wiring_keeps_fallback_and_defers_backup_cleanup() {
     assert!(
         restore.find("write(&output_image").unwrap() < restore.find("clean_backup(&sha)").unwrap()
     );
-    assert!(source.contains("mark-boot-successful || exit $?"));
+    assert!(source.contains("ota_hook::FileHook::new"));
+    assert!(source.contains("activate_ota(&mut AndroidBootctl, &mut hook, plan)"));
+    let hook_source = include_str!("../../userspace/ksud/src/ota_hook.rs");
+    assert!(hook_source.contains("mark-boot-successful || exit $?"));
     assert!(!source.contains(".arg(format!(\"set-active-boot-slot"));
     let utils = include_str!("../../userspace/ksud/src/utils.rs");
     let uninstall = utils
