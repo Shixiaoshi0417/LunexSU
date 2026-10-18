@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.captionBar
@@ -23,11 +22,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridScope
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
@@ -248,8 +250,6 @@ private fun ThemeGridPageMiuix(
     ) { innerPadding ->
         val layoutDirection = LocalLayoutDirection.current
         val pullToRefreshState = rememberPullToRefreshState()
-        val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
-            WindowInsets.captionBar.asPaddingValues().calculateBottomPadding()
         PullToRefresh(
             isRefreshing = isRefreshing,
             pullToRefreshState = pullToRefreshState,
@@ -272,13 +272,15 @@ private fun ThemeGridPageMiuix(
                     state = rememberLazyStaggeredGridState(),
                     modifier = Modifier
                         .fillMaxHeight()
+                        .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.captionBar).only(WindowInsetsSides.Bottom))
+                        .imePadding()
                         .scrollEndHaptic()
                         .overScrollVertical()
                         .nestedScroll(scrollBehavior.nestedScrollConnection)
                         .padding(horizontal = 12.dp),
                     contentPadding = PaddingValues(
                         top = innerPadding.calculateTopPadding() + 12.dp,
-                        bottom = innerPadding.calculateBottomPadding() + bottomInset + 12.dp,
+                        bottom = innerPadding.calculateBottomPadding() + 12.dp,
                     ),
                     verticalItemSpacing = 12.dp,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -554,7 +556,7 @@ private fun ThemeFilterMiuix(current: ThemeStoreFilter, onApply: (ThemeStoreFilt
     var tablet by remember(current) { mutableStateOf(current.tablet) }
     val sources = listOf(THEME_SOURCE_ALL, THEME_SOURCE_OFFICIAL, THEME_SOURCE_THIRD_PARTY)
 
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
         TextField(
             value = author,
             onValueChange = { author = it },

@@ -5,6 +5,7 @@ import android.system.Os
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -23,6 +24,8 @@ import com.shixiaoshi0417.lunexsu.data.MetricsHistory
 import com.shixiaoshi0417.lunexsu.data.SystemMetricsCollector
 import com.shixiaoshi0417.lunexsu.data.repository.SettingsRepository
 import com.shixiaoshi0417.lunexsu.data.repository.SettingsRepositoryImpl
+import com.shixiaoshi0417.lunexsu.data.zygisk.BuiltinZygisk
+import com.shixiaoshi0417.lunexsu.data.zygisk.ZygiskOverview
 import com.shixiaoshi0417.lunexsu.getKernelVersion
 import com.shixiaoshi0417.lunexsu.ksuApp
 import com.shixiaoshi0417.lunexsu.ui.screen.home.HomeUiState
@@ -40,6 +43,22 @@ class HomeViewModel(
 
     private val _uiState = MutableStateFlow(buildState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    /** Collected only by the visible, authorized homepage; never polls in the background. */
+    val zygiskOverview: StateFlow<ZygiskOverview> = flow {
+        while (true) {
+            val snapshot = try {
+                BuiltinZygisk.overview()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                ZygiskOverview()
+            }
+            emit(snapshot)
+            delay(5_000L)
+        }
+    }.flowOn(Dispatchers.IO)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(0), ZygiskOverview())
 
     /**
      * Live device/storage metrics for the Focus and Stats home layouts. Polled only while a consumer

@@ -1,10 +1,13 @@
 package com.shixiaoshi0417.lunexsu.ui.viewmodel
 
+import android.os.SystemClock
 import android.system.OsConstants
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,6 +21,7 @@ import com.shixiaoshi0417.lunexsu.data.repository.SettingsRepositoryImpl
 import com.shixiaoshi0417.lunexsu.data.zygisk.BuiltinZygisk
 import com.shixiaoshi0417.lunexsu.data.zygisk.ZygiskApplyResult
 import com.shixiaoshi0417.lunexsu.data.zygisk.ZygiskBackend
+import com.shixiaoshi0417.lunexsu.data.zygisk.ZnnRiskConfirmation
 import com.shixiaoshi0417.lunexsu.ui.util.reboot
 import com.shixiaoshi0417.lunexsu.ksuApp
 import com.shixiaoshi0417.lunexsu.ui.screen.settings.SettingsUiState
@@ -32,6 +36,8 @@ class SettingsViewModel(
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+    private val znnRisk = ZnnRiskConfirmation(SystemClock::elapsedRealtime)
+    private var znnRiskCountdown: Job? = null
 
     init {
         refresh()
@@ -443,6 +449,7 @@ class SettingsViewModel(
 
     fun setZygiskEnabled(enabled: Boolean) {
         if (!_uiState.value.zygiskSwitchEnabled) return
+        dismissZnnRiskDialog()
         applyZygisk(if (enabled) BuiltinZygisk.defaultBackend ?: return else null)
     }
 
@@ -453,7 +460,57 @@ class SettingsViewModel(
 
     fun setZygiskNextNext(enabled: Boolean) {
         val state = _uiState.value
-        if (state.zygiskNextNextEnabled) applyZygisk(state.zygiskStatus?.configured, enabled)
+        if (state.zygiskNextNextEnabled) {
+            if (!enabled) dismissZnnRiskDialog()
+            applyZygisk(state.zygiskStatus?.configured, enabled)
+        }
+    }
+
+    private fun requestZnnRiskConfirmation() {
+        znnRiskCountdown?.cancel()
+        znnRisk.request()
+        publishZnnRiskState()
+        znnRiskCountdown = viewModelScope.launch {
+            while (znnRisk.state()?.secondsRemaining?.let { it > 0 } == true) {
+                delay(100)
+                publishZnnRiskState()
+            }
+        }
+    }
+
+    private fun publishZnnRiskState() {
+        val risk = znnRisk.state()
+        _uiState.update {
+            it.copy(
+                showZnnRiskDialog = risk != null,
+                znnRiskSecondsRemaining = risk?.secondsRemaining ?: 10,
+                znnRecoveryConfirmed = risk?.recoveryConfirmed == true,
+            )
+        }
+    }
+
+    fun setZnnRecoveryConfirmed(confirmed: Boolean) {
+        znnRisk.confirmRecovery(confirmed)
+        publishZnnRiskState()
+    }
+
+    fun dismissZnnRiskDialog() {
+        znnRiskCountdown?.cancel()
+        znnRiskCountdown = null
+        znnRisk.dismiss()
+        publishZnnRiskState()
+    }
+
+    fun confirmZnnRisk() {
+        val state = _uiState.value
+        if (!state.zygiskNextNextEnabled || state.zygiskNextNext) {
+            dismissZnnRiskDialog()
+            return
+        }
+        // Enforce elapsed time and acknowledgement here too, not just on the button.
+        if (!znnRisk.consume()) return
+        dismissZnnRiskDialog()
+        applyZygisk(state.zygiskStatus?.configured, nextNext = true, riskConfirmed = true)
     }
 
     fun dismissZygiskRebootDialog() {
@@ -466,8 +523,12 @@ class SettingsViewModel(
         viewModelScope.launch(Dispatchers.IO) { reboot() }
     }
 
-    private fun applyZygisk(target: ZygiskBackend?, nextNext: Boolean = false) {
+    private fun applyZygisk(target: ZygiskBackend?, nextNext: Boolean = false, riskConfirmed: Boolean = false) {
         if (_uiState.value.zygiskBusy) return
+        if (nextNext && !_uiState.value.zygiskNextNext && !riskConfirmed) {
+            requestZnnRiskConfirmation()
+            return
+        }
         _uiState.update { it.copy(zygiskBusy = true) }
         viewModelScope.launch(Dispatchers.IO) {
             val result = BuiltinZygisk.apply(target, nextNext)

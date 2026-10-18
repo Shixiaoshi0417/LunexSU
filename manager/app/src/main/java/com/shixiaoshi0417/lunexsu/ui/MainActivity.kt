@@ -18,6 +18,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -73,7 +74,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import com.shixiaoshi0417.lunexsu.BuildConfig
 import com.shixiaoshi0417.lunexsu.Natives
+import com.shixiaoshi0417.lunexsu.data.SavedSuperkey
 import com.shixiaoshi0417.lunexsu.ui.component.bottombar.BottomBar
 import com.shixiaoshi0417.lunexsu.ui.component.bottombar.FloatingBar
 import com.shixiaoshi0417.lunexsu.ui.component.bottombar.FloatingBarConfig
@@ -180,14 +183,18 @@ class MainActivity : ComponentActivity() {
 
         if (savedInstanceState == null) intent?.let { intentChannel.trySend(it) }
 
+        val demoPreferences = if (BuildConfig.NO_ROOT_DEMO) getSharedPreferences("no_root_demo_ui", MODE_PRIVATE) else null
+        val showDemoNotice = demoPreferences?.getBoolean("notice_dismissed", false) == false
+
         setContent {
             val viewModel = viewModel<MainActivityViewModel>()
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             val selectedMainPage by viewModel.selectedMainPage.collectAsStateWithLifecycle()
             val appSettings = uiState.appSettings
             // Probe the current Core, never a saved "installed once" flag or the presence of a pack.
-            var coreInstalled by remember { mutableStateOf(Natives.isManager) }
-            LifecycleResumeEffect(Unit) {
+            val authenticationGeneration by SavedSuperkey.authenticationGeneration.collectAsStateWithLifecycle()
+            var coreInstalled by remember(authenticationGeneration) { mutableStateOf(Natives.isManager) }
+            LifecycleResumeEffect(authenticationGeneration) {
                 coreInstalled = Natives.isManager
                 onPauseOrDispose { }
             }
@@ -277,6 +284,7 @@ class MainActivity : ComponentActivity() {
                             }) {
                             themeEntry<Route.Main>(swipeDismiss = swipeDismiss) { mainScreenEntry() }
                             themeEntry<Route.About>(swipeDismiss = swipeDismiss) { AboutScreen() }
+                            themeEntry<Route.Susfs>(swipeDismiss = swipeDismiss) { com.shixiaoshi0417.lunexsu.ui.screen.susfs.SusfsScreen() }
                             themeEntry<Route.Sulog>(swipeDismiss = swipeDismiss) { SulogScreen() }
                             themeEntry<Route.ColorPalette>(swipeDismiss = swipeDismiss) { ColorPaletteScreen() }
                             themeEntry<Route.Font>(swipeDismiss = swipeDismiss) { FontScreen() }
@@ -317,15 +325,29 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    Box(Modifier.fillMaxSize().clipToBounds()) {
-                        when (uiMode) {
-                            UiMode.Material -> androidx.compose.material3.Scaffold(
-                                containerColor = if (LocalThemePackBackground.current) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer
-                            ) { navDisplay() }
+                    val scaffoldContent = @Composable {
+                            when (uiMode) {
+                                UiMode.Material -> androidx.compose.material3.Scaffold(
+                                    containerColor = if (LocalThemePackBackground.current) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer
+                                ) { navDisplay() }
 
-                            // Ordinary MIUIX keeps its native scaffold, including overlay dialogs.
-                            UiMode.Miuix -> Scaffold { navDisplay() }
+                                // Ordinary MIUIX keeps its native scaffold, including overlay dialogs.
+                                UiMode.Miuix -> Scaffold { navDisplay() }
+                            }
+                    }
+                    if (showDemoNotice) {
+                        Column(Modifier.fillMaxSize()) {
+                            com.shixiaoshi0417.lunexsu.ui.component.NoRootDemoBanner(onDismiss = {
+                                demoPreferences?.edit()?.putBoolean("notice_dismissed", true)?.apply()
+                                // Recreate backdrop/navigation layers at their final full-window size.
+                                // Keeping resized layers from the banner layout can retain a stale blur.
+                                recreate()
+                            })
+                            Box(Modifier.weight(1f).fillMaxWidth().clipToBounds()) { scaffoldContent() }
                         }
+                    } else {
+                        // Restore the ordinary full-window root, with no banner/inset wrapper left behind.
+                        Box(Modifier.fillMaxSize().clipToBounds()) { scaffoldContent() }
                     }
                     SideEffect { contentReady = true }
                 }
@@ -359,6 +381,7 @@ fun MainScreen(
         pagerState = pagerState,
         animatePageChanges = !useNavigationRail,
     )
+    val authenticationGeneration by SavedSuperkey.authenticationGeneration.collectAsStateWithLifecycle()
     val isFullFeatured = Natives.isFullFeatured()
     val pagerMode = PagerInterceptionMode.entries.getOrElse(pagerInterceptionMode) {
         PagerInterceptionMode.Native
@@ -379,7 +402,7 @@ fun MainScreen(
     }.collectAsStateWithLifecycle(0)
 
     var startupPreloadStarted by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(isFullFeatured) {
+    LaunchedEffect(isFullFeatured, authenticationGeneration) {
         if (!isFullFeatured || startupPreloadStarted) {
             return@LaunchedEffect
         }

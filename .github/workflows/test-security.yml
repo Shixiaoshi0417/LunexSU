@@ -1,0 +1,57 @@
+name: Security regression tests
+
+on:
+  push:
+    paths:
+      - 'kernel/**'
+      - 'userspace/ksud/**'
+      - 'tests/authorization/**'
+      - 'tests/hooks/**'
+      - 'tests/selinux/**'
+      - 'tests/security_f01/**'
+      - 'tests/security_lifecycle/**'
+      - 'userspace/ksud/tests/module_safety/**'
+      - 'tests/branding/test_pr_signing.py'
+      - '.github/scripts/check-pr-unsigned-apk.py'
+      - '.github/workflows/build-manager.yml'
+      - '.github/workflows/test-security.yml'
+  pull_request:
+    paths:
+      - 'kernel/**'
+      - 'userspace/ksud/**'
+      - 'tests/authorization/**'
+      - 'tests/hooks/**'
+      - 'tests/selinux/**'
+      - 'tests/security_f01/**'
+      - 'tests/security_lifecycle/**'
+      - 'userspace/ksud/tests/module_safety/**'
+      - 'tests/branding/test_pr_signing.py'
+      - '.github/scripts/check-pr-unsigned-apk.py'
+      - '.github/workflows/build-manager.yml'
+      - '.github/workflows/test-security.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kernel-faults:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Test pending authorization marker recovery
+        run: python3 tests/authorization/run_persistence_tests.py
+      - name: Test SELinux allocation and batch transactions
+        run: python3 tests/selinux/run_transaction_tests.py
+      - name: Test hook publication and teardown
+        run: python3 tests/hooks/run_hook_tests.py
+      - name: Test PR signing isolation
+        run: python3 tests/branding/test_pr_signing.py
+      - name: Test temporary ADB and boot lifecycle transactions with fakes
+        run: python3 tests/security_lifecycle/run_host_tests.py
+      - name: Test profile storage boundaries with disposable host files
+        run: cargo test --locked --manifest-path tests/security_f01/profile_host/Cargo.toml --target-dir "$RUNNER_TEMP/profile-tests"
+      - name: Test isolated module installer failure paths
+        run: python3 userspace/ksud/tests/module_safety/test_installer.py -v
+      - name: Test module publication and cross-process config transactions
+        run: cargo test --locked --manifest-path userspace/ksud/tests/module_safety/Cargo.toml --target-dir "$RUNNER_TEMP/module-tests" -- --nocapture

@@ -37,12 +37,21 @@ class ThemeRenderingTestActivity : ComponentActivity() {
     private lateinit var fixtureRoot: File
     private lateinit var fixtureContext: Context
     private var settingsScrollState: androidx.compose.foundation.ScrollState? = null
+    private val foregroundFixture = ForegroundFixture()
+
+    fun foregroundResult(): String = foregroundFixture.result
+    fun foregroundPixel(): Int = foregroundFixture.pixel
 
     fun settingsScrollPosition(): Int = settingsScrollState?.value ?: -1
     fun settingsScrollRange(): Int = settingsScrollState?.maxValue ?: 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val scenario = intent.getStringExtra("case") ?: "card"
+        if (scenario.startsWith("foreground_")) {
+            setContent { foregroundFixture.Content(scenario) }
+            return
+        }
         val id = UUID.randomUUID().toString()
         fixtureRoot = File(cacheDir, "render-$id").also { it.mkdirs() }
         fixtureContext = object : ContextWrapper(this) {
@@ -59,7 +68,6 @@ class ThemeRenderingTestActivity : ComponentActivity() {
         }
         image("grid_working_card_background.png", android.graphics.Color.GREEN)
         image("background.png", android.graphics.Color.BLUE)
-        val scenario = intent.getStringExtra("case") ?: "card"
         val json = JSONObject().put("isGridWorkingCardBackgroundEnabled", true)
             .put("gridWorkingCardBackgroundOpacity", intent.getFloatExtra("opacity", 1f).toDouble())
             .put("gridWorkingCardBackgroundDim", 0)

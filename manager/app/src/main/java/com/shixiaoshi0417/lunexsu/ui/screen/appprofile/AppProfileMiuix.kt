@@ -16,17 +16,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.captionBar
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountCircle
@@ -125,6 +127,7 @@ fun AppProfileScreenMiuix(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxHeight()
+                    .imePadding()
                     .padding(top = 16.dp)
                     .scrollEndHaptic()
                     .overScrollVertical()
@@ -161,10 +164,7 @@ fun AppProfileScreenMiuix(
                         onProfileChange = actions.onProfileChange,
                     )
                     Spacer(
-                        Modifier.height(
-                            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
-                                    WindowInsets.captionBar.asPaddingValues().calculateBottomPadding()
-                        )
+                        Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars.union(WindowInsets.captionBar))
                     )
                 }
             }

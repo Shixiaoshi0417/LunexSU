@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="no_root_demo_notice">NO ROOT DEMO · All working, root and module states are simulated. No system changes or commands are executed.</string>
     <string name="home">Home</string>
     <string name="home_not_installed">Not installed</string>
     <string name="home_click_to_install">Tap to install</string>
@@ -308,6 +309,29 @@
     <string name="settings_soft_reboot">Soft restart instead of reboot</string>
     <string name="settings_soft_reboot_summary">Use soft restart instead of a full reboot when installing, updating, or toggling modules.</string>
     <string name="settings_zygisk">Built-in Zygisk</string>
+    <string name="home_zygisk_title">Zygisk status</string>
+    <string name="home_zygisk_expand">Collapsed. Tap to expand details</string>
+    <string name="home_zygisk_collapse">Expanded. Tap to collapse details</string>
+    <string name="home_zygisk_unavailable">Status unavailable</string>
+    <string name="home_zygisk_safe_mode">Safe mode: module startup skipped</string>
+    <string name="home_zygisk_conflict">External or legacy module detected</string>
+    <string name="home_zygisk_pending">Changes pending reboot</string>
+    <string name="home_zygisk_monitor_detected">Monitor process detected</string>
+    <string name="home_zygisk_configured">Backend configured</string>
+    <string name="home_zygisk_disabled">No built-in backend configured</string>
+    <string name="home_zygisk_backend">Next-boot backend configuration</string>
+    <string name="home_zygisk_none">Not configured</string>
+    <string name="home_zygisk_monitor">zygisk-ptrace monitor process</string>
+    <string name="home_zygisk_detected">Detected</string>
+    <string name="home_zygisk_not_detected">Not detected (not a universal backend check)</string>
+    <string name="home_zygisk_znn">ZNN configuration</string>
+    <string name="home_zygisk_znn_configured">Configured (high risk)</string>
+    <string name="home_zygisk_external">External module ID</string>
+    <string name="home_zygisk_installed_version">Installed: %1$s</string>
+    <string name="home_zygisk_staged_version">Staged: %1$s</string>
+    <string name="home_zygisk_version_unknown">No readable installed version</string>
+    <string name="home_zygisk_observation_hint">Module flags and process observations do not prove successful injection. A missing ptrace monitor does not establish whether NeoZygisk or ZNN is running.</string>
+    <string name="home_zygisk_query_hint">A working Core authorization and Root shell are required. If already authorized, try again later. Query failure is not an off state.</string>
     <string name="settings_zygisk_summary">Off by default. Turning it on uses ReZygisk. Every change takes effect after a reboot.</string>
     <string name="settings_zygisk_running">%s is running</string>
     <string name="settings_zygisk_not_running">%s is enabled but not running</string>
@@ -322,6 +346,13 @@
     <string name="settings_zygisk_backend_summary">ReZygisk by default. You can switch to NeoZygisk</string>
     <string name="settings_zygisk_nextnext">Use ZygiskNextNext</string>
     <string name="settings_zygisk_nextnext_summary">Add Zygisk Next API support. Off by default; changes take effect after reboot</string>
+    <string name="settings_zygisk_nextnext_risk_summary">High risk: may prevent booting. Device recovery skills required.</string>
+    <string name="settings_zygisk_nextnext_risk_title">ZNN: high-risk feature</string>
+    <string name="settings_zygisk_nextnext_risk_message">Enabling ZygiskNextNext (ZNN) may cause a boot loop or prevent Android from starting. Boot failures have been reported. Safe mode is not guaranteed to recover the device. Do not enable unless you can independently disable faulty modules through a working recovery environment or restore a known-working boot image.</string>
+    <string name="settings_zygisk_nextnext_risk_recovery">I confirm that I can recover my device</string>
+    <string name="settings_zygisk_nextnext_risk_recovery_hint">I have a usable recovery environment or boot image, know how to recover without Android starting, and accept the risk.</string>
+    <string name="settings_zygisk_nextnext_risk_continue">Continue</string>
+    <string name="settings_zygisk_nextnext_risk_countdown">Continue (%1$d s)</string>
     <string name="settings_zygisk_nextnext_enable_first">Enable built-in Zygisk first to add Zygisk Next API support</string>
     <string name="settings_zygisk_nextnext_pending">Zygisk Next API support changed. Reboot required</string>
     <string name="settings_zygisk_legacy_vex">Old built-in Vex detected. Turn off built-in Zygisk and reboot before enabling ReZygisk</string>
@@ -547,4 +578,14 @@
     <string name="script_param_below_min">Must be at least %d</string>
     <string name="script_param_above_max">Must be at most %d</string>
     <string name="script_param_invalid">Invalid value</string>
+    <string name="superkey_remember">Remember superkey</string>
+    <string name="superkey_remember_hint">Save an encrypted unlock credential on this device and unlock automatically next time. Anyone able to open this Manager may then use its permissions.</string>
+    <string name="superkey_saved">Remembered superkey</string>
+    <string name="superkey_saved_hint">Automatic unlock is enabled on this device. Tap to forget.</string>
+    <string name="superkey_not_saved">No saved credential. You can opt in after entering your superkey.</string>
+    <string name="superkey_forget">Forget superkey</string>
+    <string name="superkey_forget_hint">Remove the encrypted credential from this device. This does not change the Core superkey or revoke an already authenticated UID. After reboot, enter the key manually again.</string>
+    <string name="superkey_storage_failed">Could not save or remove the credential. Check the remembered superkey setting; manual unlock remains available.</string>
+    <string name="superkey_saved_invalid">The saved credential is invalid or unavailable. Please enter your superkey again.</string>
+    <string name="superkey_auto_failed">Automatic unlock failed. Please enter your superkey manually.</string>
 </resources>

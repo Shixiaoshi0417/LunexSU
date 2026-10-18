@@ -107,4 +107,17 @@ class FptContainerTest {
         val text = JSONObject().put("meta_description", "[{\\\"".repeat(40)).toString().toByteArray()
         assertTrue(read(encrypt(archive("theme.json" to text))).first.has("meta_description"))
     }
+    @Test fun rejectsLenientAndMalformedJsonAtContainerBoundary() {
+        for (text in listOf("{'meta_name':'x'}", "{/* \" */ \"meta_name\":\"x\"}",
+            "{\"x\":[1,]}", "{\"x\":[}", "{}{}", "}{")) {
+            assertThrows(IllegalArgumentException::class.java) {
+                read(encrypt(archive("theme.json" to text.toByteArray())))
+            }
+            File(root, "unpacked").deleteRecursively()
+        }
+    }
+    @Test fun acceptsExactly32LevelsOfStandardJson() {
+        val text = "{\"x\":" + "[".repeat(31) + "0" + "]".repeat(31) + "}"
+        assertTrue(read(encrypt(archive("theme.json" to text.toByteArray()))).first.has("x"))
+    }
 }

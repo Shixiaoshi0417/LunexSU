@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="susfs_uid_selection">重新導向範圍</string>
+    <string name="susfs_uid_non_app">0 · 非應用程式 UID</string>
+    <string name="susfs_uid_root">1 · KernelSU 網域之外的 root</string>
+    <string name="susfs_uid_non_su">2 · KernelSU 網域之外的進程</string>
+    <string name="susfs_uid_builtin_3">3 · 內置 UID 方案 3</string>
+    <string name="susfs_uid_builtin_4">4 · 內置 UID 方案 4</string>
+    <string name="susfs_uid_unsupported">目前實作不支援已儲存的 UID 範圍 · 編輯時請選擇清單中的範圍</string>
+    <string name="susfs_uid_hint">內置 SUSFS 提供 0–4 範圍，LKM 提供 0–2 範圍。核心確認成功，不代表範圍內所有進程的重新導向效果均已驗證。</string>
+</resources>

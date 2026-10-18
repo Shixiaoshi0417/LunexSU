@@ -20,8 +20,18 @@ use crate::assets;
 use crate::feature_id::{FeatureId, parse_feature_id};
 
 #[cfg(target_os = "android")]
+#[path = "boot_lifecycle.rs"]
+mod lifecycle;
+#[cfg(target_os = "android")]
+#[path = "ota_hook.rs"]
+mod ota_hook;
+#[cfg(target_os = "android")]
+pub use lifecycle::restore_before_cleanup;
+
+#[cfg(target_os = "android")]
 mod android {
     use super::Result;
+    use super::lifecycle::{self, Bootctl, BootctlOutput, OtaPlan};
     pub(super) use crate::defs::{BACKUP_FILENAME, KSU_BACKUP_DIR, KSU_BACKUP_FILE_PREFIX};
     use crate::defs::{DEFAULT_PACKAGE_NAME, KSU_TEMP_BACKUP_DIR_NAME};
     use android_bootimg::cpio::{Cpio, CpioEntry};
@@ -31,7 +41,6 @@ mod android {
     use std::fs::{File, OpenOptions};
     use std::io::Write;
     use std::os::fd::AsRawFd;
-    use std::os::unix::fs::PermissionsExt;
     use std::path::{Path, PathBuf};
     use std::process::Command;
 
@@ -278,42 +287,41 @@ mod android {
         PathBuf::from(format!("/dev/block/by-name/{name}{slot_suffix}"))
     }
 
-    pub(super) fn post_ota() -> Result<()> {
+    struct AndroidBootctl;
+
+    impl Bootctl for AndroidBootctl {
+        fn run(&mut self, args: &[&str]) -> std::io::Result<BootctlOutput> {
+            let output = Command::new(crate::assets::BOOTCTL_PATH)
+                .args(args)
+                .output()?;
+            if !output.status.success() {
+                return Err(std::io::Error::other(format!(
+                    "bootctl {} exited with {}: {}",
+                    args.join(" "),
+                    output.status,
+                    String::from_utf8_lossy(&output.stderr).trim()
+                )));
+            }
+            Ok(BootctlOutput {
+                success: true,
+                stdout: output.stdout,
+            })
+        }
+    }
+
+    pub(super) fn prepare_ota() -> Result<OtaPlan> {
+        let suffix =
+            utils::getprop("ro.boot.slot_suffix").context("read current A/B slot suffix")?;
+        lifecycle::prepare_ota(&mut AndroidBootctl, &suffix).context("validate OTA boot control")
+    }
+
+    pub(super) fn post_ota(plan: &OtaPlan) -> Result<()> {
         use crate::assets::BOOTCTL_PATH;
         use crate::defs::ADB_DIR;
-        let status = Command::new(BOOTCTL_PATH).arg("hal-info").status()?;
-        if !status.success() {
-            return Ok(());
-        }
-
-        let current_slot = Command::new(BOOTCTL_PATH)
-            .arg("get-current-slot")
-            .output()?
-            .stdout;
-        let current_slot = String::from_utf8(current_slot)?;
-        let current_slot = current_slot.trim();
-        let target_slot = i32::from(current_slot == "0");
-
-        Command::new(BOOTCTL_PATH)
-            .arg(format!("set-active-boot-slot {target_slot}"))
-            .status()?;
-
-        let post_fs_data = Path::new(ADB_DIR).join("post-fs-data.d");
-        utils::ensure_dir_exists(&post_fs_data)?;
-        let post_ota_sh = post_fs_data.join("post_ota.sh");
-
-        let sh_content = format!(
-            r"
-{BOOTCTL_PATH} mark-boot-successful
-rm -f {BOOTCTL_PATH}
-rm -f /data/adb/post-fs-data.d/post_ota.sh
-"
-        );
-
-        std::fs::write(&post_ota_sh, sh_content)?;
-        std::fs::set_permissions(post_ota_sh, std::fs::Permissions::from_mode(0o755))?;
-
-        Ok(())
+        let mut hook = super::ota_hook::FileHook::new(Path::new(ADB_DIR), Path::new(BOOTCTL_PATH))
+            .context("lock OTA completion hook")?;
+        lifecycle::activate_ota(&mut AndroidBootctl, &mut hook, plan)
+            .context("prepare completion hook and activate OTA boot slot")
     }
 }
 
@@ -654,6 +662,15 @@ pub fn patch(args: BootPatchArgs) -> Result<()> {
         #[cfg(target_os = "android")]
         let patch_file = image.is_some();
 
+        // Refuse malformed/non-A/B slot properties before deriving any OTA
+        // partition path (the old fallback treated every non-_a value as _b).
+        #[cfg(target_os = "android")]
+        if ota {
+            let suffix = crate::utils::getprop("ro.boot.slot_suffix")
+                .context("read current A/B slot suffix")?;
+            lifecycle::other_slot_suffix(&suffix)?;
+        }
+
         #[cfg(target_os = "android")]
         if !patch_file {
             ensure_gki_kernel()?;
@@ -742,7 +759,18 @@ pub fn patch(args: BootPatchArgs) -> Result<()> {
 
         // try extract bootctl/busybox
         #[cfg(target_os = "android")]
-        let _ = assets::ensure_binaries(false);
+        if ota && flash {
+            assets::ensure_binaries(false).context("prepare OTA bootctl")?;
+        } else {
+            let _ = assets::ensure_binaries(false);
+        }
+
+        #[cfg(target_os = "android")]
+        let ota_plan = if ota && flash {
+            Some(prepare_ota()?)
+        } else {
+            None
+        };
 
         println!("- Preparing assets");
         println!("- Unpacking boot image");
@@ -911,8 +939,8 @@ pub fn patch(args: BootPatchArgs) -> Result<()> {
             println!("- Flashing new boot image");
             let bootdevice = boot_image_file.display().to_string();
             flash_partition(&bootdevice, &new_boot_bytes)?;
-            if ota {
-                post_ota()?;
+            if let Some(plan) = &ota_plan {
+                post_ota(plan)?;
             }
         }
 
@@ -1032,7 +1060,7 @@ pub fn restore(args: BootRestoreArgs) -> Result<()> {
     let mut stock_boot: Option<PathBuf> = None;
 
     #[cfg(target_os = "android")]
-    if let Some(backup_file) = cpio.entry_by_name(BACKUP_FILENAME) {
+    let backup_sha = if let Some(backup_file) = cpio.entry_by_name(BACKUP_FILENAME) {
         let sha = String::from_utf8(backup_file.data().unwrap_or_default().to_vec())?;
         let sha = sha.trim();
         let backup_path =
@@ -1043,12 +1071,12 @@ pub fn restore(args: BootRestoreArgs) -> Result<()> {
         } else {
             println!("- Warning: no backup {} found!", backup_path.display());
         }
-        if let Err(e) = clean_backup(sha) {
-            println!("- Warning: Cleanup backup image failed: {e}");
-        }
+        // Keep every backup until restore (including write/read-back) succeeds.
+        Some(sha.to_owned())
     } else {
         println!("- Backup info is absent!");
-    }
+        None
+    };
 
     #[cfg(target_os = "android")]
     let mut stock_source: Option<PathBuf> = None;
@@ -1059,6 +1087,9 @@ pub fn restore(args: BootRestoreArgs) -> Result<()> {
             if let Some(stock_path) = stock_boot {
                 let bytes = std::fs::read(&stock_path)
                     .with_context(|| format!("read stock boot {}", stock_path.display()))?;
+                let stock_image = BootImage::parse(&bytes).context("validate stock boot backup")?;
+                enforce_bootimage_version(&stock_image)?;
+                drop(stock_image);
                 stock_source = Some(stock_path);
                 bytes
             } else {
@@ -1083,6 +1114,8 @@ pub fn restore(args: BootRestoreArgs) -> Result<()> {
         }
         let bootdevice = boot_image_file.display().to_string();
         flash_partition(&bootdevice, &new_boot_bytes)?;
+        lifecycle::verify_restored_image(File::open(&boot_image_file)?, &new_boot_bytes)
+            .context("verify restored boot image; backups retained for retry")?;
     }
 
     #[cfg(target_os = "android")]
@@ -1100,6 +1133,14 @@ pub fn restore(args: BootRestoreArgs) -> Result<()> {
         std::fs::write(&output_image, &new_boot_bytes).context("copy out new boot failed")?;
         println!("- Output file is written to");
         println!("- {}", output_image.display().to_string().trim_matches('"'));
+    }
+
+    #[cfg(target_os = "android")]
+    if flash
+        && let Some(sha) = backup_sha
+        && let Err(error) = clean_backup(&sha)
+    {
+        println!("- Warning: Cleanup backup image failed: {error}");
     }
 
     println!("- Done!");

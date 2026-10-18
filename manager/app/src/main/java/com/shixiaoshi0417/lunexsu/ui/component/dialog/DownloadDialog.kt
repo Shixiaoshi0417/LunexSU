@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -55,14 +57,16 @@ private fun DownloadDialogMaterial(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.download_dialog_title)) },
         text = {
-            OutlinedTextField(
-                value = url,
-                onValueChange = { url = it },
-                placeholder = { Text(stringResource(R.string.download_dialog_msg)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                modifier = Modifier.fillMaxWidth()
-            )
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    placeholder = { Text(stringResource(R.string.download_dialog_msg)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         },
         confirmButton = {
             TextButton(
@@ -92,7 +96,7 @@ private fun DownloadDialogMiuix(
         title = stringResource(R.string.download_dialog_title),
         onDismissRequest = onDismiss,
         content = {
-            Column(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                 TextField(
                     value = url,
                     onValueChange = { url = it },

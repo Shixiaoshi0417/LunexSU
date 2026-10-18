@@ -37,7 +37,10 @@ Windows 用户及 SYSTEM 访问；该目录被 Git 忽略。备份不进入源�
 Actions 产物或日志。后续发布应继续复用这把密钥，并妥善离线备份。
 
 `build-manager.yml` 的正式构建、重打包签名和 Core 证书提取统一使用这
-四项 Secrets；PR 构建仍使用临时 RSA 2048 密钥及 `.pr` 包名。证书提取生成
+四项 Secrets。PR 构建使用 `.pr` 包名，但不生成或传递私钥；其 APK 为
+`manager-pr-compile-only` 无签名编译产物，Core 使用不可安装的一字节证书绑定，
+不能作为可信的 Manager/Core 安装组合。详见 [PR 构建安全策略](pr-build-security.md)。
+正式证书提取生成
 `KSU_EXPECTED_SIZE` / `KSU_EXPECTED_HASH`，传给 LKM 构建，LKM 再由
 Actions 内嵌进 ksud 与 APK。缺少配置时失败。重签名完成后，再用
 `apksigner verify --print-certs` 校验每个 APK 的证书 SHA256 与 Core 参数
@@ -77,8 +80,11 @@ SYSTEM. Keep an offline backup and reuse this key for subsequent releases.
 
 Production APK signing and Core certificate extraction use the same secrets;
 Actions builds the LKMs with the extracted size/hash and embeds them in ksud
-and the APK. PR builds retain temporary RSA 2048 keys and the `.pr`
-application ID. A post-signing gate verifies all APK certificate hashes
+and the APK. PR builds retain the `.pr` application ID but do not create or
+transfer private keys. Their unsigned `manager-pr-compile-only` APK and invalid
+one-byte Core certificate binding are not installable, trusted Manager/Core
+pairs. See [PR build security policy](pr-build-security.md). A production
+post-signing gate verifies all APK certificate hashes
 against Core before uploading artifacts. Build Manager can be run manually
 with `workflow_dispatch`; it does not merge main or publish a Release.
 

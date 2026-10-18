@@ -35,17 +35,22 @@ struct ksu_auth_storage_ops {
 struct ksu_auth_guard {
     __u32 uids[KSU_AUTH_GUARD_MAX_UIDS];
     size_t count;
-    bool all; /* unreadable or overflowing marker: revoke Root from every record */
+    bool all; /* unreadable, torn or overflowing marker: revoke Root from every record */
 };
 
-/* A torn trailing uid comes from a prepare that never completed, which happens
- * before any staging write or rename, so it cannot have changed a record.
- */
+/* Appending to a torn uid would shift every later record. Refuse to extend that
+ * marker, preserving all earlier complete guards until a durable recovery
+ * snapshot (with no replacement candidate) can remove it. */
+static inline bool ksu_auth_guard_can_append(__u64 len)
+{
+    return len % sizeof(__u32) == 0;
+}
+
 static inline void ksu_auth_guard_parse(struct ksu_auth_guard *guard, const void *data, size_t len)
 {
     size_t count = len / sizeof(__u32);
 
-    guard->all = count > KSU_AUTH_GUARD_MAX_UIDS;
+    guard->all = !ksu_auth_guard_can_append(len) || count > KSU_AUTH_GUARD_MAX_UIDS;
     guard->count = guard->all ? 0 : count;
     memcpy(guard->uids, data, guard->count * sizeof(__u32));
 }

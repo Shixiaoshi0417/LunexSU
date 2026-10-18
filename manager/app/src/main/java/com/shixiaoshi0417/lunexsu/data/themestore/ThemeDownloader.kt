@@ -46,7 +46,14 @@ class ThemeDownloader internal constructor(private val filesDir: File, private v
 
     private val library = ThemeLibrary(File(filesDir, "themes"))
     internal fun scanLocalThemes(): List<LocalTheme> = library.scan()
-    internal fun deleteLocalTheme(theme: LocalTheme) = library.remove(theme)
+    internal fun deleteLocalTheme(theme: LocalTheme) {
+        library.remove(theme)
+        synchronized(taskLock) {
+            if (_downloadProgress.value[theme.id]?.completedTheme?.localPath == theme.localPath) {
+                _downloadProgress.update { it - theme.id }
+            }
+        }
+    }
 
     private val semaphore = Semaphore(MAX_CONCURRENT)
     // Ownership checks and mutations (including publication) share one lock.
@@ -137,8 +144,8 @@ class ThemeDownloader internal constructor(private val filesDir: File, private v
                 val completed = synchronized(taskLock) {
                     if (!ownsTask(task)) null else {
                         checkTask(task)
-                        library.publish(task.stage, theme)
-                        updateProgress(task, 1f, 1f, 1f, DownloadStatus.COMPLETED)
+                        val local = library.publish(task.stage, theme)
+                        updateProgress(task, 1f, 1f, 1f, DownloadStatus.COMPLETED, completedTheme = local)
                     }
                 }
                 completed?.let { emit(it) }
@@ -291,9 +298,10 @@ class ThemeDownloader internal constructor(private val filesDir: File, private v
         overallProgress: Float,
         status: DownloadStatus,
         errorMessage: String? = null,
+        completedTheme: LocalTheme? = null,
     ): DownloadProgress? = synchronized(taskLock) {
         if (!ownsTask(task)) return@synchronized null
-        val progress = DownloadProgress(task.id, fileProgress, imageProgress, overallProgress, status, errorMessage)
+        val progress = DownloadProgress(task.id, fileProgress, imageProgress, overallProgress, status, errorMessage, completedTheme)
         _downloadProgress.update { it + (task.id to progress) }
         progress
     }

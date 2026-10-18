@@ -16,6 +16,7 @@
 #include <net/genetlink.h>
 #include <linux/moduleparam.h>
 #include <linux/mutex.h>
+#include <linux/module.h>
 // security/selinux/include/security.h
 #include <security.h>
 #include <ss/context.h>
@@ -34,6 +35,10 @@
 static DEFINE_MUTEX(selinux_hide_mutex);
 static bool ksu_selinux_hide_enabled __read_mostly = false;
 static bool ksu_selinux_hide_running __read_mostly = false;
+/* Protected by selinux_hide_mutex, independent of the requested feature value. */
+static bool context_write_installed;
+static bool access_write_installed;
+static bool status_open_installed;
 
 enum sel_inos {
     SEL_ROOT_INO = 2,
@@ -92,11 +97,11 @@ static write_op_fn orig_context_write, orig_access_write;
 #define ksu_task_security_struct cred_security_struct
 #endif
 
-static ssize_t my_write_context(struct file *file, char *buf, size_t size)
+static ssize_t handle_write_context(struct file *file, char *buf, size_t size)
 {
     // apply to all app uids
     if (likely(current_uid().val < 10000)) {
-        return orig_context_write(file, buf, size);
+        return smp_load_acquire(&orig_context_write)(file, buf, size);
     }
     char *canon = NULL;
     u32 sid, len;
@@ -130,11 +135,11 @@ out:
     return length;
 }
 
-static ssize_t my_write_access(struct file *file, char *buf, size_t size)
+static ssize_t handle_write_access(struct file *file, char *buf, size_t size)
 {
     // apply to all app uids
     if (likely(current_uid().val < 10000)) {
-        return orig_access_write(file, buf, size);
+        return smp_load_acquire(&orig_access_write)(file, buf, size);
     }
     char *scon = NULL, *tcon = NULL;
     u32 ssid, tsid, sconlen, tconlen;
@@ -187,6 +192,24 @@ out:
     return length;
 }
 
+static ssize_t my_write_context(struct file *file, char *buf, size_t size)
+{
+    int idx = ksu_hook_read_lock();
+    ssize_t ret = handle_write_context(file, buf, size);
+
+    srcu_read_unlock(&ksu_hook_srcu, idx);
+    return ret;
+}
+
+static ssize_t my_write_access(struct file *file, char *buf, size_t size)
+{
+    int idx = ksu_hook_read_lock();
+    ssize_t ret = handle_write_access(file, buf, size);
+
+    srcu_read_unlock(&ksu_hook_srcu, idx);
+    return ret;
+}
+
 static int my_setprocattr(const char *name, void *value, size_t size);
 struct ksu_lsm_hook selinux_setprocattr_hook = KSU_LSM_HOOK_INIT(setprocattr, "selinux_setprocattr", my_setprocattr, 0);
 
@@ -229,7 +252,7 @@ static u32 ptrace_parent_sid(void)
 }
 
 typedef int (*setprocattr_fn)(const char *name, void *value, size_t size);
-static int __nocfi my_setprocattr(const char *name, void *value, size_t size)
+static int __nocfi handle_setprocattr(const char *name, void *value, size_t size)
 {
     if (likely(current_uid().val < 10000)) {
         goto call_orig;
@@ -306,7 +329,16 @@ abort_change:
     return error;
 
 call_orig:
-    return ((setprocattr_fn)selinux_setprocattr_hook.original)(name, value, size);
+    return ((setprocattr_fn)ksu_lsm_hook_original(&selinux_setprocattr_hook))(name, value, size);
+}
+
+static int my_setprocattr(const char *name, void *value, size_t size)
+{
+    int idx = ksu_hook_read_lock();
+    int ret = handle_setprocattr(name, value, size);
+
+    srcu_read_unlock(&ksu_hook_srcu, idx);
+    return ret;
 }
 
 static DEFINE_STATIC_KEY_FALSE(fake_status_initialize_key);
@@ -363,23 +395,41 @@ out:
 
 typedef int (*sel_open_handle_status_fn)(struct inode *inode, struct file *filp);
 static sel_open_handle_status_fn orig_sel_open_handle_status, *sel_open_handle_status_slot;
-static int my_sel_open_handle_status(struct inode *inode, struct file *filp)
+static struct file_operations fake_status_ops;
+static bool fake_status_ops_initialized;
+static int handle_sel_open_status(struct inode *inode, struct file *filp)
 {
-    if (likely(current_uid().val >= 10000 && ksu_selinux_hide_enabled)) {
-        void *data;
+    if (likely(current_uid().val >= 10000 && READ_ONCE(ksu_selinux_hide_enabled))) {
+        const struct file_operations *ops;
+
         mutex_lock(&selinux_state.status_lock);
-        data = fake_status;
-        mutex_unlock(&selinux_state.status_lock);
-        if (data) {
-            filp->private_data = data;
+        ops = fake_status ? fops_get(&fake_status_ops) : NULL;
+        if (ops) {
+            /* The file (and any mapping retaining it) pins THIS_MODULE. The
+             * core SELinux read/mmap callbacks retain private_data, not a page
+             * reference, so callback draining alone cannot protect this page.
+             */
+            filp->private_data = fake_status;
+            replace_fops(filp, ops);
+            mutex_unlock(&selinux_state.status_lock);
             return 0;
         }
+        mutex_unlock(&selinux_state.status_lock);
     }
 
-    int ret = orig_sel_open_handle_status(inode, filp);
+    int ret = smp_load_acquire(&orig_sel_open_handle_status)(inode, filp);
     if (static_branch_unlikely(&fake_status_initialize_key) && !ret && !fake_status) {
         initialize_fake_status();
     }
+    return ret;
+}
+
+static int my_sel_open_handle_status(struct inode *inode, struct file *filp)
+{
+    int idx = ksu_hook_read_lock();
+    int ret = handle_sel_open_status(inode, filp);
+
+    srcu_read_unlock(&ksu_hook_srcu, idx);
     return ret;
 }
 
@@ -389,6 +439,9 @@ static int ksu_selinux_hide_enable()
 {
     int ret;
     pr_info("selinux_hide: init selinux hide\n");
+    ret = ksu_hook_lifecycle_ready();
+    if (ret)
+        return ret;
     if (!backup_sepolicy) {
         pr_err("no backup sepolicy available, please save feature and reboot to retry!\n");
         return -EAGAIN;
@@ -410,9 +463,16 @@ static int ksu_selinux_hide_enable()
     }
 
     context_write = &selinux_write_op[SEL_CONTEXT];
+    if (!READ_ONCE(*context_write)) {
+        ret = -ENOENT;
+        goto unhook;
+    }
     pr_info("selinux_hide: context_write: 0x%lx [%pSb]\n", (unsigned long)*context_write, *context_write);
     write_op_fn my = my_write_context;
-    orig_context_write = *context_write;
+    smp_store_release(&orig_context_write, READ_ONCE(*context_write));
+    /* Treat even a failed patch as possibly published until rollback drains. */
+    context_write_installed = true;
+    smp_wmb();
     ret = ksu_patch_text(context_write, &my, sizeof(my), KSU_PATCH_TEXT_FLUSH_DCACHE);
     if (ret) {
         pr_err("selinux_hide: init: patch_text context_write err: %d\n", ret);
@@ -420,9 +480,15 @@ static int ksu_selinux_hide_enable()
     }
 
     access_write = &selinux_write_op[SEL_ACCESS];
+    if (!READ_ONCE(*access_write)) {
+        ret = -ENOENT;
+        goto unhook;
+    }
     pr_info("selinux_hide: access_write: 0x%lx [%pSb]\n", (unsigned long)*access_write, *access_write);
     my = my_write_access;
-    orig_access_write = *access_write;
+    smp_store_release(&orig_access_write, READ_ONCE(*access_write));
+    access_write_installed = true;
+    smp_wmb();
     ret = ksu_patch_text(access_write, &my, sizeof(my), KSU_PATCH_TEXT_FLUSH_DCACHE);
     if (ret) {
         pr_err("selinux_hide: init: patch_text access_write err: %d\n", ret);
@@ -439,36 +505,32 @@ static int ksu_selinux_hide_enable()
 
 unhook:
     ksu_selinux_hide_unhook();
-    return -ENOSYS;
+    return ret;
 }
 
 static void ksu_selinux_hide_unhook()
 {
-    int ret;
-    if (orig_context_write) {
-        ret =
-            ksu_patch_text(context_write, &orig_context_write, sizeof(orig_context_write), KSU_PATCH_TEXT_FLUSH_DCACHE);
-        orig_context_write = NULL;
-        if (ret) {
-            pr_err("selinux_hide: exit: patch_text context_write err: %d\n", ret);
-        }
+    if (context_write_installed) {
+        ksu_hook_restore_slot((void **)context_write, orig_context_write, "selinux context_write");
+        context_write_installed = false;
     }
-    if (orig_access_write) {
-        ret = ksu_patch_text(access_write, &orig_access_write, sizeof(orig_access_write), KSU_PATCH_TEXT_FLUSH_DCACHE);
-        orig_access_write = NULL;
-        if (ret) {
-            pr_err("selinux_hide: exit: patch_text access_write err: %d\n", ret);
-        }
+    if (access_write_installed) {
+        ksu_hook_restore_slot((void **)access_write, orig_access_write, "selinux access_write");
+        access_write_installed = false;
     }
-    if (sel_open_handle_status_slot && orig_sel_open_handle_status) {
-        ret = ksu_patch_text(sel_open_handle_status_slot, &orig_sel_open_handle_status,
-                             sizeof(orig_sel_open_handle_status), KSU_PATCH_TEXT_FLUSH_DCACHE);
-        orig_sel_open_handle_status = NULL;
-        if (ret) {
-            pr_err("selinux_hide: exit: patch_text sel_open_handle_status err: %d\n", ret);
-        }
+    if (status_open_installed) {
+        ksu_hook_restore_slot((void **)sel_open_handle_status_slot, orig_sel_open_handle_status, "selinux status open");
+        status_open_installed = false;
     }
     ksu_lsm_unhook(&selinux_setprocattr_hook);
+    ksu_hook_synchronize();
+    /* No callback can still call these or access the backup policy. */
+    smp_store_release(&orig_context_write, NULL);
+    smp_store_release(&orig_access_write, NULL);
+    smp_store_release(&orig_sel_open_handle_status, NULL);
+    context_write = NULL;
+    access_write = NULL;
+    sel_open_handle_status_slot = NULL;
 }
 
 static void ksu_selinux_hide_disable()
@@ -479,7 +541,7 @@ static void ksu_selinux_hide_disable()
 
 static int selinux_hide_feature_get(u64 *value)
 {
-    *value = ksu_selinux_hide_enabled ? 1 : 0;
+    *value = READ_ONCE(ksu_selinux_hide_enabled) ? 1 : 0;
     return 0;
 }
 
@@ -489,7 +551,6 @@ static int selinux_hide_feature_set(u64 value)
     int ret = 0;
     pr_info("selinux_hide: set to %d\n", enable);
     mutex_lock(&selinux_hide_mutex);
-    ksu_selinux_hide_enabled = enable;
     if (enable) {
         if (!ksu_selinux_hide_running) {
             ret = ksu_selinux_hide_enable();
@@ -497,11 +558,11 @@ static int selinux_hide_feature_set(u64 value)
                 ksu_selinux_hide_running = true;
             }
         }
+        WRITE_ONCE(ksu_selinux_hide_enabled, !ret);
     } else {
-        if (ksu_selinux_hide_running) {
-            ksu_selinux_hide_disable();
-            ksu_selinux_hide_running = false;
-        }
+        WRITE_ONCE(ksu_selinux_hide_enabled, false);
+        ksu_selinux_hide_disable();
+        ksu_selinux_hide_running = false;
     }
     mutex_unlock(&selinux_hide_mutex);
     return ret;
@@ -535,23 +596,39 @@ void ksu_selinux_hide_handle_post_fs_data()
 
 static void hook_selinux_status_open()
 {
-    if (orig_sel_open_handle_status)
+    if (status_open_installed)
+        return;
+    if (ksu_hook_lifecycle_ready())
         return;
     if (!sel_open_handle_status_slot) {
-        struct file_operations *ops = find_kernel_symbol_exact("sel_handle_status_ops");
+        struct file_operations *ops = (void *)find_kernel_symbol_exact("sel_handle_status_ops");
         if (!ops) {
             pr_err("selinux_hide: sel_handle_status_ops not found, fake status will not work\n");
             return;
         }
         sel_open_handle_status_slot = &ops->open;
+        /* Only open is patched in the shared core table. Files served a fake
+         * page get a private, module-owned copy of the other core operations.
+         */
+        if (!fake_status_ops_initialized) {
+            fake_status_ops = *ops;
+            fake_status_ops.owner = THIS_MODULE;
+            fake_status_ops.open = NULL;
+            fake_status_ops_initialized = true;
+        }
+    }
+    if (!READ_ONCE(*sel_open_handle_status_slot)) {
+        sel_open_handle_status_slot = NULL;
+        return;
     }
     sel_open_handle_status_fn new_fn = my_sel_open_handle_status;
-    orig_sel_open_handle_status = *sel_open_handle_status_slot;
+    smp_store_release(&orig_sel_open_handle_status, READ_ONCE(*sel_open_handle_status_slot));
+    status_open_installed = true;
+    smp_wmb();
     int ret = ksu_patch_text(sel_open_handle_status_slot, &new_fn, sizeof(new_fn), KSU_PATCH_TEXT_FLUSH_DCACHE);
     if (ret) {
         pr_err("selinux_hide: init: patch_text sel_open_handle_status err: %d\n", ret);
-        sel_open_handle_status_slot = NULL;
-        orig_sel_open_handle_status = NULL;
+        ksu_selinux_hide_unhook();
     }
 }
 
@@ -570,18 +647,21 @@ void __init ksu_selinux_hide_init()
 
 void __exit ksu_selinux_hide_exit()
 {
-    mutex_lock(&selinux_hide_mutex);
-    if (ksu_selinux_hide_running) {
-        ksu_selinux_hide_disable();
-        ksu_selinux_hide_running = false;
-    }
-    mutex_unlock(&selinux_hide_mutex);
+    /* unregister drains feature operations; never invert feature_mutex ->
+     * selinux_hide_mutex by unregistering while holding the latter.
+     */
     ksu_unregister_feature_handler(KSU_FEATURE_SELINUX_HIDE);
+    mutex_lock(&selinux_hide_mutex);
+    WRITE_ONCE(ksu_selinux_hide_enabled, false);
+    static_key_disable(&fake_status_initialize_key.key);
+    ksu_selinux_hide_disable();
+    ksu_selinux_hide_running = false;
     mutex_lock(&selinux_state.status_lock);
     if (fake_status)
         __free_page(fake_status);
     fake_status = NULL;
     mutex_unlock(&selinux_state.status_lock);
+    mutex_unlock(&selinux_hide_mutex);
 }
 
 void ksu_selinux_hide_drop_backup_if_unused()

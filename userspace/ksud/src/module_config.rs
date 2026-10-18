@@ -3,10 +3,19 @@ use log::{debug, warn};
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{Read, Write};
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
-use crate::defs;
 use crate::utils::ensure_dir_exists;
+use crate::{defs, file_lock};
+
+// Keep this lock outside individual module directories: uninstall must not unlink
+// a lock inode while another writer is waiting on it.
+fn lock_configs() -> Result<file_lock::FileLock> {
+    ensure_dir_exists(defs::MODULE_CONFIG_DIR)?;
+    file_lock::FileLock::exclusive(&Path::new(defs::MODULE_CONFIG_DIR).join(".config.lock"))
+        .context("Failed to lock module configs")
+}
 
 #[allow(clippy::unreadable_literal)]
 const MODULE_CONFIG_MAGIC: u32 = 0x4b53554d; // "KSUM"
@@ -117,13 +126,19 @@ pub fn load_config(module_id: &str, config_type: ConfigType) -> Result<HashMap<S
 
     let config_path = get_config_path(module_id, config_type);
 
-    if !config_path.exists() {
-        debug!("Config file not found: {}", config_path.display());
-        return Ok(HashMap::new());
-    }
-
-    let mut file = File::open(&config_path)
-        .with_context(|| format!("Failed to open config file: {}", config_path.display()))?;
+    // Open once: a concurrent atomic replacement/removal must yield either the
+    // complete old inode, the complete new inode, or an absent config.
+    let mut file = match File::open(&config_path) {
+        Ok(file) => file,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            debug!("Config file not found: {}", config_path.display());
+            return Ok(HashMap::new());
+        }
+        Err(e) => {
+            return Err(e)
+                .with_context(|| format!("Failed to open config file: {}", config_path.display()));
+        }
+    };
 
     // Read magic
     let mut magic_buf = [0u8; 4];
@@ -206,13 +221,23 @@ pub fn load_config(module_id: &str, config_type: ConfigType) -> Result<HashMap<S
 }
 
 /// Save config to binary file
+#[allow(dead_code)] // Kept as the whole-config replacement API.
 pub fn save_config(
     module_id: &str,
     config_type: ConfigType,
     config: &HashMap<String, String>,
 ) -> Result<()> {
     crate::module::validate_module_id(module_id)?;
+    let _lock = lock_configs()?;
+    save_config_locked(module_id, config_type, config)
+}
 
+/// Caller holds the global config lock for the entire read/modify/write operation.
+fn save_config_locked(
+    module_id: &str,
+    config_type: ConfigType,
+    config: &HashMap<String, String>,
+) -> Result<()> {
     // Validate config count
     validate_config_count(config)?;
 
@@ -223,14 +248,20 @@ pub fn save_config(
             .with_context(|| format!("Invalid config value for key '{key}'"))?;
     }
 
-    ensure_config_dir(module_id)?;
+    let config_dir = ensure_config_dir(module_id)?;
 
     let config_path = get_config_path(module_id, config_type);
-    let temp_path = config_path.with_extension("tmp");
-
-    // Write to temporary file first
-    let mut file = File::create(&temp_path)
-        .with_context(|| format!("Failed to create temp config file: {}", temp_path.display()))?;
+    let permissions = match fs::metadata(&config_path) {
+        Ok(metadata) => metadata.permissions(),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => fs::Permissions::from_mode(0o644),
+        Err(e) => return Err(e).context("Failed to read config permissions"),
+    };
+    // Random, create-new, mode 0600 until the complete contents are ready. A
+    // failed write is removed by NamedTempFile instead of sharing a predictable .tmp.
+    let mut file = tempfile::Builder::new()
+        .prefix(".config-write-")
+        .tempfile_in(&config_dir)
+        .context("Failed to create private temp config file")?;
 
     // Write magic
     file.write_all(&MODULE_CONFIG_MAGIC.to_le_bytes())
@@ -268,17 +299,16 @@ pub fn save_config(
             .with_context(|| format!("Failed to write value data for '{key}'"))?;
     }
 
-    file.sync_all()
+    file.as_file().set_permissions(permissions)?;
+    file.as_file()
+        .sync_all()
         .with_context(|| "Failed to sync config file")?;
 
-    // Atomic rename
-    fs::rename(&temp_path, &config_path).with_context(|| {
-        format!(
-            "Failed to rename config file: {} -> {}",
-            temp_path.display(),
-            config_path.display()
-        )
-    })?;
+    file.persist(&config_path)
+        .with_context(|| format!("Failed to replace config file: {}", config_path.display()))?;
+    File::open(&config_dir)?
+        .sync_all()
+        .context("Failed to sync config directory")?;
 
     debug!(
         "Saved {} entries to {}",
@@ -309,35 +339,52 @@ pub fn set_config_value(
     // Validate input early for better error messages
     validate_config_key(key)?;
     validate_config_value(value)?;
+    crate::module::validate_module_id(module_id)?;
 
+    let _lock = lock_configs()?;
     let mut config = load_config(module_id, config_type)?;
     config.insert(key.to_string(), value.to_string());
 
     // Note: save_config will also validate, but this provides earlier feedback
-    save_config(module_id, config_type, &config)?;
+    save_config_locked(module_id, config_type, &config)?;
     Ok(())
 }
 
 /// Delete a single config value
 pub fn delete_config_value(module_id: &str, key: &str, config_type: ConfigType) -> Result<()> {
+    crate::module::validate_module_id(module_id)?;
+    let _lock = lock_configs()?;
     let mut config = load_config(module_id, config_type)?;
 
     if config.remove(key).is_none() {
         bail!("Key '{key}' not found in config");
     }
 
-    save_config(module_id, config_type, &config)?;
+    save_config_locked(module_id, config_type, &config)?;
     Ok(())
 }
 
 /// Clear all config values
 pub fn clear_config(module_id: &str, config_type: ConfigType) -> Result<()> {
+    crate::module::validate_module_id(module_id)?;
+    let _lock = lock_configs()?;
+    clear_config_locked(module_id, config_type)
+}
+
+fn clear_config_locked(module_id: &str, config_type: ConfigType) -> Result<()> {
     let config_path = get_config_path(module_id, config_type);
 
-    if config_path.exists() {
-        fs::remove_file(&config_path)
-            .with_context(|| format!("Failed to remove config file: {}", config_path.display()))?;
-        debug!("Cleared config: {}", config_path.display());
+    match fs::remove_file(&config_path) {
+        Ok(()) => {
+            File::open(get_config_dir(module_id))?.sync_all()?;
+            debug!("Cleared config: {}", config_path.display());
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => {
+            return Err(e).with_context(|| {
+                format!("Failed to remove config file: {}", config_path.display())
+            });
+        }
     }
 
     Ok(())
@@ -419,6 +466,8 @@ pub fn clear_all_temp_configs() -> Result<()> {
         return Ok(());
     }
 
+    let _lock = lock_configs()?;
+
     let mut cleared_count = 0;
 
     for entry in fs::read_dir(config_root)
@@ -433,7 +482,13 @@ pub fn clear_all_temp_configs() -> Result<()> {
 
         let temp_config = path.join(defs::TEMP_CONFIG_NAME);
         if temp_config.exists() {
-            match fs::remove_file(&temp_config) {
+            let Some(module_id) = path.file_name().and_then(|name| name.to_str()) else {
+                continue;
+            };
+            if crate::module::validate_module_id(module_id).is_err() {
+                continue;
+            }
+            match clear_config_locked(module_id, ConfigType::Temp) {
                 Ok(()) => {
                     debug!("Cleared temp config: {}", temp_config.display());
                     cleared_count += 1;
@@ -455,6 +510,7 @@ pub fn clear_all_temp_configs() -> Result<()> {
 /// Clear all configs for a module (called during uninstall)
 pub fn clear_module_configs(module_id: &str) -> Result<()> {
     crate::module::validate_module_id(module_id)?;
+    let _lock = lock_configs()?;
 
     let config_dir = get_config_dir(module_id);
 
@@ -465,6 +521,7 @@ pub fn clear_module_configs(module_id: &str) -> Result<()> {
                 config_dir.display()
             )
         })?;
+        File::open(defs::MODULE_CONFIG_DIR)?.sync_all()?;
         debug!("Cleared all configs for module: {module_id}");
     }
 

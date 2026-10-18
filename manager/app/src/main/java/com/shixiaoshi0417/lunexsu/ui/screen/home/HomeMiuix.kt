@@ -172,6 +172,7 @@ fun HomePagerMiuix(
                             systemInfo = state.systemInfo,
                             modifier = Modifier.fillMaxWidth(),
                         )
+                        HomeZygiskCard(state.zygiskOverview, state.isSafeMode)
                         SupportLinks(
                             onOpenUrl = actions.onOpenUrl,
                             modifier = Modifier.fillMaxWidth(),

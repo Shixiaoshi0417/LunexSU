@@ -25,7 +25,7 @@ use std::{
 };
 
 mod script;
-use script::check_run_script;
+pub use script::check_run_script;
 
 pub struct Request {
     run_script: Option<String>,

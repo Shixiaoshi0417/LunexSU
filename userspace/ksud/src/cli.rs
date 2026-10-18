@@ -29,6 +29,12 @@ enum Commands {
         command: Module,
     },
 
+    /// Manage an already available SUSFS engine (never installs or loads one)
+    Susfs {
+        #[command(subcommand)]
+        command: crate::susfs::Command,
+    },
+
     /// Trigger `post-fs-data` event
     PostFsData,
 
@@ -48,13 +54,21 @@ enum Commands {
         #[arg(long, default_missing_value = "5555", num_args = 0..=1)]
         magica: Option<u16>,
 
+        /// Accept a temporary unauthenticated root listener that vendor adbd may bind on all interfaces
+        #[arg(long, requires = "magica")]
+        magica_allow_network: bool,
+
         /// Pass allow_shell=1 when loading kernelsu.ko
         #[arg(long)]
         allow_shell: bool,
 
-        /// Restore adb properties after magica late-load
-        #[arg(long)]
+        /// Legacy compatibility flag; the initiating Magica process now restores its snapshot
+        #[arg(long, hide = true)]
         post_magica: bool,
+
+        /// Private completion channel for the initiating Magica process
+        #[arg(long, hide = true, requires = "post_magica")]
+        magica_result: Option<PathBuf>,
 
         /// Specify kernel KMI version instead of auto-detection
         #[arg(long)]
@@ -528,6 +542,7 @@ pub fn run() -> Result<()> {
     log::info!("command: {:?}", cli.command);
 
     let result = match cli.command {
+        Commands::Susfs { command } => crate::susfs::run(command),
         Commands::PostFsData => init_event::on_post_fs_data(),
         Commands::BootCompleted => {
             init_event::on_boot_completed();
@@ -660,23 +675,34 @@ pub fn run() -> Result<()> {
         },
         Commands::LateLoad {
             magica,
+            magica_allow_network,
             allow_shell,
             post_magica,
+            magica_result,
             kmi,
             package_name,
         } => {
             if let Some(port) = magica {
-                return crate::magica::run(port, &package_name, allow_shell).map_err(|e| {
-                    error!("Error running magica: {e}");
-                    e
-                });
+                return crate::magica::run(port, &package_name, allow_shell, magica_allow_network)
+                    .map_err(|e| {
+                        error!("Error running magica: {e}");
+                        e
+                    });
+            }
+            if post_magica && magica_result.is_none() {
+                info!(
+                    "Legacy --post-magica: snapshot restoration is owned by the initiating Magica process"
+                );
             }
             let result = crate::late_load::run(&package_name, kmi, allow_shell);
-            if post_magica {
-                info!("Restoring adb properties (post-magica cleanup)...");
-                if let Err(e) = crate::magica::disable_adb_root() {
-                    error!("disable adb root failed: {e}");
-                }
+            if let Some(path) = magica_result
+                && let Err(report) = crate::magica::report_child_result(&path, &result)
+            {
+                return result
+                    .context(format!(
+                        "Magica completion reporting also failed: {report:#}"
+                    ))
+                    .and(Err(report));
             }
             result
         }

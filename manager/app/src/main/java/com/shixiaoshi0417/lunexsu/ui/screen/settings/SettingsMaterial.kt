@@ -354,6 +354,9 @@ fun SettingPagerMaterial(
                 )
             }
 
+            com.shixiaoshi0417.lunexsu.ui.component.SavedSuperkeyCard(
+                Modifier.padding(start = 16.dp, end = 16.dp, bottom = 13.dp)
+            )
             SegmentedColumn(
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 13.dp),
                 content = listOf(
@@ -367,6 +370,14 @@ fun SettingPagerMaterial(
                                     stringResource(id = R.string.send_log)
                                 )
                             },
+                        )
+                    },
+                    {
+                        SegmentedListItem(
+                            onClick = actions.onOpenSusfs,
+                            headlineContent = { Text(stringResource(R.string.susfs_title)) },
+                            supportingContent = { Text(stringResource(R.string.susfs_manage)) },
+                            leadingContent = { Icon(Icons.Filled.Info, null) },
                         )
                     },
                     {

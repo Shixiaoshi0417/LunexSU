@@ -115,6 +115,7 @@ internal fun HomeLayoutContent(
         HomeLayoutStyle.STATS -> StatsHomeContent(state, actions, superuserCount, moduleEnabledCount, metrics)
         else -> CircleHomeContent(state, actions, superuserCount, moduleEnabledCount)
     }
+    HomeZygiskCard(state.zygiskOverview, state.isSafeMode)
 }
 
 @Composable

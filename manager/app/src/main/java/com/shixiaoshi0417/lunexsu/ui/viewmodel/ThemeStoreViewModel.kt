@@ -39,6 +39,12 @@ data class ThemeStoreUiState(
 
     fun hasCurrentRevision(theme: RemoteTheme): Boolean = localThemes.any { it.matchesRevision(theme) }
 
+    /** Completion and its published path are one snapshot; the disk scan may still be pending. */
+    fun localTheme(id: String, progress: DownloadProgress?): LocalTheme? =
+        progress?.takeIf { it.themeId == id && it.status == DownloadStatus.COMPLETED }
+            ?.completedTheme?.takeIf { it.id == id }
+            ?: localThemes.firstOrNull { it.id == id }
+
     val filteredLocalThemes: List<LocalTheme>
         get() {
             val query = localSearchQuery.trim()
@@ -143,7 +149,7 @@ class ThemeStoreViewModel : ViewModel() {
         themeDownloader.pauseDownload(id)
     }
 
-    fun localTheme(id: String): LocalTheme? = _uiState.value.localThemes.firstOrNull { it.id == id }
+    fun localTheme(id: String): LocalTheme? = _uiState.value.localTheme(id, downloadProgress.value[id])
 
     fun deleteTheme(localTheme: LocalTheme) {
         viewModelScope.launch {

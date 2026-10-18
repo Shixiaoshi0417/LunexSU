@@ -28,6 +28,7 @@ struct store {
     struct app_profile bystander;
     struct app_profile candidate;
     uint32_t mode;
+    bool recovery; /* A full committed snapshot, with no replacement candidate. */
 };
 
 struct loaded {
@@ -40,7 +41,8 @@ static void checked_write(int fd, const void *data, size_t size)
     assert(write(fd, data, size) == (ssize_t)size);
 }
 
-/* Mirrors prepare_allowlist_store(): append this transaction's uid. */
+/* Same production boundary predicate as prepare_allowlist_store(); I/O alone
+ * is replaced with POSIX calls on disposable host files. */
 static int prepare(void *ctx)
 {
     struct store *s = ctx;
@@ -48,8 +50,16 @@ static int prepare(void *ctx)
         return -EIO;
     int fd = openat(s->directory, ".allowlist.pending", O_WRONLY | O_CREAT | O_APPEND | O_NOFOLLOW, 0600);
     assert(fd >= 0);
-    uint32_t uid = s->candidate.curr_uid;
-    checked_write(fd, &uid, sizeof(uid));
+    if (!s->recovery) {
+        struct stat st;
+        assert(!fstat(fd, &st));
+        if (st.st_size < 0 || !ksu_auth_guard_can_append((uint64_t)st.st_size)) {
+            assert(!close(fd));
+            return -EINVAL;
+        }
+        uint32_t uid = s->candidate.curr_uid;
+        checked_write(fd, &uid, sizeof(uid));
+    }
     int ret = s->fault == GUARD_SYNC ? -EIO : fsync(fd);
     assert(!close(fd));
     if (ret)
@@ -137,8 +147,12 @@ static struct loaded reboot(struct store *s)
     if (fd >= 0) {
         uint32_t uids[KSU_AUTH_GUARD_MAX_UIDS + 1];
         ssize_t len = read(fd, uids, sizeof(uids));
-        assert(len >= 0 && !close(fd));
-        ksu_auth_guard_parse(&guard, uids, (size_t)len);
+        struct stat st;
+        assert(len >= 0 && !fstat(fd, &st) && !close(fd));
+        if (len != st.st_size)
+            guard.all = true;
+        else
+            ksu_auth_guard_parse(&guard, uids, (size_t)len);
         guarded = true;
     } else {
         assert(errno == ENOENT);
@@ -179,8 +193,11 @@ static void init_profile(struct app_profile *profile, int32_t uid, const char *k
     strcpy(profile->key, key);
 }
 
-static struct store open_store(char *dir)
+static struct store open_store(char *dir, size_t size)
 {
+    const char *tmp = getenv("TMPDIR");
+    int len = snprintf(dir, size, "%s/lunexsu-store-XXXXXX", tmp ? tmp : ".");
+    assert(len > 0 && (size_t)len < size);
     assert(mkdtemp(dir));
     struct store s = {.directory = open(dir, O_RDONLY | O_DIRECTORY), .staging = -1};
     assert(s.directory >= 0);
@@ -205,10 +222,17 @@ static void guard_parse_cases(void)
 
     ksu_auth_guard_parse(&guard, uids, 0); /* marker created, uid not yet written */
     assert(!guard.all && !ksu_auth_guard_covers(&guard, 10123));
-    ksu_auth_guard_parse(&guard, uids, sizeof(uint32_t) * 2 + 2); /* torn third uid */
-    assert(!guard.all && guard.count == 2);
-    assert(ksu_auth_guard_covers(&guard, 10123) && ksu_auth_guard_covers(&guard, 10456));
-    assert(!ksu_auth_guard_covers(&guard, 10200));
+    for (size_t tail = 1; tail <= 7; tail++) {
+        ksu_auth_guard_parse(&guard, uids, sizeof(uint32_t) + tail);
+        bool aligned = tail % sizeof(uint32_t) == 0;
+        assert(ksu_auth_guard_can_append(sizeof(uint32_t) + tail) == aligned);
+        assert(guard.all == !aligned);
+        assert(ksu_auth_guard_covers(&guard, 10123) && ksu_auth_guard_covers(&guard, 10456));
+        assert(ksu_auth_guard_covers(&guard, 10200) == !aligned);
+        ksu_auth_guard_parse(&guard, uids, tail);
+        assert(guard.all == !aligned);
+        assert(ksu_auth_guard_covers(&guard, 10200) == !aligned);
+    }
     ksu_auth_guard_parse(&guard, uids, sizeof(uids)); /* more than the loader can track */
     assert(guard.all && ksu_auth_guard_covers(&guard, 10200));
 
@@ -221,12 +245,93 @@ static void guard_parse_cases(void)
     assert(!strcmp(profile.key, "test.fixture") && profile.curr_uid == 10123);
 }
 
+static void check_guard_bytes(struct store *s, const void *expected, size_t len)
+{
+    unsigned char bytes[64];
+    int fd = openat(s->directory, ".allowlist.pending", O_RDONLY);
+    assert(fd >= 0 && len < sizeof(bytes));
+    assert(read(fd, bytes, sizeof(bytes)) == (ssize_t)len);
+    assert(!memcmp(bytes, expected, len) && !close(fd));
+}
+
+static void torn_guard_transactions(void)
+{
+    for (size_t tail = 1; tail <= 7; ++tail) {
+        char dir[4096];
+        struct store s = open_store(dir, sizeof(dir));
+        s.candidate.allow_su = true;
+        assert(!ksu_auth_store(&ops, &s));
+        close_staging(&s);
+        assert(reboot(&s).candidate_root && reboot(&s).bystander_root);
+
+        /* A complete guard from an earlier failed replacement, followed by a
+         * 1..7-byte tail. Four bytes are a complete uid, all others are torn. */
+        const uint32_t marker[] = {10123, 10456, 10567};
+        size_t len = sizeof(uint32_t) + tail;
+        int fd = openat(s.directory, ".allowlist.pending", O_WRONLY | O_CREAT | O_EXCL, 0600);
+        assert(fd >= 0);
+        checked_write(fd, marker, len);
+        assert(!fsync(fd) && !close(fd) && !fsync(s.directory));
+        struct app_profile first = s.candidate;
+        init_profile(&s.candidate, 10456, "test.other", true);
+        s.fault = RENAME;
+        bool aligned = tail % sizeof(uint32_t) == 0;
+        for (int retry = 0; retry < 3; ++retry) {
+            int ret = ksu_auth_store(&ops, &s);
+            assert(ret == (aligned ? -EIO : -EINVAL));
+            if (!aligned) {
+                assert(s.staging == -1); /* No staging write or rename. */
+                check_guard_bytes(&s, marker, len);
+            }
+            close_staging(&s);
+        }
+        s.candidate = first;
+        struct loaded loaded = reboot(&s);
+        assert(!loaded.candidate_root);
+        assert(loaded.bystander_root == aligned);
+
+        /* Restart imports only the stripped records. A recovery snapshot can
+         * bypass a bad append boundary, but may clean it only after commit. */
+        s.recovery = true;
+        s.candidate.allow_su = loaded.candidate_root;
+        s.bystander.allow_su = loaded.bystander_root;
+        s.fault = WRITE_LATER_RECORD;
+        assert(ksu_auth_store(&ops, &s) == -EIO);
+        close_staging(&s);
+        if (!aligned)
+            check_guard_bytes(&s, marker, len);
+        loaded = reboot(&s);
+        assert(!loaded.candidate_root && loaded.bystander_root == aligned);
+        s.fault = REPLACEMENT_DIR_SYNC;
+        assert(ksu_auth_store(&ops, &s) == -EIO);
+        close_staging(&s);
+        if (!aligned)
+            check_guard_bytes(&s, marker, len);
+        s.fault = NONE;
+        assert(!ksu_auth_store(&ops, &s));
+        close_staging(&s);
+        assert(faccessat(s.directory, ".allowlist.pending", F_OK, 0) == -1 && errno == ENOENT);
+        loaded = reboot(&s);
+        assert(!loaded.candidate_root && loaded.bystander_root == aligned);
+
+        /* Once recovered, ordinary explicit Permanent grants restore cleanly. */
+        s.recovery = false;
+        s.candidate.allow_su = s.bystander.allow_su = true;
+        assert(!ksu_auth_store(&ops, &s));
+        close_staging(&s);
+        loaded = reboot(&s);
+        assert(loaded.candidate_root && loaded.bystander_root);
+        close_store(&s, dir);
+    }
+}
+
 int main(void)
 {
     guard_parse_cases();
+    torn_guard_transactions();
     for (enum fault fault = NONE; fault <= CLEANUP_DIR_SYNC; ++fault) {
-        char dir[] = "/tmp/lunexsu-store-XXXXXX";
-        struct store s = open_store(dir);
+        char dir[4096];
+        struct store s = open_store(dir, sizeof(dir));
         assert(!ksu_auth_store(&ops, &s)); /* Durable denied baseline. */
         close_staging(&s);
         struct loaded loaded = reboot(&s);
@@ -270,8 +375,8 @@ int main(void)
     }
     /* Simulate reboot/interruption after every completed transaction stage. */
     for (unsigned stage = 0; stage < 5; ++stage) {
-        char dir[] = "/tmp/lunexsu-interrupt-XXXXXX";
-        struct store s = open_store(dir);
+        char dir[4096];
+        struct store s = open_store(dir, sizeof(dir));
         s.candidate.allow_su = true;
         assert(!ksu_auth_store(&ops, &s));
         close_staging(&s);
@@ -294,8 +399,8 @@ int main(void)
     }
     /* Two unfinished transactions in a row: the second must not un-guard the first. */
     {
-        char dir[] = "/tmp/lunexsu-twice-XXXXXX";
-        struct store s = open_store(dir);
+        char dir[4096];
+        struct store s = open_store(dir, sizeof(dir));
         assert(!ksu_auth_store(&ops, &s));
         close_staging(&s);
         s.candidate.allow_su = true;
@@ -315,8 +420,8 @@ int main(void)
     /* Committed temporary grants are stored without Root, so neither this
      * loader nor an upstream downgrade can restore them as Permanent. */
     for (uint32_t mode = KSU_AUTH_ONCE; mode <= KSU_AUTH_TIMED; ++mode) {
-        char dir[] = "/tmp/lunexsu-temporary-XXXXXX";
-        struct store s = open_store(dir);
+        char dir[4096];
+        struct store s = open_store(dir, sizeof(dir));
         s.candidate.allow_su = true;
         s.mode = mode;
         assert(!ksu_auth_store(&ops, &s));
@@ -335,6 +440,6 @@ int main(void)
         ksu_auth_prepare_record(&profile, KSU_AUTH_PERMANENT);
         assert(profile.allow_su);
     }
-    puts("PASS: production persistence transaction, 10 I/O faults, interrupted stages, uid-scoped reboot revocation, upstream v4 records and retry");
+    puts("PASS: production persistence helpers, tails 1..7, repeated failures, restart/recovery, 10 I/O faults, interrupted stages, upstream v4 and temporary grants");
     return 0;
 }

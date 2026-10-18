@@ -23,6 +23,14 @@ adaptive-icon canvas. The launcher supplies the final circle, rounded square or
 other device mask. The splash and Compose images use the same colored artwork;
 the Compose images are fitted to their bounds without a monochrome tint.
 
+Both adaptive foregrounds use a one-sixth fractional inset, equivalent to the
+original 18 dp on a 108 dp canvas. A fixed dp inset shrank the artwork excessively
+when package viewers or search results drew a small icon. Fractional insets keep
+the same artwork-to-bounds ratio across preview sizes and densities without
+changing the PNGs, splash artwork or in-app images. The host branding guard checks
+this geometry; the optional Android rendering suite checks actual drawable bounds.
+Compilation alone does not establish behavior in a particular third-party viewer.
+
 Reference: [Android adaptive icon design](https://developer.android.com/develop/ui/compose/system/icon_design_adaptive).
 
 The website logo/favicon, Fastlane icon and Manager bitmap resources are resized

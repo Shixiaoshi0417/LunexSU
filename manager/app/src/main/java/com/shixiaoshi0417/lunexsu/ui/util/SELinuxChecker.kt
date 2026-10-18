@@ -7,6 +7,7 @@ import com.topjohnwu.superuser.Shell
  * Safe to call from any thread (IO recommended).
  */
 fun getSELinuxStatusRaw(): String {
+    if (com.shixiaoshi0417.lunexsu.BuildConfig.NO_ROOT_DEMO) return "Unknown"
     val shell = Shell.Builder.create().build("sh")
 
     val stdoutList = ArrayList<String>()

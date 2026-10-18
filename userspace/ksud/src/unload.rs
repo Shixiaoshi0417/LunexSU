@@ -106,6 +106,13 @@ fn close_ksu_fds() {
 }
 
 pub fn unload() -> Result<()> {
+    // Independent SUSFS keeps pointers into the Core without holding a module
+    // reference. Refuse before stopping services or killing any processes.
+    if std::path::Path::new("/sys/module/susfs_guard_lkm").exists()
+        || crate::susfs::detect().implementation == "lkm"
+    {
+        anyhow::bail!("SUSFS LKM is active; disable it and reboot before unloading Core");
+    }
     info!("unload: starting LunexSU unload sequence");
 
     // 0. Switch cgroups so we don't get killed along with our parent shell

@@ -6,6 +6,8 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import com.shixiaoshi0417.lunexsu.ui.viewmodel.ThemeStoreUiState
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -228,6 +230,69 @@ class ThemeDownloaderRaceTest {
         } finally {
             body.release.countDown()
         }
+    }
+
+    @Test fun completedThemeCanBeAppliedBeforeLocalScan() = applyBeforeScan(replace = false)
+
+    @Test fun replacementCanBeAppliedBeforeStaleLocalListRefresh() = applyBeforeScan(replace = true)
+
+    private fun applyBeforeScan(replace: Boolean) = runBlocking {
+        val bodies = Array(if (replace) 2 else 1) { ByteArray(32) { 1 }.toResponseBody() }
+        val harness = Harness(temporary.root, *bodies)
+        val old = if (replace) {
+            harness.downloader.downloadTheme(remote).toList()
+            harness.downloader.scanLocalThemes().single()
+        } else null
+        val staleState = ThemeStoreUiState(localThemes = listOfNotNull(old))
+        val target = if (replace) remote.copy(version = "2") else remote
+        val completed = CompletableDeferred<Unit>()
+        val allowRefresh = CompletableDeferred<Unit>()
+        val job = launch(Dispatchers.Default) {
+            harness.downloader.downloadTheme(target).collect { progress ->
+                if (progress.status == DownloadStatus.COMPLETED) {
+                    completed.complete(Unit)
+                    // Model the ViewModel collector suspended before its local library scan.
+                    allowRefresh.await()
+                }
+            }
+        }
+        try {
+            withTimeout(10_000) { completed.await() }
+            val progress = harness.downloader.downloadProgress.value[target.id]
+            assertEquals(DownloadStatus.COMPLETED, progress?.status)
+            val applicable = staleState.localTheme(target.id, progress)
+            assertNotNull(applicable)
+            assertTrue(applicable!!.matchesRevision(target))
+            assertEquals(32L, File(applicable.localPath).length())
+            if (old != null) {
+                assertNotEquals(old.localPath, applicable.localPath)
+                assertFalse(File(old.localPath).exists())
+            }
+        } finally {
+            allowRefresh.complete(Unit)
+            withTimeout(10_000) { job.join() }
+        }
+    }
+
+    @Test fun deletingCompletedThemeClearsImmediateApplyFallback() = runBlocking {
+        val harness = Harness(temporary.root, ByteArray(32) { 1 }.toResponseBody())
+        harness.downloader.downloadTheme(remote).toList()
+        val state = ThemeStoreUiState()
+        val local = state.localTheme(remote.id, harness.downloader.downloadProgress.value[remote.id])!!
+        harness.downloader.deleteLocalTheme(local)
+        assertNull(state.localTheme(remote.id, harness.downloader.downloadProgress.value[remote.id]))
+        assertFalse(File(local.localPath).exists())
+    }
+
+    @Test fun onlyMatchingCompletedRevisionSuppliesImmediateApplyFallback() = runBlocking {
+        val harness = Harness(temporary.root, ByteArray(32) { 1 }.toResponseBody())
+        harness.downloader.downloadTheme(remote).toList()
+        val state = ThemeStoreUiState()
+        val progress = harness.downloader.downloadProgress.value[remote.id]!!
+        assertNull(state.localTheme(remote.id, progress.copy(status = DownloadStatus.DOWNLOADING)))
+        assertNull(state.localTheme(remote.id, progress.copy(themeId = "other")))
+        assertNull(state.localTheme(remote.id, progress.copy(completedTheme = progress.completedTheme!!.copy(id = "other"))))
+        assertNull(state.localTheme(remote.id, progress.copy(completedTheme = null)))
     }
 
 }

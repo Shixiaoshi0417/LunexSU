@@ -183,7 +183,7 @@ class SettingsRepositoryImpl : SettingsRepository {
     override var autoJailbreak: Boolean
         get() = prefs.getBoolean("auto_jailbreak", false)
         set(value) {
-            runCatching {
+            if (!com.shixiaoshi0417.lunexsu.BuildConfig.NO_ROOT_DEMO) runCatching {
                 ksuApp.packageManager.setComponentEnabledSetting(
                     ComponentName(ksuApp, BootCompletedReceiver::class.java),
                     if (value) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
@@ -251,7 +251,7 @@ class SettingsRepositoryImpl : SettingsRepository {
 
     override fun setAdbRootEnabled(enabled: Boolean): Boolean =
         if (execKsud("feature set adb_root ${if (enabled) 1 else 0}", true)) {
-            ShellUtils.fastCmd("setprop ctl.restart adbd")
+            if (!com.shixiaoshi0417.lunexsu.BuildConfig.NO_ROOT_DEMO) ShellUtils.fastCmd("setprop ctl.restart adbd")
             true
         } else {
             false

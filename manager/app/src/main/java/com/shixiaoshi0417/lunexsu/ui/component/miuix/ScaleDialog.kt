@@ -1,10 +1,13 @@
 package com.shixiaoshi0417.lunexsu.ui.component.miuix
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,46 +40,48 @@ fun ScaleDialog(
             var text by remember(show) {
                 mutableStateOf((volumeState() * 100).toInt().toString())
             }
-            TextField(
-                modifier = Modifier.padding(bottom = 16.dp),
-                value = text,
-                maxLines = 1,
-                trailingIcon = {
-                    Text(
-                        text = "%",
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = colorScheme.onSurfaceVariantActions,
-                    )
-                },
-                onValueChange = { newValue ->
-                    if (newValue.isEmpty()) {
-                        text = ""
-                    } else {
-                        val valid = newValue.all { it.isDigit() }
-                        if (valid) {
-                            text = newValue
-                        }
-                    }
-                },
-            )
-            Row(horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(
-                    text = stringResource(android.R.string.cancel),
-                    onClick = onDismissRequest,
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(Modifier.width(20.dp))
-                TextButton(
-                    text = stringResource(android.R.string.ok),
-                    onClick = {
-                        val parsed = text.toIntOrNull()
-                        val clamped = parsed?.coerceIn(80, 110) ?: (volumeState() * 100).toInt()
-                        onVolumeChange(clamped / 100f)
-                        onDismissRequest()
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                TextField(
+                    modifier = Modifier.padding(bottom = 16.dp),
+                    value = text,
+                    maxLines = 1,
+                    trailingIcon = {
+                        Text(
+                            text = "%",
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = colorScheme.onSurfaceVariantActions,
+                        )
                     },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                    onValueChange = { newValue ->
+                        if (newValue.isEmpty()) {
+                            text = ""
+                        } else {
+                            val valid = newValue.all { it.isDigit() }
+                            if (valid) {
+                                text = newValue
+                            }
+                        }
+                    },
                 )
+                Row(horizontalArrangement = Arrangement.SpaceBetween) {
+                    TextButton(
+                        text = stringResource(android.R.string.cancel),
+                        onClick = onDismissRequest,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(20.dp))
+                    TextButton(
+                        text = stringResource(android.R.string.ok),
+                        onClick = {
+                            val parsed = text.toIntOrNull()
+                            val clamped = parsed?.coerceIn(80, 110) ?: (volumeState() * 100).toInt()
+                            onVolumeChange(clamped / 100f)
+                            onDismissRequest()
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                    )
+                }
             }
         }
     )

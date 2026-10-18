@@ -445,6 +445,7 @@ fun SettingPagerMiuix(
                         }
                     }
 
+                    com.shixiaoshi0417.lunexsu.ui.component.SavedSuperkeyCard(Modifier.padding(top = 12.dp))
                     Card(
                         modifier = Modifier
                             .padding(vertical = 12.dp)
@@ -468,6 +469,14 @@ fun SettingPagerMiuix(
                             loadingDialog = loadingDialog
                         )
                         val about = stringResource(id = R.string.about)
+                        ArrowPreference(
+                            title = stringResource(R.string.susfs_title),
+                            summary = stringResource(R.string.susfs_manage),
+                            startAction = {
+                                Icon(Icons.Rounded.Info, null, Modifier.padding(end = 6.dp), tint = colorScheme.onBackground)
+                            },
+                            onClick = actions.onOpenSusfs,
+                        )
                         ArrowPreference(
                             title = about,
                             startAction = {

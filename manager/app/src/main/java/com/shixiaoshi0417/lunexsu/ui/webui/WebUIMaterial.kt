@@ -4,6 +4,8 @@ import android.content.Intent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -112,7 +114,7 @@ fun HandleWebUIEventMaterial(
                         }
                     },
                     text = {
-                        Column {
+                        Column(Modifier.verticalScroll(rememberScrollState())) {
                             OutlinedTextField(
                                 label = { Text(event.message) },
                                 value = state.value,

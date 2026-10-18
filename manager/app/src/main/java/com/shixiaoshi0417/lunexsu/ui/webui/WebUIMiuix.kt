@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -97,7 +99,7 @@ fun HandleWebUIEventMiuix(
                 show = showDialog.value,
                 onDismissRequest = { webUIState.onPromptResult(null) },
                 content = {
-                    Column {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
                         Text(event.message)
                         Spacer(Modifier.height(12.dp))
                         TextField(

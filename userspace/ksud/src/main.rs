@@ -25,6 +25,9 @@ mod defs;
 mod feature;
 mod feature_id;
 #[cfg(target_os = "android")]
+#[path = "module/file_lock.rs"]
+mod file_lock;
+#[cfg(target_os = "android")]
 mod hot_install;
 #[cfg(target_os = "android")]
 mod init_event;
@@ -58,6 +61,8 @@ mod soft_reboot;
 mod su;
 #[cfg(target_os = "android")]
 mod sulog;
+#[cfg(any(target_os = "android", all(test, unix)))]
+mod susfs;
 #[cfg(target_os = "android")]
 mod unload;
 #[cfg(target_os = "android")]

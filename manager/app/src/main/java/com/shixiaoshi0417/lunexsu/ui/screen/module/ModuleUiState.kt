@@ -56,12 +56,13 @@ data class ModuleUiState(
     val sortEnabledFirst: Boolean = false,
     val sortActionFirst: Boolean = false,
     val checkModuleUpdate: Boolean = true,
+    val environmentChecked: Boolean = false,
     val isSafeMode: Boolean = false,
     val magiskInstalled: Boolean = false,
     val confirmDialogState: ModuleConfirmDialogState? = null,
 ) {
     val installButtonVisible: Boolean
-        get() = !(isSafeMode || magiskInstalled)
+        get() = environmentChecked && !(isSafeMode || magiskInstalled)
 }
 
 @Immutable

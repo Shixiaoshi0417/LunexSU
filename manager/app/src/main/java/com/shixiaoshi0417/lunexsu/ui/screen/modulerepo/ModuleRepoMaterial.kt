@@ -198,7 +198,7 @@ fun ModuleRepoScreenMaterial(
                         }
                     }
                 },
-                searchContent = { _, closeSearch ->
+                searchContent = { bottomPadding, closeSearch ->
                     val latestSearchResults = rememberUpdatedState(state.searchResults)
                     ScrollToTopOnChange(
                         searchListState,
@@ -209,6 +209,7 @@ fun ModuleRepoScreenMaterial(
                         installedVersions = state.installedVersions,
                         listState = searchListState,
                         modifier = Modifier.fillMaxSize(),
+                        bottomPadding = bottomPadding,
                         onModuleClick = {
                             closeSearch()
                             actions.onOpenRepoDetail(it)

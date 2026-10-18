@@ -28,6 +28,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -257,6 +259,8 @@ fun ModuleRepoScreenMiuix(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
+                        .navigationBarsPadding()
+                        .imePadding()
                         .overScrollVertical(),
                 ) {
                     item {
