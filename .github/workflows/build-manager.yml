@@ -12,6 +12,7 @@ on:
       - '.github/workflows/ksuinit.yml'
       - '.github/scripts/setup-rust-build.sh'
       - '.github/scripts/check-bundled-assets.py'
+      - '.github/scripts/check-pr-unsigned-apk.py'
       - '.github/scripts/check-lkm-version.sh'
       - 'tests/build_version/**'
       - '.github/riscv64-cargo.toml'
@@ -32,6 +33,7 @@ on:
       - '.github/workflows/ksuinit.yml'
       - '.github/scripts/setup-rust-build.sh'
       - '.github/scripts/check-bundled-assets.py'
+      - '.github/scripts/check-pr-unsigned-apk.py'
       - '.github/scripts/check-lkm-version.sh'
       - 'tests/build_version/**'
       - '.github/riscv64-cargo.toml'
@@ -257,6 +259,10 @@ jobs:
           else
             ./gradlew clean assembleRelease :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin
           fi
+
+      - name: Verify unsigned PR artifact
+        if: github.event_name == 'pull_request'
+        run: python3 ../.github/scripts/check-pr-unsigned-apk.py app/build/outputs/apk/release
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v7

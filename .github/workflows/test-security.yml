@@ -12,6 +12,7 @@ on:
       - 'tests/security_lifecycle/**'
       - 'userspace/ksud/tests/module_safety/**'
       - 'tests/branding/test_pr_signing.py'
+      - '.github/scripts/check-pr-unsigned-apk.py'
       - '.github/workflows/build-manager.yml'
       - '.github/workflows/test-security.yml'
   pull_request:
@@ -25,6 +26,7 @@ on:
       - 'tests/security_lifecycle/**'
       - 'userspace/ksud/tests/module_safety/**'
       - 'tests/branding/test_pr_signing.py'
+      - '.github/scripts/check-pr-unsigned-apk.py'
       - '.github/workflows/build-manager.yml'
       - '.github/workflows/test-security.yml'
   workflow_dispatch:

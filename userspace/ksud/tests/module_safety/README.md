@@ -50,6 +50,9 @@ Additional cases inject rollback failure through both guard/install Drop, replac
 the candidate with an unrelated directory, corrupt/remove journals or commit
 records, and retain legacy backups.
 
+Checkpoint signals are atomically published after their contents are complete,
+so a parent observing the signal cannot read a partially written checkpoint name.
+
 ## Boot-promotion durability and recovery
 
 - Promotion journals use an explicitly managed PathBuf. Failed syncs cannot

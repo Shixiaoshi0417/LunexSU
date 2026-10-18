@@ -36,11 +36,15 @@ val managerPackageName = if (noRootDemo) "com.shixiaoshi0417.lunexsu.demo" else
 val managerName = if (noRootDemo) "LunexSU No Root Demo" else
     project.findProperty("KSU_NAME")?.toString() ?: defaultManagerName
 
-apksign {
-    storeFileProperty = "KEYSTORE_FILE"
-    storePasswordProperty = "KEYSTORE_PASSWORD"
-    keyAliasProperty = "KEY_ALIAS"
-    keyPasswordProperty = "KEY_PASSWORD"
+// Configuring this plugin without a keystore signs every variant with its debug
+// fallback. PR release artifacts must stay unsigned, even if key properties exist.
+if (!isPrBuild) {
+    apksign {
+        storeFileProperty = "KEYSTORE_FILE"
+        storePasswordProperty = "KEYSTORE_PASSWORD"
+        keyAliasProperty = "KEY_ALIAS"
+        keyPasswordProperty = "KEY_PASSWORD"
+    }
 }
 
 protobuf {

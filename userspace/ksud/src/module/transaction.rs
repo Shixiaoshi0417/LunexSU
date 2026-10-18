@@ -788,7 +788,8 @@ fn pause_for_test(point: &str) {
     if std::env::var("MODULE_SAFETY_PAUSE_AT").as_deref() == Ok(point) {
         let fixture =
             PathBuf::from(std::env::var_os("MODULE_SAFETY_FIXTURE").expect("Missing fixture"));
-        fs::write(fixture.join("paused"), point).expect("Signal publication checkpoint");
+        write_synced(&fixture.join("paused"), point.as_bytes())
+            .expect("Signal publication checkpoint");
         loop {
             std::thread::park();
         }

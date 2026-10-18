@@ -69,11 +69,33 @@ require durable garbage classification before recursive cleanup. Fault injection
 covers both parents, existing/absent live modules, repeated failures and recovery,
 and interrupted garbage deletion. It does not emulate physical power loss.
 
+## GitHub validation
+
+All ten automatic push/PR workflow runs for
+`c95037f43b3d92f381600d21c1661e21a19106a4` passed. The
+[Manager build](https://github.com/Shixiaoshi0417/LunexSU/actions/runs/39059365784)
+also built all eight KMI configurations for arm64 and x86_64, the Android and
+desktop daemons, and ksuinit. Production signing and repacking were skipped.
+Inspection of the actual `manager-pr-compile-only` APK then revealed the signing
+plugin's implicit Debug-key fallback. PR builds now bypass that configuration,
+and an upload gate rejects JAR signatures and APK v2/v3 signing blocks. The
+invalid Core certificate binding was unaffected by this packaging correction.
+The corrected PR build also passed its 460-case JVM suite and Android test-APK
+compilation locally. Its actual release APK passes the unsigned-artifact gate
+and has no valid signature according to Android's apksigner. The gate rejects
+the previously Debug-signed CI APK, including its ZIP-external signing block.
+
+An earlier push run exposed a race in the test-only checkpoint signal: its file
+could be visible before the checkpoint name was written. The signal now uses
+atomic publication. The corrected native POSIX process-death matrix passed 30
+repetitions for each previous-update state, covering 360 SIGKILL boundaries,
+alongside the complete module suite and Android compilation/lint/format checks.
+
 ## Validation limits
 
-Android instrumentation is compiled, not run on a connected device. Host hook
-tests cannot replace builds across the supported kernel matrix or actual unload
-stress tests. The normal Manager APK built locally uses known daemon compilation
+Android instrumentation is compiled, not run on a connected device. Passing
+kernel-matrix builds and host hook tests do not replace actual unload stress
+tests. The normal Manager APK built locally uses known daemon compilation
 fixtures; it is not an installable security-release package for the modified
 daemon. No ADB, partition operation, live module installation or kernel loading
 is used by these checks. Main merging and Beta4 publication remain separate
