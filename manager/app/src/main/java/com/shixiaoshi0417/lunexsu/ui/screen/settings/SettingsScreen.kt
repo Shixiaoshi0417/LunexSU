@@ -68,6 +68,7 @@ fun SettingPager(
         onZygiskRebootNow = viewModel::rebootForZygisk,
         onOpenAbout = { navigator.push(Route.About) },
         onOpenSusfs = { navigator.push(Route.Susfs) },
+        onOpenSui = { navigator.push(Route.Sui) },
         onSetZnnRecoveryConfirmed = viewModel::setZnnRecoveryConfirmed,
         onDismissZnnRisk = viewModel::dismissZnnRiskDialog,
         onConfirmZnnRisk = viewModel::confirmZnnRisk,

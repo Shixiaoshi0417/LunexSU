@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sui_title">Sui management</string>
+    <string name="sui_status">Service and permission host</string>
+    <string name="sui_separate_permissions">Sui permissions are separate from kernel Root permissions.</string>
+    <string name="sui_enable">Enable Sui</string>
+    <string name="sui_disable">Disable Sui</string>
+    <string name="sui_payload_version">Bundled Sui: %1$s</string>
+    <string name="sui_disable_warning">Disabling requests the broker to stop. A full reboot is required to remove injection and end privileges or user services already running. Updating Manager does not automatically replace an installed Sui module.</string>
+    <string name="sui_enable_warning">Requires an active ReZygisk or NeoZygisk backend and a full reboot. SystemUI and Settings must not be excluded from injection. This does not enable ZNN or ADB Root. Keep a working recovery path. Sui has its own privileged permission database.</string>
+    <string name="sui_pending_reboot">A full reboot is required</string>
+    <string name="sui_ready">Root and Shell services connected; permission host attached</string>
+    <string name="sui_unavailable">Enabled but service or permission host is unavailable</string>
+    <string name="sui_disabled">Disabled</string>
+    <string name="sui_demo">UI simulation only. Refresh simulates a completed reboot; no real Sui service runs.</string>
+    <string name="sui_host_required">Keep the Manager running to receive permission requests. Requests without a host are denied; enabling Sui does not automatically grant apps access.</string>
+    <string name="sui_search">Search Sui applications</string>
+    <string name="sui_shared_uid">Changes apply to every package sharing this UID. Revoking Sui permissions does not change kernel Root grants.</string>
+    <string name="sui_permission_request">Sui permission request</string>
+    <string name="sui_open_manager">Open LunexSU to review the requesting app and privilege level</string>
+    <string name="sui_ask">Ask</string>
+    <string name="sui_root">Allow Root</string>
+    <string name="sui_root_once">Allow Root once</string>
+    <string name="sui_shell">Allow Shell</string>
+    <string name="sui_deny">Deny</string>
+    <string name="sui_deny_once">Deny once</string>
+    <string name="sui_hidden">Hide Sui</string>
+    <string name="sui_apply">Confirm</string>
+    <string name="sui_cancel">Cancel</string>
+</resources>

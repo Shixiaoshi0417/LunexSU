@@ -29,7 +29,7 @@ use crate::defs::{MODULE_DIR, MODULE_UPDATE_DIR, UPDATE_FILE_NAME};
 use crate::module::ModuleType::{Active, All};
 use std::os::unix::{prelude::PermissionsExt, process::CommandExt};
 
-mod transaction;
+pub mod transaction;
 
 fn transaction_store() -> Result<transaction::Store> {
     transaction::Store::open(

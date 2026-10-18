@@ -182,6 +182,7 @@ val fetchZygiskAssets = tasks.register<FetchPinnedAssets>("fetchZygiskAssets") {
 val noRootDemoSources = if (noRootDemo) tasks.register<Sync>("stageNoRootDemoSources") {
     from("src/main/java") {
         exclude("**/Natives.kt", "**/ui/util/KsuCli.kt", "**/data/zygisk/BuiltinZygisk.kt",
+            "**/data/sui/SuiManager.kt",
             "**/data/repository/SuperUserRepositoryImpl.kt", "**/data/susfs/SusfsRepository.kt",
             "**/ui/KsuService.kt", "**/magica/AppZygotePreload.java", "**/magica/BootCompletedReceiver.java")
     }
@@ -189,11 +190,18 @@ val noRootDemoSources = if (noRootDemo) tasks.register<Sync>("stageNoRootDemoSou
     into(layout.buildDirectory.dir("generated/noRootDemo/sources"))
 } else null
 
+val noRootDemoAidl = if (noRootDemo) tasks.register<Sync>("stageNoRootDemoAidl") {
+    from("src/main/aidl") { exclude("moe/shizuku/**") }
+    into(layout.buildDirectory.dir("generated/noRootDemo/aidl"))
+} else null
+
 android {
     namespace = "com.shixiaoshi0417.lunexsu"
 
     if (noRootDemo) {
         sourceSets.named("main") {
+            aidl.directories.clear()
+            aidl.directories.add(layout.buildDirectory.dir("generated/noRootDemo/aidl").get().asFile.absolutePath)
             val staged = layout.buildDirectory.dir("generated/noRootDemo/sources").get().asFile.absolutePath
             java.directories.clear()
             java.directories.add(staged)
@@ -338,6 +346,7 @@ androidComponents {
 }
 
 noRootDemoSources?.let { sources -> tasks.named("preBuild") { dependsOn(sources) } }
+noRootDemoAidl?.let { sources -> tasks.named("preBuild") { dependsOn(sources) } }
 
 base {
     archivesName.set(

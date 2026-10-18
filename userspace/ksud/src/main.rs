@@ -60,6 +60,8 @@ mod soft_reboot;
 #[cfg(target_os = "android")]
 mod su;
 #[cfg(target_os = "android")]
+mod sui;
+#[cfg(target_os = "android")]
 mod sulog;
 #[cfg(any(target_os = "android", all(test, unix)))]
 mod susfs;

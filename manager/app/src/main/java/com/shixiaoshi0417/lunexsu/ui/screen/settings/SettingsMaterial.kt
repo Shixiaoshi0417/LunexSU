@@ -374,6 +374,14 @@ fun SettingPagerMaterial(
                     },
                     {
                         SegmentedListItem(
+                            onClick = actions.onOpenSui,
+                            headlineContent = { Text(stringResource(R.string.sui_title)) },
+                            supportingContent = { Text(stringResource(R.string.sui_separate_permissions)) },
+                            leadingContent = { Icon(Icons.Filled.Info, null) },
+                        )
+                    },
+                    {
+                        SegmentedListItem(
                             onClick = actions.onOpenSusfs,
                             headlineContent = { Text(stringResource(R.string.susfs_title)) },
                             supportingContent = { Text(stringResource(R.string.susfs_manage)) },

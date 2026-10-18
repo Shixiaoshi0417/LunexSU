@@ -10,6 +10,11 @@ on:
       - '.github/workflows/ksud.yml'
       - '.github/workflows/ksud-extra.yml'
       - '.github/workflows/ksuinit.yml'
+      - '.github/workflows/sui.yml'
+      - 'scripts/prepare_sui_artifact.py'
+      - 'scripts/stage_sui_payload.py'
+      - 'scripts/sui_source_inputs.py'
+      - 'scripts/sui_manager_binding.py'
       - '.github/scripts/setup-rust-build.sh'
       - '.github/scripts/check-bundled-assets.py'
       - '.github/scripts/check-pr-unsigned-apk.py'
@@ -31,6 +36,11 @@ on:
       - '.github/workflows/ksud.yml'
       - '.github/workflows/ksud-extra.yml'
       - '.github/workflows/ksuinit.yml'
+      - '.github/workflows/sui.yml'
+      - 'scripts/prepare_sui_artifact.py'
+      - 'scripts/stage_sui_payload.py'
+      - 'scripts/sui_source_inputs.py'
+      - 'scripts/sui_manager_binding.py'
       - '.github/scripts/setup-rust-build.sh'
       - '.github/scripts/check-bundled-assets.py'
       - '.github/scripts/check-pr-unsigned-apk.py'
@@ -156,8 +166,16 @@ jobs:
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.no_root_demo == true) }}
     uses: ./.github/workflows/ksuinit.yml
 
+  build-sui:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.no_root_demo == true) }}
+    needs: generate-key
+    uses: ./.github/workflows/sui.yml
+    with:
+      expected_size: ${{ needs.generate-key.outputs.expected_size }}
+      expected_hash: ${{ needs.generate-key.outputs.expected_hash }}
+
   build-ksud:
-    needs: [build-lkm, build-ksuinit]
+    needs: [generate-key, build-lkm, build-ksuinit, build-sui]
     strategy:
       matrix:
         include:
@@ -169,9 +187,12 @@ jobs:
       target: ${{ matrix.target }}
       pack_lkm: true
       pack_ksuinit: true
+      pack_sui: true
+      expected_size: ${{ needs.generate-key.outputs.expected_size }}
+      expected_hash: ${{ needs.generate-key.outputs.expected_hash }}
   
   build-ksud-extra:
-    needs: [build-lkm, build-ksuinit]
+    needs: [generate-key, build-lkm, build-ksuinit, build-sui]
     strategy:
       matrix:
         include:
@@ -191,6 +212,9 @@ jobs:
       os: ${{ matrix.os }}
       pack_lkm: true
       pack_ksuinit: true
+      pack_sui: true
+      expected_size: ${{ needs.generate-key.outputs.expected_size }}
+      expected_hash: ${{ needs.generate-key.outputs.expected_hash }}
 
   build-manager:
     needs: [generate-key, build-ksud]

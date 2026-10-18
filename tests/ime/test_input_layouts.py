@@ -39,6 +39,7 @@ OWNERS = {
     "screen/templateeditor/TemplateEditorMiuix.kt": "scrolling IME-padded page",
     "screen/themestore/ThemeStoreMaterial.kt": "expanded search; scrolling filter dialog",
     "screen/themestore/ThemeStoreMiuix.kt": "IME-padded grid; scrolling filter dialog",
+    "screen/sui/SuiScreen.kt": "bounded search in IME-padded lazy page; scrolling native dialog bodies",
     "webui/WebUIMaterial.kt": "resizing prompt with scrollable body",
     "webui/WebUIMiuix.kt": "native IME-aware prompt with scrollable content",
 }

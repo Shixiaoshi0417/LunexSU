@@ -9,3 +9,5 @@ __pycache__
 /dist
 /repack-config.json
 /userspace/ksud/.lkm_image_bootstrap.o
+# Generated from the separately verified Sui source-build artifact.
+/userspace/ksud/bin/*/sui/

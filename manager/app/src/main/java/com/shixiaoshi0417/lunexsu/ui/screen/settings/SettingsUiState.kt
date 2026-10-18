@@ -136,6 +136,7 @@ data class SettingsScreenActions(
     val onZygiskRebootNow: () -> Unit,
     val onOpenAbout: () -> Unit,
     val onOpenSusfs: () -> Unit = {},
+    val onOpenSui: () -> Unit = {},
     val onSetZnnRecoveryConfirmed: (Boolean) -> Unit = {},
     val onDismissZnnRisk: () -> Unit = {},
     val onConfirmZnnRisk: () -> Unit = {},

@@ -60,8 +60,8 @@ internal fun SusfsNativeColors(content: @Composable () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SusfsScaffold(busy: Boolean, back: () -> Unit, refresh: () -> Unit,
+    title: String = stringResource(R.string.susfs_title),
     content: @Composable (PaddingValues) -> Unit) {
-    val title = stringResource(R.string.susfs_title)
     if (miuix) {
         // Shared editor text and tab indicators follow the native MIUIX palette too.
         SusfsNativeColors {
