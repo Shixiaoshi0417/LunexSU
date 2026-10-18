@@ -3,6 +3,7 @@ package com.shixiaoshi0417.lunexsu.ui.screen.home
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -16,9 +17,9 @@ import androidx.compose.ui.res.stringResource
 import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.data.SavedSuperkey
 import com.shixiaoshi0417.lunexsu.data.SuperkeyAuthenticationResult
-import com.shixiaoshi0417.lunexsu.ui.component.RememberSuperkeyCheckbox
 import com.shixiaoshi0417.lunexsu.ui.LocalUiMode
 import com.shixiaoshi0417.lunexsu.ui.UiMode
+import com.shixiaoshi0417.lunexsu.ui.component.RememberSuperkeyCheckbox
 import com.shixiaoshi0417.lunexsu.ui.component.material.ExpressiveDialog
 import com.shixiaoshi0417.lunexsu.ui.component.material.FolkTextButton
 import com.shixiaoshi0417.lunexsu.ui.component.material.SegmentedColumn
@@ -29,6 +30,7 @@ import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
 
 @Composable
@@ -84,7 +86,7 @@ internal fun SuperkeyDialog(onDismiss: () -> Unit, onAuthenticated: () -> Unit) 
         Column {
             SuperkeyField(key, { key = it }, stringResource(R.string.superkey_enter), enabled = !busy)
             RememberSuperkeyCheckbox(rememberKey, !busy) { rememberKey = it }
-            if (failed) Text(stringResource(R.string.superkey_failed))
+            if (failed) SuperkeyError()
         }
     }
     if (LocalUiMode.current == UiMode.Miuix) {
@@ -103,5 +105,15 @@ internal fun SuperkeyDialog(onDismiss: () -> Unit, onAuthenticated: () -> Unit) 
             confirmButton = { FolkTextButton(onClick = submit, enabled = !busy && key.isNotEmpty()) { Text(stringResource(android.R.string.ok)) } },
             dismissButton = { FolkTextButton(onClick = dismiss, enabled = !busy) { Text(stringResource(android.R.string.cancel)) } },
         )
+    }
+}
+
+@Composable
+internal fun SuperkeyError() {
+    val message = stringResource(R.string.superkey_failed)
+    if (LocalUiMode.current == UiMode.Miuix) {
+        top.yukonga.miuix.kmp.basic.Text(message, color = MiuixTheme.colorScheme.error)
+    } else {
+        Text(message, color = MaterialTheme.colorScheme.error)
     }
 }

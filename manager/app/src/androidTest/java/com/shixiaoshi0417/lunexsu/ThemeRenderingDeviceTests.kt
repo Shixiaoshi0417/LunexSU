@@ -61,7 +61,8 @@ internal object ThemeRenderingDeviceTests {
         for (scenario in listOf("settings", "settings_native")) {
             checkSettingsScroll(instrumentation, scenario)
         }
-        return Bundle().apply { putString("theme_rendering", "PASS: ${cases.size} pixel cases and 2 settings scroll cases") }
+        val foregroundCases = ForegroundDeviceTests.run(instrumentation)
+        return Bundle().apply { putString("theme_rendering", "PASS: ${cases.size} pixel cases, 2 settings scroll cases and $foregroundCases foreground cases") }
     }
 
     private fun checkSettingsScroll(instrumentation: Instrumentation, scenario: String) {

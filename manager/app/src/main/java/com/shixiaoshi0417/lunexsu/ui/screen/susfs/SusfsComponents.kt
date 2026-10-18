@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,14 +43,18 @@ private val miuix: Boolean
     @Composable get() = LocalUiMode.current == UiMode.Miuix
 
 @Composable
-private fun SusfsNativeColors(content: @Composable () -> Unit) {
+internal fun SusfsNativeColors(content: @Composable () -> Unit) {
     val colors = MiuixTheme.colorScheme
     MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(
-        primary = colors.primary, onSurface = colors.onBackground,
+        primary = colors.primary, error = colors.error, onSurface = colors.onBackground,
         onSurfaceVariant = colors.onSurfaceVariantSummary, surface = colors.background,
         surfaceContainerLow = colors.surface, secondaryContainer = colors.secondary,
         onSecondaryContainer = colors.onBackground,
-    ), content = content)
+    )) {
+        // MIUIX and Material use separate content-color locals. Material Text/Icon
+        // must inherit the native foreground, not Material's default black.
+        CompositionLocalProvider(LocalContentColor provides colors.onBackground, content = content)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

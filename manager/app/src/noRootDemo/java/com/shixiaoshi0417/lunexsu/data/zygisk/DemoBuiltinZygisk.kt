@@ -22,7 +22,7 @@ object BuiltinZygisk {
         ZygiskOverview(available = true, status = simulated, versions = mapOf(
             ZygiskBackend.Re.moduleId to ZygiskModuleVersion(installed = "1.0.0 (DEMO)"),
             ZygiskBackend.Neo.moduleId to ZygiskModuleVersion(installed = "2.4 (DEMO)"),
-            ZygiskModule.NextNext.moduleId to ZygiskModuleVersion(installed = "1.11.0 (DEMO)"),
+            ZygiskModule.NextNext.moduleId to ZygiskModuleVersion(installed = "1.12.0 (DEMO)"),
         ))
     }
     suspend fun ownedModuleIds(): Set<String> = emptySet()
