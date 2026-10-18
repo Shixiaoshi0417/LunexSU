@@ -14,8 +14,9 @@ The standalone Rust harness compiles the production config and filesystem
 transaction helpers, without ksud's Android build script/assets. Transaction
 fixtures use `KSUD_MODULE_FIXTURE_ROOT` (otherwise ignored `fixtures/`); config
 fixtures use ignored `fixtures/configs/`. It never accesses `/data/adb`, a device,
-root, mounts or real modules. No installer, module script or shell is invoked by
-the Rust harness. The separate Python installer-stub harness was also run for
+root, mounts or real modules. No real installer or module script is invoked by
+the Rust harness; OTA hook checks use only a disposable fake bootctl shell script.
+The separate Python installer-stub harness was also run for
 the boot-promotion durability follow-up.
 
 ## Publication protocol and recovery
@@ -30,6 +31,10 @@ the boot-promotion durability follow-up.
 - `Publication::commit` syncs bookkeeping and writes/syncs a transaction-bound
   commit record. **Hot install is attempted only after this durable commit and
   finalization**, never while it could consume an uncommitted recovery candidate.
+- `Publication::commit_then` publishes the global metamodule alias only after
+  commit succeeds. Commit write/sync failures cannot change a prior alias or
+  expose a first-install empty live directory. If alias creation fails after
+  commit, the committed module.prop remains available to normal discovery.
 - Without commit: identity-checked recovery restores live bookkeeping and exchanges
   back the previous pending directory (or withdraws the candidate if none existed).
   With commit: it retains the new candidate and discards only the recorded,
@@ -92,9 +97,13 @@ a filesystem replacement/device-number change). The parent coordinates Android
 NDK check/clippy/fmt separately.
 
 The live snapshot covers the four per-module bookkeeping files listed above, not
-the metamodule's global symlink. The existing hot_install.rs stash/swap lifecycle
-is unchanged and is not crash-tested here; this follow-up ensures it cannot run
-before durable publication commit/finalization.
+the metamodule's global symlink. Metamodule cases inject metadata/commit sync and
+commit-record write failures with and without a prior alias, followed by recovery
+twice. Separate processes are killed before commit, after durable commit but
+before alias creation, and after alias creation; no active alias may target an
+uncommitted empty directory. The existing hot_install.rs stash/swap lifecycle is
+unchanged and is not crash-tested here; it cannot run before durable publication
+commit/finalization.
 
 WSL's D: DrvFS returns EINVAL for RENAME_EXCHANGE. Older success assertions report
 that limitation there; the new process-death tests instead require a native POSIX

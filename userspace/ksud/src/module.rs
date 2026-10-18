@@ -870,16 +870,18 @@ fn install_module_to_system(zip: &str) -> Result<String> {
         }
     }
 
-    // Create symlink for metamodule
-    if is_metamodule {
-        println!("- Creating metamodule symlink");
-        metamodule::ensure_symlink(&module_dir)?;
-    }
-
     // The synced commit record, not an in-memory guard flag, authorizes boot
     // promotion and discarding the superseded pending copy. Only after recovery
     // material is finalized may hot install consume/move the committed candidate.
-    publication.commit()?;
+    publication.commit_then(|| {
+        // Never expose an uncommitted live directory through the global alias.
+        // If interrupted here, committed module.prop supports normal discovery.
+        if is_metamodule {
+            println!("- Creating metamodule symlink");
+            metamodule::ensure_symlink(&module_dir)?;
+        }
+        Ok(())
+    })?;
     if staging.ready_for_hot_install()
         && let Some(request) = hot_install::take_request(&updated_dir)
         && hot_install::apply(module_id, is_metamodule, &request)

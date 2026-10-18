@@ -358,6 +358,12 @@ pub struct Publication<'a> {
 }
 
 impl Publication<'_> {
+    /// Publish external references only after the durable metadata commit succeeds.
+    pub fn commit_then(self, publish_reference: impl FnOnce() -> Result<()>) -> Result<()> {
+        self.commit()?;
+        publish_reference()
+    }
+
     pub fn capture_metadata(&self, directory: &Path, names: &[&str]) -> Result<()> {
         ensure!(
             directory == self.install.live.join(&self.install.module_id),
@@ -897,6 +903,105 @@ mod tests {
     impl Drop for SyncFailure {
         fn drop(&mut self) {
             SYNC_FAILURE.with_borrow_mut(|failure| *failure = None);
+        }
+    }
+
+    #[test]
+    fn metamodule_reference_is_unchanged_when_commit_fails() {
+        for previous in [false, true] {
+            for failure in ["metadata-sync", "commit-write", "commit-sync"] {
+                let fixture = PromotionFixture::new(previous);
+                fs::remove_dir_all(fixture.update()).unwrap();
+                fs::create_dir_all(fixture.live()).unwrap();
+                if previous {
+                    fs::write(
+                        fixture.live().join("module.prop"),
+                        b"id=example\nmetamodule=1\nversion=old\n",
+                    )
+                    .unwrap();
+                }
+                let link = fixture.temp.path().join("metamodule");
+                if previous {
+                    std::os::unix::fs::symlink(fixture.live(), &link).unwrap();
+                }
+                let old_link = fs::symlink_metadata(&link).ok().map(|m| m.ino());
+                let store = fixture.open().unwrap();
+                let install = store.install("example").unwrap();
+                let prop = b"id=example\nmetamodule=1\nversion=new\n";
+                fs::write(install.module().join("module.prop"), prop).unwrap();
+                let publication = install.publish_guard(&fixture.update()).unwrap();
+                publication
+                    .capture_metadata(&fixture.live(), &["module.prop"])
+                    .unwrap();
+                fs::write(fixture.live().join("module.prop"), prop).unwrap();
+                let obstruction = install.directory.join(COMMITTED);
+                let injected = match failure {
+                    "metadata-sync" => Some(SyncFailure::at(&fixture.live())),
+                    "commit-write" => {
+                        fs::create_dir(&obstruction).unwrap();
+                        None
+                    }
+                    "commit-sync" => Some(SyncFailure::at(&install.directory)),
+                    _ => unreachable!(),
+                };
+                let called = std::cell::Cell::new(false);
+                assert!(
+                    publication
+                        .commit_then(|| {
+                            called.set(true);
+                            Ok(())
+                        })
+                        .is_err()
+                );
+                assert!(!called.get(), "{failure}");
+                assert_eq!(fs::symlink_metadata(&link).ok().map(|m| m.ino()), old_link);
+                drop(injected);
+                if failure == "commit-write" {
+                    fs::remove_dir(obstruction).unwrap();
+                }
+                drop(install);
+                drop(store);
+                for _ in 0..2 {
+                    let _recovered = fixture.open().unwrap();
+                    assert_eq!(
+                        fixture.live().join("module.prop").exists(),
+                        previous || failure == "commit-sync"
+                    );
+                    assert_eq!(fs::symlink_metadata(&link).ok().map(|m| m.ino()), old_link);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn metamodule_link_failure_keeps_committed_metadata_for_fallback() {
+        let fixture = PromotionFixture::new(false);
+        fs::remove_dir_all(fixture.update()).unwrap();
+        fs::create_dir_all(fixture.live()).unwrap();
+        let store = fixture.open().unwrap();
+        let install = store.install("example").unwrap();
+        let prop = b"id=example\nmetamodule=1\n";
+        fs::write(install.module().join("module.prop"), prop).unwrap();
+        let publication = install.publish_guard(&fixture.update()).unwrap();
+        publication
+            .capture_metadata(&fixture.live(), &["module.prop"])
+            .unwrap();
+        fs::write(fixture.live().join("module.prop"), prop).unwrap();
+        assert!(
+            publication
+                .commit_then(|| {
+                    assert_eq!(fs::read(fixture.live().join("module.prop"))?, prop);
+                    assert!(!is_pending_publication(&fixture.update()));
+                    anyhow::bail!("Injected symlink creation failure")
+                })
+                .is_err()
+        );
+        drop(install);
+        drop(store);
+        for _ in 0..2 {
+            let _recovered = fixture.open().unwrap();
+            assert_eq!(fs::read(fixture.live().join("module.prop")).unwrap(), prop);
+            assert!(!is_pending_publication(&fixture.update()));
         }
     }
 

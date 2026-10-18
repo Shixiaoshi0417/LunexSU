@@ -167,6 +167,41 @@ mod tests {
                 fs::write(root.join("ready"), "ready").unwrap();
                 module_config::clear_module_configs(&id).unwrap();
             }
+            "metamodule-publication" => {
+                let updates = root.join("modules_update");
+                let live = root.join("modules");
+                let store =
+                    transaction::Store::open(&root.join("transactions"), &updates, &live).unwrap();
+                let install = store.install(&id).unwrap();
+                let prop = b"id=example\nmetamodule=1\nversion=new\n";
+                fs::write(install.module().join("module.prop"), prop).unwrap();
+                let publication = install.publish_guard(&updates.join(&id)).unwrap();
+                let live = live.join(&id);
+                fs::create_dir_all(&live).unwrap();
+                publication
+                    .capture_metadata(&live, &["module.prop"])
+                    .unwrap();
+                fs::write(live.join("module.prop"), prop).unwrap();
+                if std::env::var("MODULE_SAFETY_PAUSE_AT").as_deref()
+                    == Ok("metamodule-before-commit")
+                {
+                    fs::write(root.join("paused.tmp"), "metamodule-before-commit").unwrap();
+                    fs::rename(root.join("paused.tmp"), root.join("paused")).unwrap();
+                    loop {
+                        thread::park();
+                    }
+                }
+                publication
+                    .commit_then(|| {
+                        std::os::unix::fs::symlink(&live, root.join("metamodule"))?;
+                        fs::write(root.join("paused.tmp"), "metamodule-linked")?;
+                        fs::rename(root.join("paused.tmp"), root.join("paused"))?;
+                        loop {
+                            thread::park();
+                        }
+                    })
+                    .unwrap();
+            }
             "publication" | "publication-drop-failure" => {
                 let updates = root.join("modules_update");
                 let live = root.join("modules");
@@ -686,6 +721,67 @@ mod tests {
     #[test]
     fn process_death_publication_without_previous_pending() {
         process_death_publication_matrix(false);
+    }
+
+    #[test]
+    fn metamodule_publication_survives_death_without_an_empty_active_alias() {
+        for checkpoint in [
+            "metamodule-before-commit",
+            "publication-commit",
+            "metamodule-linked",
+        ] {
+            let temp = fixture();
+            let root = temp.path();
+            roots(root);
+            let mut child = worker_with(
+                "metamodule-publication",
+                root,
+                "example",
+                &[("MODULE_SAFETY_PAUSE_AT", checkpoint)],
+            );
+            wait_file(&root.join("paused"));
+            assert_eq!(fs::read_to_string(root.join("paused")).unwrap(), checkpoint);
+            let link = root.join("metamodule");
+            assert_eq!(link.is_symlink(), checkpoint == "metamodule-linked");
+            child.kill().unwrap();
+            assert_eq!(child.wait().unwrap().signal(), Some(libc::SIGKILL));
+            for _ in 0..2 {
+                let _store = transaction::Store::open(
+                    &root.join("transactions"),
+                    &root.join("modules_update"),
+                    &root.join("modules"),
+                )
+                .unwrap();
+                let committed = checkpoint != "metamodule-before-commit";
+                assert_eq!(root.join("modules/example/module.prop").exists(), committed);
+                assert_eq!(root.join("modules_update/example").exists(), committed);
+                assert_eq!(link.is_symlink(), checkpoint == "metamodule-linked");
+                if committed {
+                    let prop =
+                        fs::read_to_string(root.join("modules/example/module.prop")).unwrap();
+                    assert!(prop.contains("id=example\n") && prop.contains("metamodule=1\n"));
+                    assert!(!transaction::is_pending_publication(
+                        &root.join("modules_update/example")
+                    ));
+                }
+                if link.is_symlink() {
+                    assert!(link.join("module.prop").is_file());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn metamodule_installer_publishes_alias_only_inside_the_post_commit_callback() {
+        let source = include_str!("../../../src/module.rs");
+        let installer = source.split("fn install_module_to_system(").nth(1).unwrap();
+        let callback = installer.find("publication.commit_then(||").unwrap();
+        let alias = installer
+            .find("metamodule::ensure_symlink(&module_dir)")
+            .unwrap();
+        let hot = installer.find("staging.ready_for_hot_install()").unwrap();
+        assert!(callback < alias && alias < hot);
+        assert_eq!(installer.matches("metamodule::ensure_symlink(").count(), 1);
     }
 
     #[test]
