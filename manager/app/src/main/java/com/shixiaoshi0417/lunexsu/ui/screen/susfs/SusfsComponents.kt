@@ -137,7 +137,8 @@ internal fun AlertDialog(onDismissRequest: () -> Unit, title: @Composable () -> 
     if (miuix) SusfsNativeColors { WindowDialog(show = true, title = "", onDismissRequest = onDismissRequest) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             ProvideTextStyle(MaterialTheme.typography.titleLarge, title)
-            text()
+            // Bound the editor's own scroll container above the action row.
+            Column(Modifier.weight(1f, fill = false)) { text() }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 dismissButton?.invoke()
                 Spacer(Modifier.width(12.dp))

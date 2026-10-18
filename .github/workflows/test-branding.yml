@@ -30,3 +30,6 @@ jobs:
             python3 "$test"
             echo "::endgroup::"
           done
+
+      - name: Check input layout ownership and keyboard guards
+        run: python3 tests/ime/test_input_layouts.py

@@ -3,6 +3,8 @@ package com.shixiaoshi0417.lunexsu.ui.screen.home
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -91,17 +93,19 @@ internal fun SuperkeyDialog(onDismiss: () -> Unit, onAuthenticated: () -> Unit) 
     }
     if (LocalUiMode.current == UiMode.Miuix) {
         WindowDialog(show = true, title = stringResource(R.string.superkey_enter), onDismissRequest = dismiss) {
-            content()
-            Row {
-                TextButton(stringResource(android.R.string.cancel), onClick = dismiss, enabled = !busy, modifier = Modifier.weight(1f))
-                TextButton(stringResource(android.R.string.ok), onClick = submit, enabled = !busy && key.isNotEmpty(), modifier = Modifier.weight(1f))
+            Column {
+                Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) { content() }
+                Row {
+                    TextButton(stringResource(android.R.string.cancel), onClick = dismiss, enabled = !busy, modifier = Modifier.weight(1f))
+                    TextButton(stringResource(android.R.string.ok), onClick = submit, enabled = !busy && key.isNotEmpty(), modifier = Modifier.weight(1f))
+                }
             }
         }
     } else {
         ExpressiveDialog(
             onDismissRequest = dismiss,
             title = { Text(stringResource(R.string.superkey_enter)) },
-            text = content,
+            text = { Column(Modifier.verticalScroll(rememberScrollState())) { content() } },
             confirmButton = { FolkTextButton(onClick = submit, enabled = !busy && key.isNotEmpty()) { Text(stringResource(android.R.string.ok)) } },
             dismissButton = { FolkTextButton(onClick = dismiss, enabled = !busy) { Text(stringResource(android.R.string.cancel)) } },
         )
