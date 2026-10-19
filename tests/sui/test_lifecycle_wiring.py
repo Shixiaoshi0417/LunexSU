@@ -22,7 +22,23 @@ class LifecycleWiringTests(unittest.TestCase):
         self.assertIn("session?.epoch == current.epoch", reply)
         self.assertIn("request.expired(SystemClock.elapsedRealtime())) SuiDecision.DENY_ONCE", reply)
         self.assertNotIn("newSingleThreadExecutor", source)
-        self.assertIn("SynchronousQueue()", source)
+        worker = (KOTLIN / "data/sui/SuiIpcExecutor.kt").read_text(encoding="utf-8")
+        self.assertIn("SynchronousQueue()", worker)
+        self.assertIn("retire(worker)", worker)
+        self.assertIn("workers.size < maxWorkers", worker)
+        self.assertIn("lease.checkActive()", reply)
+        self.assertIn("catch (error: TimeoutException)", source)
+        self.assertIn("disconnect() // Invalidates", source)
+
+    def test_lifecycle_timeout_retains_unknown_outcome_until_authoritative_status(self):
+        source = (KOTLIN / "data/sui/SuiManager.kt").read_text(encoding="utf-8")
+        self.assertIn("lifecycle.retain(future)", source)
+        self.assertIn('lifecycle.reconcile { SuiStatus.parse(command("status")) }', source)
+        self.assertIn("while (lifecycle.isPending())", source)
+        self.assertIn("allowReconciliation || !lifecycle.isPending()", source)
+        screen = (KOTLIN / "ui/screen/sui/SuiScreen.kt").read_text(encoding="utf-8")
+        self.assertIn("ui.reconciling -> R.string.sui_outcome_pending", screen)
+        self.assertIn("!ui.busy && !ui.reconciling", screen)
 
     def test_demo_has_no_real_broker_or_root_access(self):
         path = ROOT / "manager/app/src/noRootDemo/java/com/shixiaoshi0417/lunexsu/data/sui/SuiManager.kt"

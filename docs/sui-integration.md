@@ -45,7 +45,7 @@ matching UID and one matching APK signer; a reused UID, No Root Demo or invalid
 PR binding fails closed. Registration is private, bounded and atomically
 published. Shell and root Sui servers keep their separate permission domain.
 
-Host checks: `python -m unittest discover -s tests/sui -v` (33 groups). They use
+Host checks: `python -m unittest discover -s tests/sui -v` (34 groups). They use
 synthetic ELF/certificate data, execute the pure Java predicate and guard the
 fixed baseline/local adaptations. Source guards are not Binder or Android
 execution tests.
@@ -83,7 +83,9 @@ diagnostics. Manager separately tracks its live permission callback: readable
 payloads, existing processes or healthy server Binders do not prove this host is
 attached. Only the unlocked main Manager process may attach. Requests have a
 bounded queue, connection generation and deadline; grants revalidate package UID
-and signing identity at dispatch. Old connections cannot grant after reconnect.
+and signing identity at dispatch. Stale callbacks and unsent old-generation work
+are rejected after reconnect. An already-sent Binder RPC cannot be cancelled by
+the Manager; its result must be verified after a timeout.
 The Sui protocol supports persistent Shell and Root, one-time Root and deny;
 unsupported one-time Shell is rejected by both UI and server, not converted into
 Root. SystemUI cannot replace the Manager's permission callback. Upstream legacy
@@ -100,10 +102,23 @@ controller, Sui AIDL, daemon calls and payload from its actual APK.
 
 Completed local checks include the actual Sui source build, ARM64 Android Rust
 check/clippy/format sequence, and normal/Demo clean release, unit-test and
-instrumentation-compilation builds. JVM results are 476/493 cases, respectively,
+instrumentation-compilation builds. JVM results are 482/499 cases, respectively,
 with no failures/errors and one Windows POSIX-shell skip each, covered by the
-independent 14-case Manager/argv host suite. Nine Sui model tests run per variant.
-All 544 Manager build-time source hashes were checked against both outputs.
+independent 14-case Manager/argv host suite. Nine Sui model and six timeout/recovery
+tests run per variant. All 547 Manager build-time source hashes were checked
+against both outputs.
+
+PR #12 follow-up guards the four public Shizuku AIDL interfaces by their exact
+upstream Git-blob hashes instead of weakening the application namespace check.
+A lifecycle-command timeout retains the original future and reports an unknown
+outcome. New mutations remain blocked until that command finishes and a fresh,
+successfully parsed daemon status reconciles the state; the mutation is never
+automatically retried or cancelled through the shared root shell. Timed-out
+Binder workers are retired with their generation, allowing a replacement worker
+without an unbounded queue or thread count (at most three live workers). If all
+remain stuck, further IPC fails explicitly until capacity recovers or Manager
+restarts. Host tests use controllable futures and uninterruptible fake calls,
+not real Android Binder services.
 
 Native POSIX regression results are 30 Sui cases, 25 boot/Magica lifecycle cases,
 9 installer cases and 33 existing module/OTA/configuration cases. The latter

@@ -27,4 +27,6 @@
     <string name="sui_hidden">Hide Sui</string>
     <string name="sui_apply">Confirm</string>
     <string name="sui_cancel">Cancel</string>
+    <string name="sui_outcome_pending">Sui command outcome is unconfirmed. It may still finish; do not reboot until status is verified. New changes are blocked while checking.</string>
+    <string name="sui_ipc_timeout">Sui IPC timed out; the connection was reset. Refresh to verify any permission change before retrying.</string>
 </resources>

@@ -27,4 +27,6 @@
     <string name="sui_hidden">隐藏 Sui</string>
     <string name="sui_apply">确认</string>
     <string name="sui_cancel">取消</string>
+    <string name="sui_outcome_pending">Sui 命令结果尚未确认，仍可能完成。请勿重启，等待状态核实；核实期间禁止新的更改。</string>
+    <string name="sui_ipc_timeout">Sui IPC 已超时并重置连接。请刷新核对权限变更结果，再决定是否重试。</string>
 </resources>

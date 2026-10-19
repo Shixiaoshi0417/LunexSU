@@ -32,9 +32,9 @@ import kotlinx.coroutines.sync.withLock
 import moe.shizuku.server.IShizukuApplication
 import moe.shizuku.server.IShizukuService
 import org.lsposed.hiddenapibypass.HiddenApiBypass
-import java.util.concurrent.SynchronousQueue
-import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.security.MessageDigest
 
@@ -47,10 +47,9 @@ object SuiManager {
     private val requests = SuiRequestQueue()
     private val epoch = AtomicLong()
     private val lastForeground = AtomicLong()
-    // One bounded worker, no unbounded queue if a remote Binder stops responding.
-    private val ipc = ThreadPoolExecutor(1, 1, 30, TimeUnit.SECONDS, SynchronousQueue()) {
-        Thread(it, "SuiManagerIPC").apply { isDaemon = true }
-    }
+    private val ipc = SuiIpcExecutor()
+    private val lifecycle = SuiLifecycleCommand()
+    private val watchingLifecycle = AtomicBoolean()
     private lateinit var context: Context
     private data class Session(val epoch: Long, val service: IShizukuService, val death: IBinder.DeathRecipient)
     @Volatile private var session: Session? = null
@@ -85,26 +84,31 @@ object SuiManager {
         if (now - lastForeground.getAndSet(now) >= 3_000) refresh(false)
     }
 
-    fun refresh(includeApps: Boolean = true) = operation {
-        val status = SuiStatus.parse(command("status"))
-        mutable.update { it.copy(status = status) }
+    fun refresh(includeApps: Boolean = true) = operation(allowReconciliation = true) { refreshStatus(includeApps) }
+
+    private fun refreshStatus(includeApps: Boolean) {
+        val status = if (lifecycle.isPending()) {
+            lifecycle.reconcile { SuiStatus.parse(command("status")) } ?: return
+        } else SuiStatus.parse(command("status"))
+        mutable.update { it.copy(status = status, reconciling = false, error = null) }
         if (status.desiredEnabled && status.serviceHealthy && !status.pendingReboot) {
-            remote { connect() }
+            remote { lease -> connect(lease) }
             if (includeApps) loadApps()
         } else disconnect()
     }
 
-    fun prepare() = operation { command("prepare"); refreshLater() }
-    fun enable() = operation { command("prepare"); command("enable"); refreshLater() }
-    fun disable() = operation { command("disable"); disconnect(); refreshLater() }
+    fun prepare() = operation { try { command("prepare") } finally { refreshLater() } }
+    fun enable() = operation { try { command("prepare"); command("enable") } finally { refreshLater() } }
+    fun disable() = operation { disconnect(); try { command("disable") } finally { refreshLater() } }
 
     fun setPermission(app: SuiApp, permission: SuiPermission) = operation {
         check(app.uid != Process.myUid() && app in mutable.value.apps)
-        remote {
+        remote { lease ->
             val currentSession = active()
             val current = context.packageManager.getPackagesForUid(app.uid).orEmpty().map { packageInfo(it) }
             check(fingerprint(current) == app.identity) { "Application identity changed; refresh before granting" }
             check(session?.epoch == currentSession.epoch) { "Expired Sui connection" }
+            lease.checkActive()
             currentSession.service.updateFlagsForUid(app.uid, SuiPermission.MASK, permission.flag)
         }
         loadApps()
@@ -119,19 +123,48 @@ object SuiManager {
         }
     }
 
-    private fun operation(block: suspend () -> Unit) {
+    private fun operation(allowReconciliation: Boolean = false, block: suspend () -> Unit) {
         scope.launch {
             operations.withLock {
                 mutable.update { it.copy(busy = true, error = null) }
-                try { block() }
+                try {
+                    check(allowReconciliation || !lifecycle.isPending()) { pendingMessage() }
+                    block()
+                }
                 catch (error: Exception) {
-                    mutable.update { it.copy(error = error.message ?: error.javaClass.simpleName) }
+                    mutable.update { it.copy(error = if (lifecycle.isPending()) pendingMessage()
+                        else error.message ?: error.javaClass.simpleName) }
                 } finally { mutable.update { it.copy(busy = false) } }
             }
         }
     }
 
     private fun refreshLater() { refresh(false) }
+
+    private fun pendingMessage() = context.getString(R.string.sui_outcome_pending)
+
+    private fun watchLifecycle() {
+        if (!watchingLifecycle.compareAndSet(false, true)) return
+        scope.launch {
+            try {
+                // One retained mutation and one observer, never a retry of the mutation.
+                // While it still runs, do not enqueue status jobs behind the shared shell.
+                while (lifecycle.isPending()) {
+                    delay(5_000)
+                    operations.withLock {
+                        mutable.update { it.copy(busy = true) }
+                        try { refreshStatus(false) }
+                        catch (error: Exception) { mutable.update { it.copy(error = if (lifecycle.isPending())
+                            pendingMessage() else error.message ?: error.javaClass.simpleName) } }
+                        finally { mutable.update { it.copy(busy = false, reconciling = lifecycle.isPending()) } }
+                    }
+                }
+            } finally {
+                watchingLifecycle.set(false)
+                if (lifecycle.isPending()) watchLifecycle()
+            }
+        }
+    }
 
     private fun command(action: String): String {
         require(action in setOf("status", "prepare", "enable", "disable"))
@@ -143,22 +176,34 @@ object SuiManager {
             newJob().add("$path sui $action").to(output, errors).exec()
         }
         val result = try { future.get(15, TimeUnit.SECONDS) }
-            finally { if (!future.isDone) future.cancel(false) }
+        catch (error: Exception) {
+            if (action != "status" && (error is TimeoutException || error is InterruptedException)) {
+                lifecycle.retain(future)
+                disconnect()
+                mutable.update { it.copy(reconciling = true, error = pendingMessage()) }
+                watchLifecycle()
+            } else if (!future.isDone) future.cancel(false)
+            if (error is InterruptedException) Thread.currentThread().interrupt()
+            throw error
+        }
         check(result.isSuccess) { errors.joinToString("\n").ifEmpty { "Sui command failed (${result.code})" } }
         return output.joinToString("\n")
     }
 
-    private fun <T> remote(block: () -> T): T {
-        val future = ipc.submit<T> { block() }
-        return try { future.get(5, TimeUnit.SECONDS) }
-        finally { if (!future.isDone) future.cancel(false) }
+    private fun <T> remote(block: (SuiIpcExecutor.Lease) -> T): T {
+        return try { ipc.call(block) }
+        catch (error: TimeoutException) {
+            disconnect() // Invalidates requests/callbacks and a late connect's session epoch.
+            throw IllegalStateException(context.getString(R.string.sui_ipc_timeout), error)
+        } catch (error: InterruptedException) { disconnect(); throw error }
     }
 
     private fun active(): Session = checkNotNull(session?.takeIf { it.service.asBinder().isBinderAlive }) {
         "Sui is not connected"
     }
 
-    private fun connect() {
+    private fun connect(lease: SuiIpcExecutor.Lease) {
+        lease.checkActive()
         if (session?.service?.asBinder()?.isBinderAlive == true) return
         val generation = epoch.incrementAndGet()
         val activity = HiddenApiBypass.invoke(Class.forName("android.os.ServiceManager"), null,
@@ -188,7 +233,7 @@ object SuiManager {
         }
         binder.linkToDeath(death, 0)
         synchronized(this) {
-            if (epoch.get() != generation) {
+            if (epoch.get() != generation || runCatching { lease.checkActive() }.isFailure) {
                 binder.unlinkToDeath(death, 0)
                 error("Sui connection was cancelled")
             }
@@ -251,7 +296,7 @@ object SuiManager {
     }
 
     private fun reply(request: SuiRequest, decision: SuiDecision) {
-        remote {
+        remote { lease ->
             val current = active()
             check(current.epoch == request.connection) { "Expired Sui connection" }
             if (decision.allowed && !request.expired(SystemClock.elapsedRealtime())) {
@@ -263,6 +308,7 @@ object SuiManager {
             check(session?.epoch == current.epoch) { "Expired Sui connection" }
             // Recheck at dispatch, not only in the periodic expiry job: Binder/PM work can be slow.
             val effective = if (request.expired(SystemClock.elapsedRealtime())) SuiDecision.DENY_ONCE else decision
+            lease.checkActive()
             current.service.dispatchPermissionConfirmationResult(request.uid, request.pid, request.requestCode, Bundle().apply {
                 putBoolean("shizuku:request-permission-reply-allowed", effective.allowed)
                 putBoolean("shizuku:request-permission-reply-is-onetime", effective.once)
@@ -275,9 +321,10 @@ object SuiManager {
         val apps = context.packageManager.getInstalledPackages(PackageManager.GET_SIGNING_CERTIFICATES)
             .filter { info -> info.applicationInfo?.uid?.let { it != Process.myUid() && it % 100_000 >= 10_000 } == true }
             .groupBy { it.applicationInfo!!.uid }
-        val values = remote {
+        val values = remote { lease ->
             val current = active()
             current.epoch to apps.map { (uid, packages) ->
+                lease.checkActive()
                 SuiApp(uid, packages.sortedBy { it.packageName }.joinToString { it.packageName },
                     packages.joinToString { context.packageManager.getApplicationLabel(it.applicationInfo!!).toString() },
                     SuiPermission.fromFlags(current.service.getFlagsForUid(uid, SuiPermission.MASK)), fingerprint(packages))

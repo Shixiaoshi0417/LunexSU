@@ -88,4 +88,5 @@ data class SuiUiState(
     val hostAttached: Boolean = false,
     val busy: Boolean = false,
     val error: String? = null,
+    val reconciling: Boolean = false,
 )

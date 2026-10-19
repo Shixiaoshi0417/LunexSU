@@ -51,6 +51,7 @@ fun SuiScreen() {
                 SegmentedColumn(title = stringResource(R.string.sui_status)) {
                     item { SegmentedListItem(headlineContent = { Text(stringResource(R.string.sui_payload_version, ui.status.version.ifEmpty { "Sui" })) },
                         supportingContent = { Text(stringResource(when {
+                            ui.reconciling -> R.string.sui_outcome_pending
                             ui.status.pendingReboot -> R.string.sui_pending_reboot
                             ui.status.serviceHealthy && ui.hostAttached -> R.string.sui_ready
                             ui.status.desiredEnabled -> R.string.sui_unavailable
@@ -60,9 +61,9 @@ fun SuiScreen() {
                     if (ui.status.reason.isNotBlank()) item {
                         Text(ui.status.reason, Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    item { TextButton(enabled = !ui.busy && ui.status.payloadAvailable && !ui.status.desiredEnabled,
+                    item { TextButton(enabled = !ui.busy && !ui.reconciling && ui.status.payloadAvailable && !ui.status.desiredEnabled,
                         onClick = { confirmEnable = true }) { Text(stringResource(R.string.sui_enable)) } }
-                    item { TextButton(enabled = !ui.busy, onClick = SuiManager::disable) { Text(stringResource(R.string.sui_disable)) } }
+                    item { TextButton(enabled = !ui.busy && !ui.reconciling, onClick = SuiManager::disable) { Text(stringResource(R.string.sui_disable)) } }
                     item { Text(stringResource(R.string.sui_disable_warning), Modifier.padding(16.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
@@ -76,7 +77,7 @@ fun SuiScreen() {
             if (!ui.hostAttached) item { Text(stringResource(R.string.sui_host_required)) }
             items(ui.apps.filter { query.isBlank() || it.label.contains(query, true) || it.packages.contains(query, true) }, key = { it.uid }) { app ->
                 SegmentedColumn(title = app.label) {
-                    item { SegmentedListItem(enabled = ui.hostAttached && !ui.busy, onClick = { editing = app },
+                    item { SegmentedListItem(enabled = ui.hostAttached && !ui.busy && !ui.reconciling, onClick = { editing = app },
                         headlineContent = { Text(app.packages) }, supportingContent = {
                             Text("UID ${app.uid} · ${stringResource(app.permission.label())}")
                         }) }
