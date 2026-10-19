@@ -19,6 +19,13 @@ from sui_manager_binding import binding
 
 
 class ArtifactTests(unittest.TestCase):
+    def test_sdk_setup_does_not_request_the_removed_tools_package(self):
+        workflow = (ROOT / ".github/workflows/sui.yml").read_text(encoding="utf-8")
+        setup = workflow.split("android-actions/setup-android@v3", 1)[1].split("- uses:", 1)[0]
+        self.assertIn("cmdline-tools-version: 13114758", setup)
+        self.assertIn("packages: platform-tools", setup)
+        self.assertNotRegex(setup, r"packages:\s*(?:['\"])?tools(?:\s|$)")
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix="lunex-sui-artifact-")
         self.addCleanup(self.temporary.cleanup)
