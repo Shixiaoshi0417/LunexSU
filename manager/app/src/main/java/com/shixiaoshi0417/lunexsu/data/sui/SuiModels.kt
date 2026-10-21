@@ -62,23 +62,48 @@ data class SuiRequest(
 /** No overflow, timeout or dismissal ever implicitly grants a capability. */
 class SuiRequestQueue(private val capacity: Int = 16, private val timeoutMillis: Long = 60_000) {
     private val requests = mutableListOf<SuiRequest>()
-    @Synchronized fun snapshot(): List<SuiRequest> = requests.toList()
+    private val replying = mutableMapOf<SuiRequest, Any>()
+    @Synchronized fun snapshot(): List<SuiRequest> = requests.filter { it !in replying }
     @Synchronized fun offer(request: SuiRequest): Boolean {
         if (request.uid < 0 || request.pid <= 0 || request.packageName.length !in 1..255 ||
             !request.packageName.matches(Regex("[A-Za-z][A-Za-z0-9_]*(?:\\.[A-Za-z][A-Za-z0-9_]*)*"))) return false
-        if (requests.any { it.connection == request.connection && it.uid == request.uid &&
+        if ((requests + replying.keys).any { it.connection == request.connection && it.uid == request.uid &&
                 it.pid == request.pid && it.requestCode == request.requestCode }) return true
         if (requests.size >= capacity) return false
         requests += request
         return true
     }
     @Synchronized fun remove(request: SuiRequest): Boolean = requests.remove(request)
-    @Synchronized fun expire(now: Long): List<SuiRequest> {
-        val expired = requests.filter { it.expired(now, timeoutMillis) }
-        requests.removeAll(expired.toSet())
-        return expired
+    // Expiry is a denial candidate, not proof that its reply was sent.
+    @Synchronized fun expire(now: Long): List<SuiRequest> =
+        requests.filter { it !in replying && it.expired(now, timeoutMillis) }
+
+    /** Keep unsent failures retryable; consume immediately before the RPC can be sent. */
+    internal fun respond(request: SuiRequest, reply: (() -> Unit) -> Unit): Boolean {
+        val attempt = Any()
+        synchronized(this) {
+            if (request !in requests || request in replying) return false
+            replying[request] = attempt
+        }
+        try {
+            reply {
+                synchronized(this) {
+                    check(replying[request] === attempt && requests.remove(request)) { "Expired Sui reply attempt" }
+                }
+            }
+            return true
+        } finally {
+            synchronized(this) {
+                // Invalidate even a late, unsent worker before another attempt can claim this request.
+                if (replying[request] === attempt) replying.remove(request)
+            }
+        }
     }
-    @Synchronized fun clear(): List<SuiRequest> = requests.toList().also { requests.clear() }
+
+    @Synchronized fun clear(): List<SuiRequest> = requests.toList().also {
+        requests.clear()
+        replying.clear()
+    }
 }
 
 data class SuiUiState(

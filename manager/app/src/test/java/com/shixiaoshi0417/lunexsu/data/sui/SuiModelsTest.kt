@@ -48,6 +48,9 @@ class SuiModelsTest {
         queue.offer(request(2, at = 1_000))
         assertTrue(queue.expire(59_999).isEmpty())
         assertEquals(listOf(request(at = 0)), queue.expire(60_000))
+        assertEquals(listOf(request(at = 0), request(2, at = 1_000)), queue.snapshot())
+        assertEquals(listOf(request(at = 0)), queue.expire(60_000))
+        assertTrue(queue.respond(request(at = 0)) { beforeDispatch -> beforeDispatch() })
         assertEquals(listOf(request(2, at = 1_000)), queue.snapshot())
         assertTrue(queue.expire(60_000).isEmpty())
     }

@@ -61,7 +61,7 @@ object SuiManager {
             while (true) {
                 delay(1_000)
                 requests.expire(SystemClock.elapsedRealtime()).forEach {
-                    runCatching { reply(it, SuiDecision.DENY_ONCE) }
+                    runCatching { replyQueued(it, SuiDecision.DENY_ONCE) }
                 }
                 publishRequests()
             }
@@ -115,10 +115,8 @@ object SuiManager {
     }
 
     fun decide(request: SuiRequest, decision: SuiDecision) {
-        if (!requests.remove(request)) return
-        publishRequests()
         scope.launch {
-            runCatching { reply(request, decision) }
+            runCatching { replyQueued(request, decision) }
                 .onFailure { error -> mutable.update { it.copy(error = error.message ?: error.javaClass.simpleName) } }
         }
     }
@@ -295,7 +293,16 @@ object SuiManager {
         return true
     }
 
-    private fun reply(request: SuiRequest, decision: SuiDecision) {
+    private fun replyQueued(request: SuiRequest, decision: SuiDecision) {
+        try {
+            requests.respond(request) { beforeDispatch ->
+                publishRequests()
+                reply(request, decision, beforeDispatch)
+            }
+        } finally { publishRequests() }
+    }
+
+    private fun reply(request: SuiRequest, decision: SuiDecision, beforeDispatch: () -> Unit = {}) {
         remote { lease ->
             val current = active()
             check(current.epoch == request.connection) { "Expired Sui connection" }
@@ -308,12 +315,15 @@ object SuiManager {
             check(session?.epoch == current.epoch) { "Expired Sui connection" }
             // Recheck at dispatch, not only in the periodic expiry job: Binder/PM work can be slow.
             val effective = if (request.expired(SystemClock.elapsedRealtime())) SuiDecision.DENY_ONCE else decision
-            lease.checkActive()
-            current.service.dispatchPermissionConfirmationResult(request.uid, request.pid, request.requestCode, Bundle().apply {
+            val result = Bundle().apply {
                 putBoolean("shizuku:request-permission-reply-allowed", effective.allowed)
                 putBoolean("shizuku:request-permission-reply-is-onetime", effective.once)
                 putBoolean("shizuku:request-permission-reply-is-shell", effective.shell)
-            })
+            }
+            lease.checkActive()
+            // Past this point the RPC may have been sent, even if it throws or times out.
+            beforeDispatch()
+            current.service.dispatchPermissionConfirmationResult(request.uid, request.pid, request.requestCode, result)
         }
     }
 
