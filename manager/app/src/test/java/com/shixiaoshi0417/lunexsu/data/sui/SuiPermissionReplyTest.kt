@@ -143,7 +143,7 @@ class SuiPermissionReplyTest {
             assertFalse(queue.respond(request) { error("duplicate click") })
             assertFalse(queue.offer(request.copy(requestCode = 2)))
             beforeDispatch()
-            assertTrue(queue.offer(request)) // Duplicate callback during an RPC is absorbed.
+            assertFalse(queue.offer(request)) // Duplicate callbacks must be explicitly rejected.
             assertTrue(queue.snapshot().isEmpty())
             assertFalse(queue.respond(request) { error("duplicate callback") })
         }

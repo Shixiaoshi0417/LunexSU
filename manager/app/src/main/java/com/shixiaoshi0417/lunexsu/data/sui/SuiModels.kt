@@ -68,10 +68,14 @@ class SuiRequestQueue(private val capacity: Int = 16, private val timeoutMillis:
         if (request.uid < 0 || request.pid <= 0 || request.packageName.length !in 1..255 ||
             !request.packageName.matches(Regex("[A-Za-z][A-Za-z0-9_]*(?:\\.[A-Za-z][A-Za-z0-9_]*)*"))) return false
         if ((requests + replying.keys).any { it.connection == request.connection && it.uid == request.uid &&
-                it.pid == request.pid && it.requestCode == request.requestCode }) return true
+                it.pid == request.pid && it.requestCode == request.requestCode }) return false
         if (requests.size >= capacity) return false
         requests += request
         return true
+    }
+    /** The synchronous host callback must fail before accepting a request it cannot retain. */
+    internal fun requireOffer(request: SuiRequest) {
+        check(request.identity.isNotEmpty() && offer(request)) { "Sui permission request was not accepted" }
     }
     @Synchronized fun remove(request: SuiRequest): Boolean = requests.remove(request)
     // Expiry is a denial candidate, not proof that its reply was sent.

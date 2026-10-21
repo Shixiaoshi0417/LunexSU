@@ -268,13 +268,14 @@ object SuiManager {
                 fingerprint(listOf(info))
             }.getOrDefault("")
             val request = SuiRequest(generation, uid, pid, name, requestCode, SystemClock.elapsedRealtime(), identity)
-            val accepted = synchronized(SuiManager) {
-                if (session?.epoch != generation) return
-                identity.isNotEmpty() && requests.offer(request)
+            synchronized(SuiManager) {
+                check(session?.epoch == generation) { "Expired Sui connection" }
+                // This callback is synchronous. Sui catches rejection and consumes/denies
+                // exactly one pending request locally, without using our busy IPC worker.
+                requests.requireOffer(request)
             }
-            if (!accepted) scope.launch { runCatching { reply(request, SuiDecision.DENY_ONCE) } }
-            publishRequests()
-            notifyRequest()
+            // Once retained, UI/notification errors must not also trigger Sui's denial fallback.
+            runCatching { publishRequests(); notifyRequest() }
         }
     }
 
@@ -302,7 +303,7 @@ object SuiManager {
         } finally { publishRequests() }
     }
 
-    private fun reply(request: SuiRequest, decision: SuiDecision, beforeDispatch: () -> Unit = {}) {
+    private fun reply(request: SuiRequest, decision: SuiDecision, beforeDispatch: () -> Unit) {
         remote { lease ->
             val current = active()
             check(current.epoch == request.connection) { "Expired Sui connection" }

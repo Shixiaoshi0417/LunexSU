@@ -25,7 +25,7 @@ class SuiModelsTest {
     @Test fun queueBoundsAndDuplicatesDoNotOverwriteEarlierPrompts() {
         val queue = SuiRequestQueue(capacity = 2)
         assertTrue(queue.offer(request()))
-        assertTrue(queue.offer(request()))
+        assertFalse(queue.offer(request()))
         assertEquals(1, queue.snapshot().size)
         assertTrue(queue.offer(request(2)))
         assertFalse(queue.offer(request(3)))
