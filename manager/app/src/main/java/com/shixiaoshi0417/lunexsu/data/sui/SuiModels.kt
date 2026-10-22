@@ -63,6 +63,8 @@ data class SuiRequest(
 class SuiRequestQueue(private val capacity: Int = 16, private val timeoutMillis: Long = 60_000) {
     private val requests = mutableListOf<SuiRequest>()
     private val replying = mutableMapOf<SuiRequest, Any>()
+    // The live server instance that still counts these requests as pending while we are detached.
+    private var retainedServer: Any? = null
     @Synchronized fun snapshot(): List<SuiRequest> = requests.filter { it !in replying }
     @Synchronized fun offer(request: SuiRequest): Boolean {
         if (request.uid < 0 || request.pid <= 0 || request.packageName.length !in 1..255 ||
@@ -107,6 +109,45 @@ class SuiRequestQueue(private val capacity: Int = 16, private val timeoutMillis:
     @Synchronized fun clear(): List<SuiRequest> = requests.toList().also {
         requests.clear()
         replying.clear()
+        retainedServer = null
+    }
+
+    /**
+     * A local disconnect (an IPC timeout, a lifecycle change) does not tell the still-live
+     * [server] anything: it keeps counting these requests as pending, and only a reply from us can
+     * consume them. Keep them for that instance; in-flight attempts may no longer dispatch.
+     */
+    @Synchronized fun detach(server: Any) {
+        retainedServer = server
+        replying.clear()
+    }
+
+    /**
+     * Reconnected to [server] as [connection]. Requests retained for that same instance move to
+     * the new connection so they can still be answered or denied on expiry; a different instance
+     * never saw them, so they are dropped. Returns the requests that moved.
+     */
+    @Synchronized fun resume(server: Any, connection: Long): List<SuiRequest> {
+        val retained = retainedServer ?: return emptyList()
+        retainedServer = null
+        replying.clear()
+        if (retained !== server) {
+            requests.clear()
+            return emptyList()
+        }
+        val moved = requests.map { it.copy(connection = connection) }
+        requests.clear()
+        requests += moved
+        return moved
+    }
+
+    @Synchronized fun retained(): Any? = retainedServer
+
+    /** The retained [server] died, and its pending confirmations with it. */
+    @Synchronized fun dropRetained(server: Any): Boolean {
+        if (retainedServer !== server) return false
+        clear()
+        return true
     }
 }
 

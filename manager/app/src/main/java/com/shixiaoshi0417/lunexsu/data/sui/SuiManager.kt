@@ -60,6 +60,8 @@ object SuiManager {
         scope.launch {
             while (true) {
                 delay(1_000)
+                // Requests kept across a local disconnect die with the server that counted them.
+                (requests.retained() as? IBinder)?.let { if (!it.isBinderAlive) requests.dropRetained(it) }
                 requests.expire(SystemClock.elapsedRealtime()).forEach {
                     runCatching { replyQueued(it, SuiDecision.DENY_ONCE) }
                 }
@@ -218,24 +220,17 @@ object SuiManager {
         val service = IShizukuService.Stub.asInterface(binder)
         check(service.uid == 0 && service.version == 13) { "Unexpected Sui server" }
         val death = IBinder.DeathRecipient {
-            if (disconnect(generation)) {
-                scope.launch {
-                    // Bounded recovery only; never spin or repeatedly execute mutating commands.
-                    repeat(5) {
-                        delay(5_000)
-                        if (session != null || !mutable.value.status.desiredEnabled) return@launch
-                        refresh(false)
-                    }
-                }
-            }
+            if (disconnect(generation, serverDied = true)) recoverLater()
         }
         binder.linkToDeath(death, 0)
-        synchronized(this) {
+        val resumed = synchronized(this) {
             if (epoch.get() != generation || runCatching { lease.checkActive() }.isFailure) {
                 binder.unlinkToDeath(death, 0)
                 error("Sui connection was cancelled")
             }
             session = Session(generation, service, death)
+            // Only the same live server still counts retained requests as pending.
+            requests.resume(binder, generation)
         }
         try {
             service.attachApplication(application(generation), Bundle().apply {
@@ -243,6 +238,7 @@ object SuiManager {
                 putInt("shizuku:attach-api-version", 13)
             })
         } catch (error: Exception) { disconnect(generation); throw error }
+        if (resumed.isNotEmpty()) runCatching { publishRequests(); notifyRequest() }
     }
 
     private fun application(generation: Long) = object : IShizukuApplication.Stub() {
@@ -279,19 +275,48 @@ object SuiManager {
         }
     }
 
-    private fun disconnect(expectedEpoch: Long? = null): Boolean {
+    /**
+     * Drops this connection. Unlinking does not kill our still-live callback, so a server that is
+     * still running keeps counting admitted requests as pending and never denies them itself: keep
+     * them for that server (see [SuiRequestQueue.detach]) and reconnect. Only the server's death
+     * makes them moot.
+     */
+    private fun disconnect(expectedEpoch: Long? = null, serverDied: Boolean = false): Boolean {
+        var retained = false
         val previous = synchronized(this) {
             if (expectedEpoch != null && session?.epoch != expectedEpoch) return false
             epoch.incrementAndGet()
             val old = session
             session = null
-            requests.clear()
+            val server = old?.service?.asBinder()
+            when {
+                serverDied -> requests.clear()
+                server != null && server.isBinderAlive -> {
+                    requests.detach(server)
+                    retained = requests.snapshot().isNotEmpty()
+                }
+                old != null -> requests.clear()
+                // Already disconnected: keep any retention; the expiry loop drops a dead server's.
+            }
             mutable.update { it.copy(hostAttached = false, requests = emptyList(), apps = emptyList()) }
             old
         }
         runCatching { previous?.service?.asBinder()?.unlinkToDeath(previous.death, 0) }
         if (::context.isInitialized) context.getSystemService(NotificationManager::class.java).cancel(NOTIFICATION)
+        if (retained) recoverLater()
         return true
+    }
+
+    private fun recoverLater() {
+        scope.launch {
+            // Bounded recovery only; never spin or repeatedly execute mutating commands.
+            repeat(5) {
+                delay(5_000)
+                if (session != null || !mutable.value.status.desiredEnabled) return@launch
+                // A pending lifecycle command has its own observer; do not queue status behind it.
+                if (!lifecycle.isPending()) refresh(false)
+            }
+        }
     }
 
     private fun replyQueued(request: SuiRequest, decision: SuiDecision) {
