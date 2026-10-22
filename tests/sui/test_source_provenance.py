@@ -14,14 +14,20 @@ BASE = '40c97e24d155f23364d8ebfe4b247034dc6547ef'
 CHANGED = {
     'gradle/wrapper/gradle-wrapper.properties', 'module.gradle.kts',
     'module/build.gradle.kts', 'module/src/main/cpp/CMakeLists.txt',
+    'module/src/main/cpp/main/sui_main.hpp', 'module/src/main/cpp/util/include/selinux.h',
+    'module/src/main/cpp/util/selinux.cpp',
     'module/src/main/java/rikka/sui/server/FinasuManagerGate.java',
+    'module/src/main/java/rikka/sui/server/SuiConfigManager.java',
     'module/src/main/java/rikka/sui/server/SuiService.java',
     'module/src/main/java/rikka/sui/systemserver/BridgeService.java',
     'module/src/main/java/rikka/sui/systemserver/SystemProcess.java', 'package.py',
 }
 ADDED = {'SOURCE.lock.json', 'LUNEXSU.md',
           'module/src/main/java/rikka/sui/server/LunexsuManagerGate.java',
-          'module/src/main/java/rikka/sui/server/ManagerTrust.java'}
+          'module/src/main/java/rikka/sui/server/ManagerTrust.java',
+          # The shell runtime directory is UID 2000's: root reaches it only through descriptors.
+          'module/src/main/cpp/util/include/shell_runtime.h', 'module/src/main/cpp/util/shell_runtime.cpp',
+          'module/src/main/java/rikka/sui/server/ShellRuntimeFiles.java'}
 
 
 def baseline_matches(name, raw, digest):

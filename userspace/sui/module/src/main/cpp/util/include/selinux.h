@@ -5,6 +5,8 @@ bool init_selinux();
 void freecon(char* con);
 int getfilecon_raw(const char* path, char** con);
 int setfilecon_raw(const char* path, const char* context);
+int fgetfilecon_raw(int fd, char** con);
+int fsetfilecon_raw(int fd, const char* context);
 int selinux_check_access(const char* scon, const char* tcon, const char* tclass, const char* perm,
                          void* auditdata);
 int getcon(char** con);

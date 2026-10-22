@@ -34,6 +34,7 @@
 #include <string>
 #include <dirent.h>
 #include <ksu.h>
+#include <shell_runtime.h>
 
 static constexpr const char* SUI_DATA_DIR = "/data/adb/sui";
 static constexpr const char* KSU_NO_ESCAPE_MARKER = "/data/adb/sui/ksu_no_escape";
@@ -43,9 +44,16 @@ static constexpr const char* SHELL_DIR_PREFIX = "sui_shell_";
 static constexpr const char* SHELL_DIR_MARKER = "/data/adb/sui/shell_dir_name";
 static constexpr const char* SHELL_DATA_FILE_CONTEXT = "u:object_r:shell_data_file:s0";
 
-static bool set_shell_runtime_context(const char* path) {
+static constexpr uid_t SHELL_UID = 2000;
+static constexpr gid_t SHELL_GID = 2000;
+// sui_uids.txt only lists UID:flags pairs; anything larger is not ours to copy as root.
+static constexpr off_t MAX_LEGACY_UIDS_SIZE = 1024 * 1024;
+
+// Labels through the descriptor: UID 2000 owns the runtime directory and could otherwise swap the
+// path for a link between creation and labeling.
+static bool set_shell_runtime_context(int fd) {
     char* context = nullptr;
-    if (getfilecon_raw(path, &context) >= 0) {
+    if (fgetfilecon_raw(fd, &context) >= 0) {
         bool matched = strcmp(context, SHELL_DATA_FILE_CONTEXT) == 0;
         freecon(context);
         if (matched) {
@@ -53,41 +61,77 @@ static bool set_shell_runtime_context(const char* path) {
         }
     }
 
-    if (setfilecon_raw(path, SHELL_DATA_FILE_CONTEXT) != 0) {
-        PLOGE("setfilecon %s -> %s", path, SHELL_DATA_FILE_CONTEXT);
+    if (fsetfilecon_raw(fd, SHELL_DATA_FILE_CONTEXT) != 0) {
+        PLOGE("fsetfilecon -> %s", SHELL_DATA_FILE_CONTEXT);
         return false;
     }
 
     context = nullptr;
-    if (getfilecon_raw(path, &context) < 0) {
-        PLOGE("getfilecon %s", path);
+    if (fgetfilecon_raw(fd, &context) < 0) {
+        PLOGE("fgetfilecon");
         return false;
     }
     bool matched = strcmp(context, SHELL_DATA_FILE_CONTEXT) == 0;
     if (!matched) {
-        LOGE("unexpected SELinux context for %s: %s", path, context);
+        LOGE("unexpected SELinux context for a shell runtime entry: %s", context);
     }
     freecon(context);
     return matched;
 }
 
-static bool prepare_shell_runtime_file(const char* source, const char* target, mode_t mode) {
-    if (copyfile(source, target) != 0) {
-        PLOGE("copy %s -> %s", source, target);
+// Recreates `name` in the shell runtime directory from a root-owned module file. The previous
+// entry, which UID 2000 may have replaced with a link, is renamed over and never opened.
+static bool prepare_shell_runtime_file(const char* source, int dir_fd, const char* name,
+                                       mode_t mode) {
+    int src_fd = shell_runtime_open_regular(AT_FDCWD, source, -1);
+    if (src_fd < 0) {
+        PLOGE("open %s", source);
         return false;
     }
-    if (!set_shell_runtime_context(target)) {
-        return false;
-    }
-    if (chmod(target, mode) != 0) {
-        PLOGE("chmod %s", target);
-        return false;
-    }
-    if (chown(target, 2000, 2000) != 0) {
-        PLOGE("chown %s", target);
+    int rc = shell_runtime_replace_file(dir_fd, name, src_fd, mode, SHELL_UID, SHELL_GID,
+                                        set_shell_runtime_context);
+    int err = errno;
+    close(src_fd);
+    if (rc != 0) {
+        errno = err;
+        PLOGE("prepare shell runtime file %s", name);
         return false;
     }
     return true;
+}
+
+// Opens (creating if needed) the runtime directory under /data/local/tmp without following a
+// link, and hands it to UID 2000 through the descriptor.
+static int open_shell_runtime_dir(const char* name) {
+    int base_fd = shell_runtime_open_dir(AT_FDCWD, SHELL_BASE_DIR);
+    if (base_fd < 0) {
+        PLOGE("open %s", SHELL_BASE_DIR);
+        return -1;
+    }
+    int dir_fd = shell_runtime_open_or_create_dir(base_fd, name, 0755);
+    int err = errno;
+    close(base_fd);
+    if (dir_fd < 0) {
+        errno = err;
+        PLOGE("open shell runtime directory %s/%s", SHELL_BASE_DIR, name);
+        return -1;
+    }
+    struct stat st{};
+    if (fstat(dir_fd, &st) != 0 || (st.st_uid != 0 && st.st_uid != SHELL_UID)) {
+        LOGE("unexpected owner of shell runtime directory %s/%s", SHELL_BASE_DIR, name);
+        close(dir_fd);
+        return -1;
+    }
+    if (!set_shell_runtime_context(dir_fd)) {
+        close(dir_fd);
+        return -1;
+    }
+    if (fchown(dir_fd, SHELL_UID, SHELL_GID) != 0 || fchmod(dir_fd, 0755) != 0) {
+        PLOGE("hand over shell runtime directory %s/%s", SHELL_BASE_DIR, name);
+        close(dir_fd);
+        return -1;
+    }
+    return dir_fd;
 }
 
 static void log_context(const char* stage) {
@@ -163,6 +207,17 @@ static bool is_valid_shell_dir_name(const std::string& name) {
     return true;
 }
 
+// The runtime directory is always a direct child of SHELL_BASE_DIR with a validated name.
+static bool shell_dir_name_of(const std::string& path, std::string& name) {
+    size_t base_len = strlen(SHELL_BASE_DIR);
+    if (path.rfind(SHELL_BASE_DIR, 0) != 0 || path.size() <= base_len + 1 ||
+        path[base_len] != '/') {
+        return false;
+    }
+    name = path.substr(base_len + 1);
+    return is_valid_shell_dir_name(name);
+}
+
 static bool read_file_line(const char* path, std::string& out) {
     int fd = open(path, O_RDONLY | O_CLOEXEC);
     if (fd < 0)
@@ -225,54 +280,70 @@ static std::string generate_unique_shell_dir_name() {
     return std::string(fallback);
 }
 
+// The legacy directory is shell-owned: a link there must not make root list or unlink another
+// directory, so the cleanup works on descriptors and leaves a link alone.
 static void cleanup_legacy_shell_dir_best_effort() {
-    DIR* dir = opendir(LEGACY_SHELL_DIR);
-    if (dir == nullptr) {
+    int base_fd = shell_runtime_open_dir(AT_FDCWD, SHELL_BASE_DIR);
+    if (base_fd < 0) {
+        LOGW("open %s for legacy cleanup failed with %d: %s", SHELL_BASE_DIR, errno,
+             strerror(errno));
         return;
     }
-
-    struct dirent* entry = nullptr;
-    while ((entry = readdir(dir)) != nullptr) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-            continue;
-        }
-        std::string path = std::string(LEGACY_SHELL_DIR) + "/" + entry->d_name;
-        if (entry->d_type == DT_DIR) {
-            LOGW("skip nested legacy directory during cleanup: %s", path.c_str());
-            continue;
-        }
-        if (unlink(path.c_str()) != 0) {
-            LOGW("remove legacy file failed: %s (%d: %s)", path.c_str(), errno, strerror(errno));
-        }
-    }
-    closedir(dir);
-
-    if (rmdir(LEGACY_SHELL_DIR) != 0) {
+    if (shell_runtime_remove_dir(base_fd, "sui_shell") != 0) {
         LOGW("remove legacy shell dir failed: %s (%d: %s)", LEGACY_SHELL_DIR, errno,
              strerror(errno));
     } else {
         LOGI("legacy shell dir removed: %s", LEGACY_SHELL_DIR);
     }
+    close(base_fd);
+}
+
+// Copies the legacy sui_uids.txt without following a link or reading a FIFO as root.
+static void copy_legacy_uids_best_effort(int new_dir_fd) {
+    int base_fd = shell_runtime_open_dir(AT_FDCWD, SHELL_BASE_DIR);
+    if (base_fd < 0) {
+        return;
+    }
+    int legacy_fd = shell_runtime_open_dir(base_fd, "sui_shell");
+    close(base_fd);
+    if (legacy_fd < 0) {
+        if (errno != ENOENT) {
+            LOGW("open legacy shell dir failed with %d: %s", errno, strerror(errno));
+        }
+        return;
+    }
+    int src_fd = shell_runtime_open_regular(legacy_fd, "sui_uids.txt", MAX_LEGACY_UIDS_SIZE);
+    close(legacy_fd);
+    if (src_fd < 0) {
+        if (errno != ENOENT) {
+            LOGW("open legacy sui_uids.txt failed with %d: %s", errno, strerror(errno));
+        }
+        return;
+    }
+    if (shell_runtime_replace_file(new_dir_fd, "sui_uids.txt", src_fd, 0644, SHELL_UID, SHELL_GID,
+                                   nullptr) != 0) {
+        LOGW("copy legacy sui_uids.txt failed with %d: %s", errno, strerror(errno));
+    }
+    close(src_fd);
 }
 
 static std::string migrate_legacy_shell_dir() {
     std::string new_name = generate_unique_shell_dir_name();
     std::string new_path = std::string(SHELL_BASE_DIR) + "/" + new_name;
-    if (ensure_dir(new_path.c_str(), 0755) != 0) {
-        LOGW("create migrated shell dir failed with %d: %s", errno, strerror(errno));
+    int base_fd = shell_runtime_open_dir(AT_FDCWD, SHELL_BASE_DIR);
+    int new_dir_fd =
+            base_fd < 0 ? -1 : shell_runtime_open_or_create_dir(base_fd, new_name.c_str(), 0755);
+    int err = errno;
+    if (base_fd >= 0) {
+        close(base_fd);
+    }
+    if (new_dir_fd < 0) {
+        LOGW("create migrated shell dir failed with %d: %s", err, strerror(err));
         return LEGACY_SHELL_DIR;
     }
 
-    std::string old_uids = std::string(LEGACY_SHELL_DIR) + "/sui_uids.txt";
-    std::string new_uids = new_path + "/sui_uids.txt";
-    if (access(old_uids.c_str(), F_OK) == 0) {
-        if (copyfile(old_uids.c_str(), new_uids.c_str()) == 0) {
-            chmod(new_uids.c_str(), 0644);
-            chown(new_uids.c_str(), 2000, 2000);
-        } else {
-            LOGW("copy legacy sui_uids.txt failed with %d: %s", errno, strerror(errno));
-        }
-    }
+    copy_legacy_uids_best_effort(new_dir_fd);
+    close(new_dir_fd);
 
     if (write_text_atomic(SHELL_DIR_MARKER, new_name + "\n") != 0) {
         LOGW("write migrated shell dir marker failed with %d: %s", errno, strerror(errno));
@@ -407,19 +478,13 @@ static int sui_main(int argc, char** argv) {
 
         // uid 2000 cannot read /data/adb/modules/zygisk-sui/sui.dex or .so libraries
         const char* shell_dir = shell_dir_path.c_str();
-        if (ensure_dir(shell_dir, 0755) != 0) {
-            PLOGE("ensure shell runtime directory %s", shell_dir);
+        std::string shell_dir_name;
+        if (!shell_dir_name_of(shell_dir_path, shell_dir_name)) {
+            LOGE("invalid shell runtime directory %s", shell_dir);
             exit(EXIT_FAILURE);
         }
-        if (!set_shell_runtime_context(shell_dir)) {
-            exit(EXIT_FAILURE);
-        }
-        if (chmod(shell_dir, 0755) != 0) {
-            PLOGE("chmod %s", shell_dir);
-            exit(EXIT_FAILURE);
-        }
-        if (chown(shell_dir, 2000, 2000) != 0) {
-            PLOGE("chown %s", shell_dir);
+        int shell_dir_fd = open_shell_runtime_dir(shell_dir_name.c_str());
+        if (shell_dir_fd < 0) {
             exit(EXIT_FAILURE);
         }
 
@@ -432,26 +497,23 @@ static int sui_main(int argc, char** argv) {
             if (access(metadata_path, F_OK) != 0) {
                 continue;
             }
-            char shell_metadata_path[PATH_MAX];
-            snprintf(shell_metadata_path, PATH_MAX, "%s/%s", shell_dir, metadata_name);
-            if (!prepare_shell_runtime_file(metadata_path, shell_metadata_path, 0644)) {
+            if (!prepare_shell_runtime_file(metadata_path, shell_dir_fd, metadata_name, 0644)) {
                 exit(EXIT_FAILURE);
             }
         }
 
         char shell_dex_path[PATH_MAX];
         snprintf(shell_dex_path, PATH_MAX, "%s/sui.dex", shell_dir);
-        if (!prepare_shell_runtime_file(dex_path, shell_dex_path, 0644)) {
+        if (!prepare_shell_runtime_file(dex_path, shell_dir_fd, "sui.dex", 0644)) {
             exit(EXIT_FAILURE);
         }
 
         char lib_path[PATH_MAX];
         snprintf(lib_path, PATH_MAX, "%s/librish.so", root_path);
-        char shell_lib_path[PATH_MAX];
-        snprintf(shell_lib_path, PATH_MAX, "%s/librish.so", shell_dir);
-        if (!prepare_shell_runtime_file(lib_path, shell_lib_path, 0644)) {
+        if (!prepare_shell_runtime_file(lib_path, shell_dir_fd, "librish.so", 0644)) {
             exit(EXIT_FAILURE);
         }
+        close(shell_dir_fd);
 
         // Match adbd's supplementary groups before dropping root credentials.
         if (set_shell_supplementary_groups() != 0) {

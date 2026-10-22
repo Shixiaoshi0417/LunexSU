@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <cstring>
 #include <cerrno>
 #include <logging.h>
@@ -62,6 +63,45 @@ int setfilecon_raw(const char* path, const char* context) {
         char* ccontext = nullptr;
         int err = errno;
         if ((getfilecon_raw(path, &ccontext) >= 0) && (strcmp(context, ccontext) == 0)) {
+            rc = 0;
+        } else {
+            errno = err;
+        }
+        freecon(ccontext);
+    }
+    return rc;
+}
+
+// Descriptor variants for entries in directories another UID controls, where a path could be
+// swapped for a link between validation and labeling.
+int fgetfilecon_raw(int fd, char** context) {
+    ssize_t size = fgetxattr(fd, XATTR_NAME_SELINUX, nullptr, 0);
+    if (size < 0)
+        return -1;
+    if (size == 0) {
+        errno = ENOTSUP;
+        return -1;
+    }
+    char* buf = static_cast<char*>(calloc(static_cast<size_t>(size) + 1, 1));
+    if (!buf)
+        return -1;
+    ssize_t ret = fgetxattr(fd, XATTR_NAME_SELINUX, buf, static_cast<size_t>(size));
+    if (ret <= 0) {
+        if (ret == 0)
+            errno = ENOTSUP;
+        free(buf);
+        return -1;
+    }
+    *context = buf;
+    return static_cast<int>(ret);
+}
+
+int fsetfilecon_raw(int fd, const char* context) {
+    int rc = fsetxattr(fd, XATTR_NAME_SELINUX, context, strlen(context) + 1, 0);
+    if (rc < 0 && errno == ENOTSUP) {
+        char* ccontext = nullptr;
+        int err = errno;
+        if ((fgetfilecon_raw(fd, &ccontext) >= 0) && (strcmp(context, ccontext) == 0)) {
             rc = 0;
         } else {
             errno = err;

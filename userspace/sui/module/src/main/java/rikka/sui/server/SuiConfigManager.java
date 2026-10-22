@@ -55,6 +55,8 @@ public class SuiConfigManager extends ConfigManager {
     private static final long SHELL_SYNC_DEBOUNCE_MS = 200;
     private static final long SHELL_SYNC_WAIT_TIMEOUT_MS = 5000;
     private static final String SHELL_TRANSITION_PREFIX = "#transition:";
+    // The shell config only holds UID:flags pairs; refuse to read anything larger as root.
+    private static final int MAX_SHELL_CONFIG_SIZE = 1024 * 1024;
     private static final HandlerThread SHELL_SYNC_THREAD = new HandlerThread("sui-shell-sync");
     private static final Handler SHELL_SYNC_HANDLER;
     private static final AtomicLong SHELL_TRANSITION_COUNTER =
@@ -179,11 +181,18 @@ public class SuiConfigManager extends ConfigManager {
         }
     }
 
+    // Root reads the shell-owned config through ShellRuntimeFiles, so a planted link or FIFO can
+    // neither redirect the read nor stall startup.
     private long readShellTransitionId() {
-        try (BufferedReader br = new BufferedReader(new FileReader(getShellConfigFile()))) {
-            String line = br.readLine();
-            if (line != null && line.startsWith(SHELL_TRANSITION_PREFIX)) {
-                return Long.parseLong(line.substring(SHELL_TRANSITION_PREFIX.length()));
+        File shellDir = getShellDir();
+        try (ShellRuntimeFiles.Dir dir = ShellRuntimeFiles.openDir(shellDir.getParent(), shellDir.getName(), false)) {
+            byte[] content = ShellRuntimeFiles.readRegular(dir, SHELL_CONFIG_FILENAME, MAX_SHELL_CONFIG_SIZE);
+            if (content == null) return 0;
+            String text = new String(content, java.nio.charset.StandardCharsets.UTF_8);
+            int end = text.indexOf('\n');
+            String line = end >= 0 ? text.substring(0, end) : text;
+            if (line.startsWith(SHELL_TRANSITION_PREFIX)) {
+                return Long.parseLong(line.substring(SHELL_TRANSITION_PREFIX.length()).trim());
             }
         } catch (Throwable e) {
             LOGGER.w(e, "Failed to read previous shell transition id");
@@ -324,19 +333,12 @@ public class SuiConfigManager extends ConfigManager {
                     sb.append(entry.uid).append(":").append(entry.flags).append("\n");
                 }
             }
-            java.io.File dir = getShellDir();
-            if (!dir.exists()) dir.mkdirs();
-            java.io.File file = new java.io.File(dir, SHELL_CONFIG_FILENAME);
-            java.io.File tempFile = new java.io.File(dir, SHELL_CONFIG_FILENAME + ".tmp");
-            try (java.io.FileOutputStream fos = new java.io.FileOutputStream(tempFile)) {
-                fos.write(sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                fos.getFD().sync();
+            // UID 2000 owns this directory: never write through a path it can redirect.
+            File shellDir = getShellDir();
+            try (ShellRuntimeFiles.Dir dir = ShellRuntimeFiles.openDir(shellDir.getParent(), shellDir.getName(), true)) {
+                ShellRuntimeFiles.replace(dir, SHELL_CONFIG_FILENAME,
+                        sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8), 0644);
             }
-            if (!tempFile.renameTo(file)) {
-                LOGGER.w("Failed to atomically replace shell config file");
-                return false;
-            }
-            android.system.Os.chmod(file.getAbsolutePath(), 0644);
             return true;
         } catch (Throwable e) {
             LOGGER.e(e, "sync uids to shell");

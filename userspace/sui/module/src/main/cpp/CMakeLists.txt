@@ -32,6 +32,7 @@ add_library(util STATIC
         util/ksu.cpp
         util/plt.c
         util/selinux.cpp
+        util/shell_runtime.cpp
         util/memory.cpp
         util/app_process.cpp
         util/socket.cpp)

@@ -23,3 +23,13 @@ the UI does not offer the latter and the server explicitly denies that invalid
 combination instead of treating it as Root. The original SystemUI/Settings
 management APIs are otherwise preserved; this is not an ACL merger or a claim
 that all administrative entry points were removed.
+
+The shell runtime directory under `/data/local/tmp` and that directory itself are
+owned by the shell user (UID 2000), who can swap any entry for a link between two
+root operations. The root starter therefore opens the directory without following
+links and recreates `sui.dex`, `librish.so` and metadata as fresh exclusive files
+that are labeled, chowned and chmodded through their descriptors before being
+renamed into place; legacy migration and cleanup likewise never follow a link. The
+root server reads and replaces `sui_uids.txt` through `/proc/self/fd` of that
+directory, refusing links, FIFOs and oversized files. Only an existing link is
+replaced; nothing outside the directory is opened for writing.
