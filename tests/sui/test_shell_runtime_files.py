@@ -220,7 +220,8 @@ public class Check {
             ShellRuntimeFiles.replace(dir, "sui_uids.txt", "#transition:7\n10000:1\n".getBytes(StandardCharsets.UTF_8), 0644);
         }
         check(read(outside).equals("root secret"), "outside file rewritten");
-        check(Files.getPosixFilePermissions(outside).toString().equals("[OWNER_READ, OWNER_WRITE]"), "outside chmodded");
+        check(Files.getPosixFilePermissions(outside).equals(
+                java.nio.file.attribute.PosixFilePermissions.fromString("rw-------")), "outside chmodded");
         check(Files.isRegularFile(shell.resolve("sui_uids.txt"), LinkOption.NOFOLLOW_LINKS), "link kept");
         check(read(shell.resolve("sui_uids.txt")).startsWith("#transition:7"), "config content");
         try (DirectoryStream<Path> s = Files.newDirectoryStream(shell)) {
