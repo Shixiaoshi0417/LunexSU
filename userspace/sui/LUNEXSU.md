@@ -23,6 +23,9 @@ and denies its remaining requests, even if a replacement has already attached;
 client notifications happen outside the state lock and do not change saved ACLs
 or other grants. A reply or callback failure can consume each request only once.
 Local reconnects with a still-live callback retain their requests as before.
+Shell delegation reserves each `(uid, pid, requestCode)` callback atomically.
+While that callback is pending, a duplicate is denied through its own new Binder
+before Manager admission; it cannot replace or unlink the original callback.
 This protocol supports one-time Root, but not one-time Shell:
 the UI does not offer the latter and the server explicitly denies that invalid
 combination instead of treating it as Root. The original SystemUI/Settings

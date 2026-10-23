@@ -81,10 +81,17 @@ class PermissionCallbackTests(unittest.TestCase):
             "public void showPermissionConfirmation(",
             "private final class DelegatedPermissionCallback",
             "private void dispatchDelegatedPermissionResult(",
+            "private void sendDelegatedPermissionResult(",
             "private void removeDelegatedPermissionCallback(",
             "private void destroyDelegatedPermissionCallback(",
-            "private void putDelegatedPermissionCallback(",
+            "private boolean putDelegatedPermissionCallback(",
         ))
+        # Compile the actual post-validation shell transaction path, including registration
+        # and its early return. Calling the registry and show methods separately misses bugs.
+        delegate = source[source.index("            String key = buildPermissionRequestKey(reqUid, reqPid, requestCode);"):]
+        delegate = delegate[:delegate.index("\n        }\n        return super.onTransact")]
+        production += ("\nprivate boolean delegate(int requestCode, String packageName, int reqUid, int reqPid, "
+                       "IBinder callback) {\n" + delegate + "\n}\n")
         # Keep the actual reply-consumption guard; model the unchanged policy side effects.
         finish = method(source, "private void finishPermissionConfirmation(")
         production += "\n" + finish[:finish.index("        LOGGER.i(")] + (
@@ -117,6 +124,7 @@ public class Check {
         final List<DeathRecipient> recipients = new ArrayList<>();
         final List<Integer> results = new ArrayList<>();
         boolean alive = true;
+        boolean failTransact;
         public synchronized void linkToDeath(DeathRecipient recipient, int flags) throws RemoteException {
             if (!alive) throw new RemoteException();
             recipients.add(recipient);
@@ -126,6 +134,7 @@ public class Check {
         }
         public synchronized boolean transact(int code, Parcel data, Parcel reply, int flags) {
             check(code == 1 && reply == null && flags == FLAG_ONEWAY);
+            if (failTransact) throw new IllegalStateException("Callback delivery failed");
             results.add(data.value);
             return true;
         }
@@ -146,6 +155,8 @@ public class Check {
     static final class ClientRecord {
         final String packageName = "com.example.client";
         Object client = new Object();
+        ClientRecord() {}
+        ClientRecord(int uid, int pid, Object client, String name, int version) { this.client = client; }
         boolean allowed, onetime;
         final List<Boolean> results = new ArrayList<>();
         final List<Integer> codes = new ArrayList<>();
@@ -163,6 +174,9 @@ public class Check {
     static final class Handler {
         void removeCallbacks(Runnable callback) {}
         void postDelayed(Runnable callback, long delay) {}
+    }
+    static final class UserHandleCompat {
+        static int getUserId(int uid) { return uid / 100000; }
     }
     static final class RootBridgeDelegate {
         static void delegatePermissionConfirmationToRoot(Object manager, int code, String name, int uid, int pid) {
@@ -186,7 +200,10 @@ public class Check {
         return host;
     }
     void reply(int uid, int pid, int code) {
-        finishPermissionConfirmation(uid, pid, code, true, true, false, true);
+        reply(uid, pid, code, true);
+    }
+    void reply(int uid, int pid, int code, boolean allowed) {
+        finishPermissionConfirmation(uid, pid, code, allowed, true, false, true);
     }
     static void check(boolean value) { if (!value) throw new AssertionError(); }
     static void await(CountDownLatch latch) {
@@ -427,6 +444,8 @@ TestBinder oldDelegate = new TestBinder(), newDelegate = new TestBinder();
 server.putDelegatedPermissionCallback(key, oldDelegate);
 server.showPermissionConfirmation(7, dummy, 10123, 1234, 0);
 server.host((uid, pid, name, code) -> {});
+// An expired/dead callback can free its slot while the old UI request is retained.
+server.removeDelegatedPermissionCallback(key, server.delegatedPermissionCallbacks.get(key));
 server.putDelegatedPermissionCallback(key, newDelegate);
 server.showPermissionConfirmation(7, dummy, 10123, 1234, 0);
 old.die();
@@ -435,6 +454,110 @@ check(server.delegatedPermissionCallbacks.get(key).binder == newDelegate);
 server.reply(10123, 1234, 7);
 check(newDelegate.results.equals(List.of(1)));
 check(server.delegatedPermissionCallbacks.isEmpty() && server.pendingPermissionConfirmations.isEmpty());
+''')
+
+    def test_shell_duplicates_preserve_first_callback_and_reject_only_new_callbacks(self):
+        self.run_server(r'''
+Check server = new Check();
+int[] prompts = {0};
+server.host((uid, pid, name, code) -> {
+    if (++prompts[0] > 1) throw new IllegalStateException("Duplicate Manager request");
+});
+TestBinder first = new TestBinder(), second = new TestBinder(), third = new TestBinder();
+String key = buildPermissionRequestKey(10123, 1234, 7);
+check(server.delegate(7, "com.example.client", 10123, 1234, first));
+check(server.delegate(7, "com.example.client", 10123, 1234, second));
+check(server.delegate(7, "com.example.client", 10123, 1234, third));
+check(prompts[0] == 1 && first.results.isEmpty());
+check(second.results.equals(List.of(0)) && third.results.equals(List.of(0)));
+check(first.recipients.size() == 1 && second.recipients.isEmpty() && third.recipients.isEmpty());
+check(server.delegatedPermissionCallbacks.get(key).binder == first);
+check(server.pendingPermissionConfirmations.get(key).size() == 1);
+server.reply(10123, 1234, 7);
+server.reply(10123, 1234, 7);
+check(first.results.equals(List.of(1)) && first.recipients.isEmpty());
+check(second.results.equals(List.of(0)) && third.results.equals(List.of(0)));
+check(server.delegatedPermissionCallbacks.isEmpty() && server.pendingPermissionConfirmations.isEmpty());
+''')
+
+    def test_concurrent_shell_duplicates_admit_only_one_callback(self):
+        self.run_server(r'''
+for (int i = 0; i < 200; i++) {
+    Check server = new Check();
+    java.util.concurrent.atomic.AtomicInteger prompts = new java.util.concurrent.atomic.AtomicInteger();
+    server.host((uid, pid, name, code) -> { prompts.incrementAndGet(); });
+    TestBinder first = new TestBinder(), second = new TestBinder();
+    CountDownLatch start = new CountDownLatch(1);
+    Task a = new Task(() -> { await(start); check(server.delegate(7, "com.example.client", 10123, 1234, first)); });
+    Task b = new Task(() -> { await(start); check(server.delegate(7, "com.example.client", 10123, 1234, second)); });
+    a.start(); b.start(); start.countDown(); a.finish(); b.finish();
+    check(prompts.get() == 1);
+    server.reply(10123, 1234, 7);
+    check(first.results.size() == 1 && second.results.size() == 1);
+    check(first.results.get(0) + second.results.get(0) == 1);
+    check(first.recipients.isEmpty() && second.recipients.isEmpty());
+    check(server.delegatedPermissionCallbacks.isEmpty() && server.pendingPermissionConfirmations.isEmpty());
+}
+''')
+
+    def test_duplicate_callback_delivery_failure_cannot_break_original_denial(self):
+        self.run_server(r'''
+Check server = new Check();
+int[] prompts = {0};
+server.host((uid, pid, name, code) -> { prompts[0]++; });
+TestBinder first = new TestBinder(), duplicate = new TestBinder();
+duplicate.failTransact = true;
+server.delegate(7, "com.example.client", 10123, 1234, first);
+server.delegate(7, "com.example.client", 10123, 1234, duplicate);
+check(prompts[0] == 1 && first.results.isEmpty() && first.recipients.size() == 1);
+check(duplicate.recipients.isEmpty());
+server.reply(10123, 1234, 7, false);
+check(first.results.equals(List.of(0)) && first.recipients.isEmpty());
+check(server.pendingPermissionConfirmations.isEmpty() && server.delegatedPermissionCallbacks.isEmpty());
+''')
+
+    def test_shell_keys_are_independent_and_can_be_reused_after_completion(self):
+        self.run_server(r'''
+Check server = new Check();
+server.host((uid, pid, name, code) -> {});
+TestBinder a = new TestBinder(), b = new TestBinder(), c = new TestBinder(), next = new TestBinder();
+server.delegate(7, "com.example.client", 10123, 1234, a);
+server.delegate(8, "com.example.client", 10123, 1234, b);
+server.delegate(7, "com.example.client", 10124, 1235, c);
+server.reply(10123, 1234, 7);
+server.delegate(7, "com.example.client", 10123, 1234, next);
+check(next.results.isEmpty() && server.delegatedPermissionCallbacks.size() == 3);
+server.reply(10123, 1234, 7, false);
+server.reply(10123, 1234, 8);
+server.reply(10124, 1235, 7);
+check(a.results.equals(List.of(1)) && b.results.equals(List.of(1)));
+check(c.results.equals(List.of(1)) && next.results.equals(List.of(0)));
+check(server.pendingPermissionConfirmations.isEmpty() && server.delegatedPermissionCallbacks.isEmpty());
+''')
+
+    def test_dead_or_missing_shell_callback_is_not_admitted(self):
+        self.run_server(r'''
+Check server = new Check();
+int[] prompts = {0};
+server.host((uid, pid, name, code) -> { prompts[0]++; });
+TestBinder dead = new TestBinder(); dead.die();
+server.delegate(7, "com.example.client", 10123, 1234, dead);
+server.delegate(7, "com.example.client", 10123, 1234, null);
+check(prompts[0] == 0);
+check(server.pendingPermissionConfirmations.isEmpty() && server.delegatedPermissionCallbacks.isEmpty());
+''')
+
+    def test_manager_death_after_shell_duplicate_denies_only_original_once(self):
+        self.run_server(r'''
+Check server = new Check();
+Host host = server.host((uid, pid, name, code) -> {});
+TestBinder first = new TestBinder(), duplicate = new TestBinder();
+server.delegate(7, "com.example.client", 10123, 1234, first);
+server.delegate(7, "com.example.client", 10123, 1234, duplicate);
+host.die(); host.die(); server.reply(10123, 1234, 7);
+check(first.results.equals(List.of(0)) && duplicate.results.equals(List.of(0)));
+check(first.recipients.isEmpty() && duplicate.recipients.isEmpty());
+check(server.pendingPermissionConfirmations.isEmpty() && server.delegatedPermissionCallbacks.isEmpty());
 ''')
 
     def test_uid_removal_keeps_other_clients_pending(self):

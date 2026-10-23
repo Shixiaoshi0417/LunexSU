@@ -830,15 +830,19 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
     private void dispatchDelegatedPermissionResult(String key, DelegatedPermissionCallback callback, boolean allowed) {
         if (callback != null && delegatedPermissionCallbacks.remove(key, callback)) {
             destroyDelegatedPermissionCallback(callback);
-            android.os.Parcel cbData = android.os.Parcel.obtain();
-            try {
-                cbData.writeInt(allowed ? 1 : 0);
-                callback.binder.transact(1, cbData, null, android.os.IBinder.FLAG_ONEWAY);
-            } catch (Throwable e) {
-                LOGGER.w(e, "Failed to call delegated permission callback");
-            } finally {
-                cbData.recycle();
-            }
+            sendDelegatedPermissionResult(callback.binder, allowed);
+        }
+    }
+
+    private void sendDelegatedPermissionResult(android.os.IBinder binder, boolean allowed) {
+        android.os.Parcel cbData = android.os.Parcel.obtain();
+        try {
+            cbData.writeInt(allowed ? 1 : 0);
+            binder.transact(1, cbData, null, android.os.IBinder.FLAG_ONEWAY);
+        } catch (Throwable e) {
+            LOGGER.w(e, "Failed to call delegated permission callback");
+        } finally {
+            cbData.recycle();
         }
     }
 
@@ -1033,18 +1037,24 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         callback.binder.unlinkToDeath(callback, 0);
     }
 
-    private void putDelegatedPermissionCallback(String key, android.os.IBinder binder) {
+    private boolean putDelegatedPermissionCallback(String key, android.os.IBinder binder) {
         DelegatedPermissionCallback callback = new DelegatedPermissionCallback(key, binder);
         try {
             binder.linkToDeath(callback, 0);
         } catch (RemoteException e) {
             LOGGER.w(e, "delegated permission callback is already dead");
-            return;
+            return false;
         }
 
-        DelegatedPermissionCallback old = delegatedPermissionCallbacks.put(key, callback);
-        destroyDelegatedPermissionCallback(old);
+        if (delegatedPermissionCallbacks.putIfAbsent(key, callback) != null) {
+            // Keep the original prompt's callback. Deny only this duplicate, before it
+            // can enter the Manager queue or acquire the original pending token.
+            destroyDelegatedPermissionCallback(callback);
+            sendDelegatedPermissionResult(binder, false);
+            return false;
+        }
         mainHandler.postDelayed(callback, DELEGATED_PERMISSION_CALLBACK_TIMEOUT_MS);
+        return true;
     }
 
     private int waitForPackage(String packageName, boolean forever) {
@@ -1788,8 +1798,8 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
             }
 
             String key = buildPermissionRequestKey(reqUid, reqPid, requestCode);
-            if (callback != null) {
-                putDelegatedPermissionCallback(key, callback);
+            if (callback == null || !putDelegatedPermissionCallback(key, callback)) {
+                return true;
             }
 
             int userId = UserHandleCompat.getUserId(reqUid);
