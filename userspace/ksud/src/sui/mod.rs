@@ -5,6 +5,7 @@ mod payload;
 mod process_helper;
 mod runtime;
 mod state;
+mod supervision;
 
 pub use runtime::reconcile_boot;
 

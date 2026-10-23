@@ -76,6 +76,18 @@ class LifecycleWiringTests(unittest.TestCase):
         self.assertIn("runtime::wait_output(", queries)
         self.assertNotIn('.output()?', queries)
 
+    def test_supervisor_probes_both_binders_and_keeps_the_restart_budget(self):
+        runtime = (RUST / "sui/runtime.rs").read_text(encoding="utf-8")
+        supervise = runtime.split("pub fn supervise()", 1)[1].split("pub fn boot_services()", 1)[0]
+        self.assertIn("supervision::watch(", supervise)
+        self.assertIn("binder_diagnostics().is_ok_and(|value| supervision::servers_alive(&value))", supervise)
+        self.assertIn("can_start(false)", supervise)
+        self.assertIn("super::register_manager()", supervise)
+        self.assertIn("supervision::Outcome::Stopped", supervise)
+        self.assertIn("failures < 5", supervise)
+        self.assertIn("failures += 1", supervise)
+        self.assertIn("Duration::from_secs(1_u64 << failures)", supervise)
+
 
 if __name__ == "__main__":
     unittest.main()

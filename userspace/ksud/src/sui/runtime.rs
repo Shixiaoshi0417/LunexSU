@@ -1,5 +1,5 @@
 //! Explicit, reboot-gated lifecycle. No vendor boot scripts or ADB-root helpers are run.
-use super::{deployment, payload, state};
+use super::{deployment, payload, state, supervision};
 use anyhow::{Context, Result, ensure};
 use std::{
     fs::{self, File, OpenOptions},
@@ -331,25 +331,26 @@ pub fn supervise() -> Result<()> {
             }
         };
         let mut refresh = Instant::now();
-        loop {
-            if child.try_wait()?.is_some() {
-                break;
-            }
-            if can_start(false).is_err() {
-                let _ = child.kill();
-                let _ = child.wait();
-                return Ok(());
-            }
-            if refresh.elapsed() >= Duration::from_secs(30) {
-                if super::register_manager().is_err() {
-                    let _ = child.kill();
-                    let _ = child.wait();
-                    return Ok(());
+        let outcome = supervision::watch(
+            &mut child,
+            || {
+                if can_start(false).is_err() {
+                    return false;
                 }
-                refresh = Instant::now();
-            }
-            thread::sleep(Duration::from_secs(1));
+                if refresh.elapsed() >= Duration::from_secs(30) {
+                    if super::register_manager().is_err() {
+                        return false;
+                    }
+                    refresh = Instant::now();
+                }
+                true
+            },
+            || binder_diagnostics().is_ok_and(|value| supervision::servers_alive(&value)),
+        )?;
+        if outcome == supervision::Outcome::Stopped {
+            return Ok(());
         }
+        log::warn!("Sui generation stopped: {outcome:?}; retrying within the restart budget");
         failures += 1;
         thread::sleep(Duration::from_secs(1_u64 << failures));
     }
@@ -396,33 +397,27 @@ pub fn reconcile_boot() -> Result<()> {
     deployment::disable_owned(&paths)
 }
 
+fn binder_diagnostics() -> Result<serde_json::Value> {
+    let record = Path::new(crate::defs::WORKING_DIR).join("lunexsu-sui/manager.json");
+    let manager: super::identity::Manager = serde_json::from_slice(&bounded_read(&record, 4096)?)?;
+    let output = wait_output(
+        app_process("rikka.sui.server.SuiDiagnostics").arg(manager.uid.to_string()),
+        5,
+    )?;
+    ensure!(output.status.success(), "Sui Binder diagnostics failed");
+    Ok(serde_json::from_slice(&output.stdout)?)
+}
+
 pub fn status() -> Result<serde_json::Value> {
     let desired = desired()?;
     let pending_reboot = desired.enabled && (!desired.after_reboot(&boot()?) || pending().exists());
-    let mut bridge = serde_json::Value::Null;
-    if can_start(true).is_ok() {
-        let record = Path::new(crate::defs::WORKING_DIR).join("lunexsu-sui/manager.json");
-        if let Ok(manager) = bounded_read(&record, 4096)
-            .and_then(|bytes| Ok(serde_json::from_slice::<super::identity::Manager>(&bytes)?))
-        {
-            let result = wait_output(
-                app_process("rikka.sui.server.SuiDiagnostics").arg(manager.uid.to_string()),
-                5,
-            );
-            if let Ok(output) = result
-                && output.status.success()
-            {
-                bridge = serde_json::from_slice(&output.stdout).unwrap_or_default();
-            }
-        }
-    }
-    let healthy = [
-        "root_binder_alive",
-        "shell_binder_alive",
-        "manager_verified",
-    ]
-    .iter()
-    .all(|key| bridge["bridge"][key].as_bool() == Some(true));
+    let bridge = if can_start(true).is_ok() {
+        binder_diagnostics().unwrap_or_default()
+    } else {
+        serde_json::Value::Null
+    };
+    let healthy = supervision::servers_alive(&bridge)
+        && bridge["bridge"]["manager_verified"].as_bool() == Some(true);
     let reason = if desired.enabled && !pending_reboot && !healthy {
         can_start(true).err().map_or_else(
             || {

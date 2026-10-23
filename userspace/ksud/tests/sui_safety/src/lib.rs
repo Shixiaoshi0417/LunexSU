@@ -14,6 +14,10 @@ mod identity_tests;
 mod process_helper;
 
 #[cfg(all(test, unix))]
+#[path = "../../../src/sui/supervision.rs"]
+mod supervision;
+
+#[cfg(all(test, unix))]
 #[path = "../../../src/module/file_lock.rs"]
 mod file_lock;
 #[cfg(all(test, unix))]

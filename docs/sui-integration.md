@@ -76,7 +76,15 @@ intent is committed after module flags/policy are durable. Boot reconciliation
 runs before policy loading and module scripts, disabling owned candidates after
 an interrupted or invalid activation. The supervisor starts only after a full
 reboot, tracks the foreground root child and its parent-death guard, bounds
-restart attempts, and stops on disabled/changed ownership or identity.
+restart attempts, and stops on disabled/changed ownership or identity. It probes
+both root and shell Binders every five seconds using the bounded diagnostics
+helper. Each generation gets a 60-second initial readiness window; after both
+Binders have been seen alive, loss of either (or failed diagnostics) kills and
+reaps root so the existing bounded restart loop recreates both servers. Root's
+death also stops shell through its parent-death guard. A background/disconnected
+Manager permission callback is not a server-liveness failure. Host process tests
+cover this monitor and cleanup; they do not execute Android Binder or prove
+on-device recovery.
 
 Status distinguishes bundled bytes, desired state and actual root/shell Binder
 diagnostics. Manager separately tracks its live permission callback: readable
