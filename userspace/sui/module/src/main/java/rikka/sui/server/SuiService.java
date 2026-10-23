@@ -477,9 +477,8 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
     private volatile IShizukuApplication systemUiApplication;
 
     private final Object managerBinderLock = new Object();
-    private final Object pendingPermissionLock = new Object();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private final Map<String, Integer> pendingPermissionConfirmations = new HashMap<>();
+    private final Map<String, List<PendingPermissionConfirmation>> pendingPermissionConfirmations = new HashMap<>();
     private final java.util.concurrent.ConcurrentHashMap<Integer, CapabilityEpochState> capabilityEpochStates =
             new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -618,33 +617,97 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         return requestUid + ":" + requestPid + ":" + requestCode;
     }
 
-    private void markPendingPermissionConfirmation(int requestUid, int requestPid, int requestCode) {
-        synchronized (pendingPermissionLock) {
-            String key = buildPermissionRequestKey(requestUid, requestPid, requestCode);
-            Integer count = pendingPermissionConfirmations.get(key);
-            pendingPermissionConfirmations.put(key, count == null ? 1 : count + 1);
+    private final class PendingPermissionConfirmation {
+        final String key;
+        final IBinder owner;
+        final ClientRecord client;
+        final int requestCode;
+        final DelegatedPermissionCallback delegatedCallback;
+
+        PendingPermissionConfirmation(String key, IBinder owner, ClientRecord client, int requestCode) {
+            this.key = key;
+            this.owner = owner;
+            this.client = client;
+            this.requestCode = requestCode;
+            this.delegatedCallback = delegatedPermissionCallbacks.get(key);
         }
     }
 
-    private boolean consumePendingPermissionConfirmation(int requestUid, int requestPid, int requestCode) {
-        synchronized (pendingPermissionLock) {
+    private PendingPermissionConfirmation markPendingPermissionConfirmation(
+            int requestUid, int requestPid, int requestCode, IBinder owner, ClientRecord client) {
+        synchronized (managerBinderLock) {
             String key = buildPermissionRequestKey(requestUid, requestPid, requestCode);
-            Integer count = pendingPermissionConfirmations.get(key);
-            if (count == null || count <= 0) {
+            PendingPermissionConfirmation pending = new PendingPermissionConfirmation(key, owner, client, requestCode);
+            List<PendingPermissionConfirmation> requests = pendingPermissionConfirmations.get(key);
+            if (requests == null) {
+                requests = new java.util.ArrayList<>();
+                pendingPermissionConfirmations.put(key, requests);
+            }
+            requests.add(pending);
+            return pending;
+        }
+    }
+
+    private PendingPermissionConfirmation consumePendingPermissionConfirmation(
+            int requestUid, int requestPid, int requestCode) {
+        synchronized (managerBinderLock) {
+            String key = buildPermissionRequestKey(requestUid, requestPid, requestCode);
+            List<PendingPermissionConfirmation> pending = pendingPermissionConfirmations.get(key);
+            if (pending == null || pending.isEmpty()) {
+                return null;
+            }
+            PendingPermissionConfirmation result = pending.remove(0);
+            if (pending.isEmpty()) pendingPermissionConfirmations.remove(key);
+            return result;
+        }
+    }
+
+    private boolean removePendingPermissionConfirmation(PendingPermissionConfirmation request) {
+        synchronized (managerBinderLock) {
+            List<PendingPermissionConfirmation> pending = pendingPermissionConfirmations.get(request.key);
+            if (pending == null || !pending.remove(request)) {
                 return false;
             }
-            if (count == 1) {
-                pendingPermissionConfirmations.remove(key);
-            } else {
-                pendingPermissionConfirmations.put(key, count - 1);
-            }
+            if (pending.isEmpty()) pendingPermissionConfirmations.remove(request.key);
             return true;
+        }
+    }
+
+    private void denyPermissionConfirmation(PendingPermissionConfirmation request) {
+        // A lost UI is not a permission-policy change. Notify the original client once,
+        // without revoking a grant from another concurrent request or persisting a denial.
+        if (request.client.client != null) {
+            request.client.dispatchRequestPermissionResult(request.requestCode, false);
+        }
+        dispatchDelegatedPermissionResult(request.key, request.delegatedCallback, false);
+    }
+
+    private void onPermissionHostDied(IBinder binder) {
+        List<PendingPermissionConfirmation> abandoned = new java.util.ArrayList<>();
+        synchronized (managerBinderLock) {
+            if (systemUiApplication != null && systemUiApplication.asBinder() == binder) {
+                systemUiApplication = null;
+            }
+            // Old callbacks can die after a replacement attaches. Only claim their own
+            // requests, including duplicate keys, and leave the new host's requests intact.
+            for (List<PendingPermissionConfirmation> pending : pendingPermissionConfirmations.values()) {
+                for (PendingPermissionConfirmation request : pending) {
+                    if (request.owner == binder) abandoned.add(request);
+                }
+            }
+            for (PendingPermissionConfirmation request : abandoned) {
+                removePendingPermissionConfirmation(request);
+            }
+        }
+        // Never call a client Binder while holding the admission/death lock.
+        for (PendingPermissionConfirmation request : abandoned) {
+            denyPermissionConfirmation(request);
         }
     }
 
     private void removePendingPermissionConfirmationsForUid(int uid) {
         String prefix = uid + ":";
-        synchronized (pendingPermissionLock) {
+        synchronized (managerBinderLock) {
             java.util.List<String> toRemove = new java.util.ArrayList<>();
             for (String key : pendingPermissionConfirmations.keySet()) {
                 if (key.startsWith(prefix)) {
@@ -665,7 +728,9 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
             boolean onetime,
             boolean isShell,
             boolean consumePending) {
-        if (consumePending && !consumePendingPermissionConfirmation(requestUid, requestPid, requestCode)) {
+        PendingPermissionConfirmation pending = consumePending
+                ? consumePendingPermissionConfirmation(requestUid, requestPid, requestCode) : null;
+        if (consumePending && pending == null) {
             LOGGER.w(
                     "drop stale or forged permission result: uid=%d, pid=%d, requestCode=%d",
                     requestUid, requestPid, requestCode);
@@ -758,9 +823,13 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         }
 
         String key = buildPermissionRequestKey(requestUid, requestPid, requestCode);
-        DelegatedPermissionCallback callback = delegatedPermissionCallbacks.get(key);
-        if (callback != null) {
-            removeDelegatedPermissionCallback(key, callback);
+        dispatchDelegatedPermissionResult(
+                key, pending != null ? pending.delegatedCallback : delegatedPermissionCallbacks.get(key), allowed);
+    }
+
+    private void dispatchDelegatedPermissionResult(String key, DelegatedPermissionCallback callback, boolean allowed) {
+        if (callback != null && delegatedPermissionCallbacks.remove(key, callback)) {
+            destroyDelegatedPermissionCallback(callback);
             android.os.Parcel cbData = android.os.Parcel.obtain();
             try {
                 cbData.writeInt(allowed ? 1 : 0);
@@ -1170,36 +1239,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         // This managed distribution ships its permission UI in LunexSU, not sui.apk.
         // A later SystemUI attach must not replace the signed Manager's callback.
         if (isLunexsuManager) {
-            IBinder binder = application.asBinder();
-            synchronized (managerBinderLock) {
-            try {
-                binder.linkToDeath(
-                        new IBinder.DeathRecipient() {
-
-                            @Override
-                            public void binderDied() {
-                                LOGGER.w("manager binder is dead, pid=%d", callingPid);
-
-                                synchronized (managerBinderLock) {
-                                    if (systemUiApplication != null && systemUiApplication.asBinder() == binder) {
-                                        systemUiApplication = null;
-                                    } else {
-                                        LOGGER.w("binderDied is called later than the arrival of the new binder ?!");
-                                    }
-                                }
-
-                                binder.unlinkToDeath(this, 0);
-                            }
-                        },
-                        0);
-            } catch (RemoteException e) {
-                LOGGER.w(e, "attachApplication");
-                return;
-            }
-
-                systemUiApplication = application;
-                LOGGER.i("manager attached: pid=%d", callingPid);
-            }
+            if (!attachPermissionHost(application, callingPid)) return;
         }
 
         if (!isManager && !isSettings) {
@@ -1256,18 +1296,48 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         }
     }
 
+    private boolean attachPermissionHost(IShizukuApplication application, int callingPid) {
+        IBinder binder = application.asBinder();
+        synchronized (managerBinderLock) {
+            try {
+                binder.linkToDeath(new IBinder.DeathRecipient() {
+                    @Override
+                    public void binderDied() {
+                        LOGGER.w("manager binder is dead, pid=%d", callingPid);
+                        onPermissionHostDied(binder);
+                        binder.unlinkToDeath(this, 0);
+                    }
+                }, 0);
+            } catch (RemoteException e) {
+                LOGGER.w(e, "attachApplication");
+                return false;
+            }
+            systemUiApplication = application;
+            LOGGER.i("manager attached: pid=%d", callingPid);
+            return true;
+        }
+    }
+
     @Override
     public void showPermissionConfirmation(
             int requestCode, @NonNull ClientRecord clientRecord, int callingUid, int callingPid, int userId) {
-        IShizukuApplication permissionHost = systemUiApplication;
+        IShizukuApplication permissionHost;
+        PendingPermissionConfirmation pending;
+        synchronized (managerBinderLock) {
+            // Publish ownership before delivery, atomically with host selection and death.
+            permissionHost = systemUiApplication;
+            pending = permissionHost == null ? null : markPendingPermissionConfirmation(
+                    callingUid, callingPid, requestCode, permissionHost.asBinder(), clientRecord);
+        }
         if (permissionHost != null) {
-            markPendingPermissionConfirmation(callingUid, callingPid, requestCode);
             try {
                 permissionHost.showPermissionConfirmation(
                         callingUid, callingPid, clientRecord.packageName, requestCode);
             } catch (Throwable e) {
                 LOGGER.w(e, "showPermissionConfirmation");
-                finishPermissionConfirmation(callingUid, callingPid, requestCode, false, true, false, true);
+                // Death or a reply may already have claimed this exact request. Do not
+                // consume a different duplicate or a new host's request with the same key.
+                if (removePendingPermissionConfirmation(pending)) denyPermissionConfirmation(pending);
             }
         } else if (shellMode) {
             LOGGER.i("Delegating showPermissionConfirmation to root server");

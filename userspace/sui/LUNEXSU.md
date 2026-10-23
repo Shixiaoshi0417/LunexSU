@@ -17,8 +17,13 @@ real privileged Sui bridge. Integration and runtime validation are in progress;
 importing this source does not establish Android/ROM compatibility.
 
 The managed permission callback belongs only to the Core-certificate-bound
-LunexSU Manager, not a later legacy SystemUI attachment. Callback death is
-identity checked. This protocol supports one-time Root, but not one-time Shell:
+LunexSU Manager, not a later legacy SystemUI attachment. Pending confirmations
+are owned by the callback Binder that received them. Its death atomically claims
+and denies its remaining requests, even if a replacement has already attached;
+client notifications happen outside the state lock and do not change saved ACLs
+or other grants. A reply or callback failure can consume each request only once.
+Local reconnects with a still-live callback retain their requests as before.
+This protocol supports one-time Root, but not one-time Shell:
 the UI does not offer the latter and the server explicitly denies that invalid
 combination instead of treating it as Root. The original SystemUI/Settings
 management APIs are otherwise preserved; this is not an ACL merger or a claim

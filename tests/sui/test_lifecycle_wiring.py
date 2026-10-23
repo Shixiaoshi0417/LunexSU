@@ -54,6 +54,7 @@ class LifecycleWiringTests(unittest.TestCase):
         path = ROOT / "userspace/sui/module/src/main/java/rikka/sui/server/SuiService.java"
         source = path.read_text(encoding="utf-8")
         self.assertIn("if (isLunexsuManager)", source)
+        self.assertIn("if (!attachPermissionHost(application, callingPid)) return;", source)
         self.assertIn("private volatile IShizukuApplication systemUiApplication", source)
         self.assertIn("systemUiApplication != null && systemUiApplication.asBinder() == binder", source)
         self.assertIn("if (onetime && isShell)", source)
