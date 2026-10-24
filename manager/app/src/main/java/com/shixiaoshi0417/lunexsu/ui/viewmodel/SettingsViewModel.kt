@@ -450,7 +450,25 @@ class SettingsViewModel(
     fun setZygiskEnabled(enabled: Boolean) {
         if (!_uiState.value.zygiskSwitchEnabled) return
         dismissZnnRiskDialog()
-        applyZygisk(if (enabled) BuiltinZygisk.defaultBackend ?: return else null)
+        if (enabled) {
+            if (!_uiState.value.zygiskEnabled) _uiState.update { it.copy(showZygiskEnableDialog = true) }
+        } else {
+            dismissZygiskEnableDialog()
+            applyZygisk(null)
+        }
+    }
+
+    fun dismissZygiskEnableDialog() {
+        _uiState.update { it.copy(showZygiskEnableDialog = false) }
+    }
+
+    fun confirmZygiskEnable() {
+        val state = _uiState.value
+        if (!state.showZygiskEnableDialog) return
+        dismissZygiskEnableDialog()
+        if (!state.canConfirmZygiskEnable) return
+        // BuiltinZygisk re-reads both directories under its mutex before any mutation.
+        applyZygisk(state.zygiskSelected)
     }
 
     fun setZygiskBackend(backend: ZygiskBackend) {

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sui_title">Sui 管理</string>
+    <string name="sui_switch_title">Sui（Shizuku API）</string>
+    <string name="sui_switch_summary">預設關閉。需要啟用一個內置或外置 ReZygisk、NeoZygisk 或 Zygisk Next，每次變更都需完整重新啟動後生效</string>
+    <string name="sui_zygisk_required">請先啟用 Zygisk</string>
+    <string name="sui_zygisk_missing">未偵測到已啟用的 Zygisk，無法開啟 Sui。</string>
+    <string name="sui_zygisk_pending">Zygisk 設定有待生效的變更，請完整重新啟動後再開啟 Sui。</string>
+    <string name="sui_zygisk_conflict">偵測到多個已啟用或待安裝的 Zygisk，請只保留一個並完整重新啟動。</string>
+    <string name="sui_zygisk_unavailable">無法核實 Zygisk 前置條件，禁止開啟 Sui。請使用配套更新的 ksud 後重新整理。</string>
+    <string name="sui_zygisk_instructions">請在設定中啟用內置 Zygisk，或安裝並啟用外置 ReZygisk、NeoZygisk、Zygisk Next 模組，然後完整重新啟動並重新整理。外置模組毋須由 LunexSU 安裝。此對話框不會自動開啟 Zygisk 或 Sui；偵測通過只代表滿足前置條件，不保證注入成功。</string>
+    <string name="sui_refresh">重新整理</string>
+    <string name="sui_payload_missing">內置 Sui 組件無法使用</string>
+    <string name="sui_apps">應用程式授權</string>
+    <string name="sui_status">服務與授權宿主</string>
+    <string name="sui_separate_permissions">Sui 權限與核心 Root 權限互相獨立。</string>
+    <string name="sui_enable">啟用 Sui</string>
+    <string name="sui_disable">停用 Sui</string>
+    <string name="sui_payload_version">內置 Sui：%1$s</string>
+    <string name="sui_disable_warning">停用會要求停止服務。徹底移除注入、結束現有權限或正在執行的使用者服務仍需完整重新啟動。更新管理員不會自動取代已安裝的 Sui 模組。</string>
+    <string name="sui_enable_warning">需要啟用一個內置或外置 ReZygisk、NeoZygisk 或 Zygisk Next，並完整重新啟動。SystemUI 和設定不能被排除注入。不會自動啟用 ZNN 或 ADB Root。請保留可用的復原方式；Sui 使用獨立的高權限授權資料庫。</string>
+    <string name="sui_pending_reboot">需要完整重新啟動</string>
+    <string name="sui_ready">Root、Shell 服務已連接，授權宿主已附加</string>
+    <string name="sui_unavailable">已啟用，但服務或授權宿主無法使用</string>
+    <string name="sui_disabled">已停用</string>
+    <string name="sui_demo">只模擬介面。重新整理模擬重新啟動完成，不會執行真正的 Sui 服務。</string>
+    <string name="sui_host_required">請保持管理器執行以接收授權請求。沒有宿主的請求會被拒絕；啟用 Sui 不會自動授權應用程式。</string>
+    <string name="sui_search">搜尋 Sui 應用程式</string>
+    <string name="sui_shared_uid">修改會影響共用此 UID 的所有應用程式。撤銷 Sui 權限不會改變核心 Root 授權。</string>
+    <string name="sui_permission_request">Sui 授權請求</string>
+    <string name="sui_open_manager">開啟 LunexSU，核對請求應用程式與權限等級</string>
+    <string name="sui_ask">詢問</string>
+    <string name="sui_root">允許 Root</string>
+    <string name="sui_root_once">僅本次允許 Root</string>
+    <string name="sui_shell">允許 Shell</string>
+    <string name="sui_deny">拒絕</string>
+    <string name="sui_deny_once">僅本次拒絕</string>
+    <string name="sui_hidden">隱藏 Sui</string>
+    <string name="sui_apply">確認</string>
+    <string name="sui_cancel">取消</string>
+    <string name="sui_outcome_pending">Sui 命令結果尚未確認，仍可能完成。請勿重新啟動，等待狀態核實；核實期間禁止新的變更。</string>
+    <string name="sui_ipc_timeout">Sui IPC 已逾時並重設連線。請重新整理核對權限變更結果，再決定是否重試。</string>
+</resources>

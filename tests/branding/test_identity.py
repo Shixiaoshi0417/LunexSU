@@ -13,6 +13,23 @@ ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "com.shixiaoshi0417.lunexsu"
 SOURCE = ROOT / "manager/app/src"
 
+# These are public wire-protocol identities, not the application's namespace.
+# Keep the exact fixed-source interfaces: never exempt arbitrary third-party files.
+SHIZUKU_AIDL = {
+    "main/aidl/moe/shizuku/server/IRemoteProcess.aidl": "fb5d777abbebe1765b22bf0f1705fc55dbd02518",
+    "main/aidl/moe/shizuku/server/IShizukuApplication.aidl": "bf3762adba146723519220f3bc1827d595cb2860",
+    "main/aidl/moe/shizuku/server/IShizukuService.aidl": "ba1aab7461fb905fdb62735c3d1e43aa030cb9ba",
+    "main/aidl/moe/shizuku/server/IShizukuServiceConnection.aidl": "c472cd38eb051fdcf2581a4c072c6dea30aa4a48",
+}
+
+
+def valid_namespace(relative, source, declaration):
+    if relative in SHIZUKU_AIDL:
+        canonical = source.replace("\r\n", "\n").encode("utf-8")
+        blob = hashlib.sha1(b"blob " + str(len(canonical)).encode() + b"\0" + canonical).hexdigest()
+        return declaration == "moe.shizuku.server" and blob == SHIZUKU_AIDL[relative]
+    return declaration == PACKAGE or declaration.startswith(PACKAGE + ".")
+
 
 def read(name):
     return (ROOT / name).read_text(encoding="utf-8")
@@ -52,7 +69,7 @@ class IdentityTests(unittest.TestCase):
                 self.assertNotIn('System.loadLibrary("kernelsu")', source, str(path))
                 declaration = re.search(r"^package ([\w.]+)", source, re.M)
                 self.assertIsNotNone(declaration, str(path))
-                self.assertTrue(declaration[1].startswith(PACKAGE), str(path))
+                self.assertTrue(valid_namespace(path.relative_to(SOURCE).as_posix(), source, declaration[1]), str(path))
                 self.assertIn(declaration[1].replace(".", "/"), path.parent.as_posix())
         natives = read("manager/app/src/main/java/com/shixiaoshi0417/lunexsu/Natives.kt")
         jni = read("manager/app/src/main/cpp/jni.cc")
@@ -64,6 +81,17 @@ class IdentityTests(unittest.TestCase):
         self.assertIn("add_library(lunexsu", read("manager/app/src/main/cpp/CMakeLists.txt"))
         self.assertIn('System.loadLibrary("lunexsu")', read("manager/app/src/main/java/com/shixiaoshi0417/lunexsu/magica/AppZygotePreload.java"))
         self.assertIn("Java_com_shixiaoshi0417_lunexsu_magica_AppZygotePreload_forkDontCareAndExecKsud", jni)
+
+    def test_protocol_namespace_exception_is_exact_and_hash_locked(self):
+        for name in SHIZUKU_AIDL:
+            source = (SOURCE / name).read_text(encoding="utf-8")
+            self.assertTrue(valid_namespace(name, source, "moe.shizuku.server"))
+            self.assertTrue(valid_namespace(name, source.replace("\n", "\r\n"), "moe.shizuku.server"))
+            self.assertFalse(valid_namespace(name, source + "\n// changed protocol\n", "moe.shizuku.server"))
+            self.assertFalse(valid_namespace(name + ".kt", source, "moe.shizuku.server"))
+            self.assertFalse(valid_namespace(name, source, PACKAGE))
+        self.assertFalse(valid_namespace("main/aidl/moe/shizuku/server/New.aidl", "", "moe.shizuku.server"))
+        self.assertFalse(valid_namespace("main/java/untrusted/Other.kt", "", PACKAGE + "fake"))
 
     def test_no_hardcoded_upstream_ci_workspace(self):
         workflow = read(".github/workflows/ddk-lkm.yml")

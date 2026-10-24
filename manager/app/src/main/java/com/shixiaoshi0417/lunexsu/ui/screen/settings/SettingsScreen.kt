@@ -32,6 +32,7 @@ fun SettingPager(
             viewModel.refresh()
         } else {
             viewModel.dismissZnnRiskDialog()
+            viewModel.dismissZygiskEnableDialog()
         }
     }
 
@@ -40,7 +41,10 @@ fun SettingPager(
             viewModel.refresh()
         }
         initialResumeHandled.value = true
-        onPauseOrDispose { viewModel.dismissZnnRiskDialog() }
+        onPauseOrDispose {
+            viewModel.dismissZnnRiskDialog()
+            viewModel.dismissZygiskEnableDialog()
+        }
     }
 
     val actions = SettingsScreenActions(
@@ -68,14 +72,20 @@ fun SettingPager(
         onZygiskRebootNow = viewModel::rebootForZygisk,
         onOpenAbout = { navigator.push(Route.About) },
         onOpenSusfs = { navigator.push(Route.Susfs) },
+        onOpenSui = { navigator.push(Route.Sui) },
         onSetZnnRecoveryConfirmed = viewModel::setZnnRecoveryConfirmed,
         onDismissZnnRisk = viewModel::dismissZnnRiskDialog,
         onConfirmZnnRisk = viewModel::confirmZnnRisk,
+        onDismissZygiskEnable = viewModel::dismissZygiskEnableDialog,
+        onConfirmZygiskEnable = viewModel::confirmZygiskEnable,
     )
 
     when (LocalUiMode.current) {
         UiMode.Miuix -> SettingPagerMiuix(uiState, actions, bottomInnerPadding)
         UiMode.Material -> SettingPagerMaterial(uiState, actions, bottomInnerPadding)
     }
-    if (isCurrentPage) ZnnRiskDialog(uiState, actions)
+    if (isCurrentPage) {
+        ZnnRiskDialog(uiState, actions)
+        ZygiskEnableDialog(uiState, actions)
+    }
 }

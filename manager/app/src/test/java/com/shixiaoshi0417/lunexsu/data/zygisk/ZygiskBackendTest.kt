@@ -234,6 +234,58 @@ class ZygiskBackendTest {
         assertTrue(script.contains("^name=VexZygisk"))
     }
 
+    @Test fun differentIdExternalProviderIsNotOverwrittenOrUninstalled() {
+        val flags = mapOf(Neo to external)
+        assertNull(zygiskStatusOf(flags, false).conflictFor(ZygiskBackend.Re))
+        assertEquals(listOf(ZygiskStep.Install(Re)), planZygiskChange(flags, ZygiskBackend.Re))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun sameIdExternalProviderCannotBeInstalledOverEvenWhenDisabled() {
+        planZygiskChange(mapOf(Re to external.copy(disabled = true, remove = true)), ZygiskBackend.Re)
+    }
+
+    @Test fun collisionsAreCheckedForEveryRequestedComponentNotJustTheFirst() {
+        val status = zygiskStatusOf(mapOf(Re to external, Neo to external, NextNext to external), false)
+        assertEquals(setOf("rezygisk", "zygisksu", "zygisknextsu"), status.occupiedIds)
+        assertEquals("zygisksu", status.conflictFor(ZygiskBackend.Neo))
+        assertEquals("rezygisk", status.conflictFor(ZygiskBackend.Re))
+        assertNull(status.conflictFor(null))
+    }
+
+    @Test fun foreignCompanionOnlyBlocksItsOwnInstallation() {
+        val flags = mapOf(NextNext to external)
+        val status = zygiskStatusOf(flags, false)
+        assertNull(status.conflictFor(ZygiskBackend.Re))
+        assertEquals("zygisknextsu", status.conflictFor(ZygiskBackend.Re, true))
+        assertEquals(listOf(ZygiskStep.Install(Re)), planZygiskChange(flags, ZygiskBackend.Re))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun companionInstallCannotAdoptAnExternalLoader() {
+        planZygiskChange(mapOf(Re to owned, NextNext to external), ZygiskBackend.Re, true)
+    }
+
+    @Test fun mixedOwnershipDoesNotClaimEitherCopy() {
+        val (flags, _) = parseZygiskFlags(listOf("module rezygisk 1 1 1 0 0 0 1"))
+        assertFalse(flags.getValue(Re).isOwned)
+        val status = zygiskStatusOf(flags, false)
+        assertNull(status.configured)
+        assertNull(status.active)
+        assertEquals("rezygisk", status.conflictFor(ZygiskBackend.Re))
+        assertEquals(emptyList<ZygiskStep>(), planZygiskChange(flags, null))
+    }
+
+    @Test fun malformedOwnershipBitsCannotBecomeAnOwnedModule() {
+        val (flags, _) = parseZygiskFlags(listOf("module rezygisk 1 1 0 0 0 0 invalid"))
+        assertTrue(flags.isEmpty())
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun mixedOwnershipCannotBeRestoredOrOverwritten() {
+        planZygiskChange(mapOf(Re to owned.copy(unownedCopy = true)), ZygiskBackend.Re)
+    }
+
     @Test fun addonSwitchIsGreyUntilBuiltInIsEnabled() {
         val off = SettingsUiState(zygiskStatus = ZygiskStatus(), zygiskBackends = ZygiskBackend.entries)
         assertFalse(off.zygiskNextNextEnabled)

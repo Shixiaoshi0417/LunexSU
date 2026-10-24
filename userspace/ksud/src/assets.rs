@@ -14,8 +14,12 @@ mod android {
 
     pub fn ensure_binaries(ignore_if_exist: bool) -> anyhow::Result<()> {
         for file in Asset::iter() {
-            if file == "ksuinit" || file == "waitsys" || file.ends_with(".ko") {
-                // don't extract internal executables and kernel modules
+            if file == "ksuinit"
+                || file == "waitsys"
+                || file.ends_with(".ko")
+                || file.starts_with("sui/")
+            {
+                // Managed Sui is installed explicitly, never by general extraction.
                 continue;
             }
             let asset =

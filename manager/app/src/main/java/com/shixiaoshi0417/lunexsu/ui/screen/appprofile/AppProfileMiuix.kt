@@ -314,30 +314,25 @@ private fun AppProfileInner(
                     .padding(horizontal = 12.dp)
                     .padding(bottom = 12.dp),
             ) {
-                SwitchPreference(
-                    startAction = {
-                        Icon(
-                            imageVector = Icons.Rounded.Security,
-                            contentDescription = null,
-                            modifier = Modifier.padding(end = 6.dp),
-                            tint = colorScheme.onBackground
-                        )
-                    },
-                    title = stringResource(id = R.string.superuser),
-                    checked = isRootGranted && (profile.authorizationMode == 0 || profile.authorizationState == 1),
-                    enabled = !saving && profile.authorizationReadError == 0,
-                    onCheckedChange = {
-                        onProfileChange(profile.copy(allowSu = it, authorizationOperation = if (it) 1 else 0))
-                    },
-                )
+                AuthorizationConfig(profile, onProfileChange, saving) { enabled, onCheckedChange ->
+                    SwitchPreference(
+                        startAction = {
+                            Icon(
+                                imageVector = Icons.Rounded.Security,
+                                contentDescription = null,
+                                modifier = Modifier.padding(end = 6.dp),
+                                tint = colorScheme.onBackground
+                            )
+                        },
+                        title = stringResource(id = R.string.superuser),
+                        checked = isRootGranted && (profile.authorizationMode == 0 || profile.authorizationState == 1),
+                        enabled = enabled,
+                        onCheckedChange = onCheckedChange,
+                    )
+                }
             }
         }
 
-        if (!isSpecialApp) {
-            Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
-                AuthorizationConfig(profile, onProfileChange, saving)
-            }
-        }
         val initialRootMode = if (profile.rootUseDefault) {
             Mode.Default
         } else if (profile.rootTemplate != null) {

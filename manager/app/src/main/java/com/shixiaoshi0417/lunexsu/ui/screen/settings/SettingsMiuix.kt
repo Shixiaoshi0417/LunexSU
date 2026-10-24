@@ -365,6 +365,7 @@ fun SettingPagerMiuix(
                         }
 
                         ZygiskCardMiuix(uiState, actions)
+                        SuiCardMiuix(onOpenSui = actions.onOpenSui)
 
                         Card(
                             modifier = Modifier

@@ -60,6 +60,8 @@ mod soft_reboot;
 #[cfg(target_os = "android")]
 mod su;
 #[cfg(target_os = "android")]
+mod sui;
+#[cfg(target_os = "android")]
 mod sulog;
 #[cfg(any(target_os = "android", all(test, unix)))]
 mod susfs;
@@ -67,6 +69,8 @@ mod susfs;
 mod unload;
 #[cfg(target_os = "android")]
 mod utils;
+#[cfg(target_os = "android")]
+mod zygisk;
 
 #[cfg(target_os = "android")]
 #[allow(nonstandard_style, unused, unsafe_op_in_unsafe_fn)]

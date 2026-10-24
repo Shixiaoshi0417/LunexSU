@@ -30,6 +30,7 @@ import com.shixiaoshi0417.lunexsu.ui.component.material.SegmentedColumnScope
 import com.shixiaoshi0417.lunexsu.ui.component.material.SegmentedColumn as MaterialGroup
 import com.shixiaoshi0417.lunexsu.ui.component.material.SegmentedListItem as MaterialItem
 import com.shixiaoshi0417.lunexsu.ui.component.material.SegmentedSwitchItem as MaterialSwitch
+import com.shixiaoshi0417.lunexsu.ui.component.material.expressiveTopAppBarColors
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Scaffold as MiuixScaffold
 import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
@@ -60,8 +61,8 @@ internal fun SusfsNativeColors(content: @Composable () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SusfsScaffold(busy: Boolean, back: () -> Unit, refresh: () -> Unit,
+    title: String = stringResource(R.string.susfs_title),
     content: @Composable (PaddingValues) -> Unit) {
-    val title = stringResource(R.string.susfs_title)
     if (miuix) {
         // Shared editor text and tab indicators follow the native MIUIX palette too.
         SusfsNativeColors {
@@ -75,7 +76,9 @@ internal fun SusfsScaffold(busy: Boolean, back: () -> Unit, refresh: () -> Unit,
         ExpressiveScaffold(topBar = {
             LargeFlexibleTopAppBar(title = { Text(title) }, navigationIcon = {
                 IconButton(onClick = back) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.susfs_back)) }
-            }, actions = { TextButton(enabled = !busy, onClick = refresh) { Text(stringResource(R.string.susfs_refresh)) } })
+            }, actions = { TextButton(enabled = !busy, onClick = refresh) { Text(stringResource(R.string.susfs_refresh)) } },
+                // Theme colors: over a pack wallpaper the chrome zone, not an opaque bar, draws the platform.
+                colors = expressiveTopAppBarColors())
         }, content = content)
     }
 }

@@ -222,7 +222,50 @@ fn assemble_bootstrap() {
     }
 }
 
+fn manager_certificate_binding() {
+    let path = Path::new("../../kernel/Kbuild");
+    println!("cargo:rerun-if-changed={}", path.display());
+    let source = fs::read_to_string(path).expect("read Core certificate defaults");
+    for (name, fallback) in [
+        ("KSU_EXPECTED_SIZE", "KSU_EXPECTED_SIZE ?= "),
+        ("KSU_EXPECTED_HASH", "KSU_EXPECTED_HASH ?= "),
+    ] {
+        println!("cargo:rerun-if-env-changed={name}");
+        let value = env::var(name)
+            .ok()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| {
+                source
+                    .lines()
+                    .find_map(|line| line.strip_prefix(fallback))
+                    .expect("Core certificate default")
+                    .trim()
+                    .to_owned()
+            });
+        if name == "KSU_EXPECTED_SIZE" {
+            let size: u32 = if let Some(hex) = value.strip_prefix("0x") {
+                u32::from_str_radix(hex, 16).expect("Core certificate size")
+            } else {
+                value.parse().expect("Core certificate size")
+            };
+            assert!((1..=1024).contains(&size), "invalid Core certificate size");
+            println!("cargo:rustc-env={name}={size}");
+        } else {
+            assert!(
+                value.len() == 64
+                    && value
+                        .bytes()
+                        .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
+                "invalid Core certificate hash"
+            );
+            println!("cargo:rustc-env={name}={value}");
+        }
+    }
+}
+
 fn main() {
+    manager_certificate_binding();
+    println!("cargo:rerun-if-env-changed=KSU_PACKAGE_NAME");
     // Embedded modules may be added after a cached daemon build.
     println!("cargo:rerun-if-changed=bin");
     assemble_bootstrap();
