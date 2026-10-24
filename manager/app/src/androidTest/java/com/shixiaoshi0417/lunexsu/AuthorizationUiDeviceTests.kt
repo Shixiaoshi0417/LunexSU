@@ -2,12 +2,10 @@ package com.shixiaoshi0417.lunexsu
 
 import android.app.Instrumentation
 import android.content.Intent
-import android.graphics.Rect
 import android.os.Bundle
 import android.os.SystemClock
 import android.system.ErrnoException
 import android.system.Os
-import android.view.MotionEvent
 import android.view.accessibility.AccessibilityNodeInfo
 
 /** Exercises the real Material/MIUIX pages with debug-only injected storage. */
@@ -30,7 +28,7 @@ object AuthorizationUiDeviceTests {
         var passed = 0
         fun nodes(node: AccessibilityNodeInfo?): List<AccessibilityNodeInfo> {
             if (node == null) return emptyList()
-            // Compose can reuse node IDs when the grant label becomes Renew.
+            // Compose can reuse node IDs when controls change after a save.
             // Refresh each node instead of traversing the accessibility cache.
             if (!node.refresh()) return emptyList()
             return listOf(node) + (0 until node.childCount).flatMap { nodes(node.getChild(it)) }
@@ -79,6 +77,11 @@ object AuthorizationUiDeviceTests {
             }))
             SystemClock.sleep(300)
         }
+        fun finishMinutes() {
+            val field = nodes(instrumentation.uiAutomation.rootInActiveWindow).first { it.isEditable }
+            check(field.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id))
+            SystemClock.sleep(300)
+        }
         for (ui in listOf("material", "miuix")) {
             for (reject in listOf(false, true)) {
                 prefs.edit().clear().commit()
@@ -92,18 +95,18 @@ object AuthorizationUiDeviceTests {
                         click(*names)
                     }
                     select("Once per app run", "本次运行")
-                    click("Grant / apply", "授权 / 应用")
                     awaitMode(if (reject) 0 else 1, true, if (reject) -5 else 0)
                     passed++
                     if (reject) continue
                     select("Timed", "限时")
-                    click("15 min", "15 分钟")
-                    click("Grant / apply", "授权 / 应用")
                     awaitMode(2, true)
-                    check(prefs.getLong("seconds", 0) == 900L)
                     var generation = prefs.getLong("generation", 0)
+                    click("15 min", "15 分钟")
+                    awaitGeneration(generation)
+                    check(prefs.getLong("seconds", 0) == 900L)
+                    generation = prefs.getLong("generation", 0)
                     setMinutes("42")
-                    click("Renew from now", "从现在起续期")
+                    finishMinutes()
                     awaitGeneration(generation)
                     check(prefs.getLong("seconds", 0) == 2520L)
                     passed++
@@ -111,35 +114,24 @@ object AuthorizationUiDeviceTests {
                     setMinutes("0")
                     val all = nodes(instrumentation.uiAutomation.rootInActiveWindow)
                     check(all.first { it.isEditable }.text?.toString() == "0") { "Invalid duration was not entered" }
-                    var button: AccessibilityNodeInfo? = all.first {
-                        it.text?.toString() in listOf("Renew from now", "从现在起续期")
-                    }
-                    // Test a real touch: cached Compose accessibility flags
-                    // can still mark a disabled button enabled after editing.
-                    while (button != null && button.isEnabled && !button.isClickable) button = button.parent
-                    check(button != null && button.isVisibleToUser)
-                    val bounds = Rect().also { button.getBoundsInScreen(it) }
-                    val downTime = SystemClock.uptimeMillis()
-                    for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
-                        val event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action,
-                            bounds.exactCenterX(), bounds.exactCenterY(), 0)
-                        try { check(instrumentation.uiAutomation.injectInputEvent(event, true)) }
-                        finally { event.recycle() }
-                    }
+                    finishMinutes()
                     SystemClock.sleep(500)
                     check(prefs.getLong("generation", 0) == generation)
                     check(prefs.getLong("seconds", 0) == 2520L)
                     passed++
                     setMinutes("42")
-                    click("Renew from now", "从现在起续期")
-                    awaitGeneration(generation)
-                    click("Revoke", "提前撤销")
+                    finishMinutes()
+                    // Selecting the existing policy must not extend a timed deadline.
+                    check(prefs.getLong("generation", 0) == generation)
+                    click("Superuser", "超级用户")
                     awaitMode(2, false)
-                    passed += 3
+                    val writes = prefs.getInt("writes", 0)
                     select("Permanent", "永久")
-                    click("Grant / apply", "授权 / 应用")
+                    SystemClock.sleep(300)
+                    check(prefs.getInt("writes", 0) == writes && !prefs.getBoolean("allowed", true))
+                    click("Superuser", "超级用户")
                     awaitMode(0, true)
-                    passed++
+                    passed += 3
                 } finally {
                     instrumentation.runOnMainSync { activity.finish() }
                     SystemClock.sleep(200)
@@ -153,10 +145,24 @@ object AuthorizationUiDeviceTests {
                 .putExtra("ui", ui).putExtra("restore", true))
             try {
                 SystemClock.sleep(700)
-                click("Grant / apply", "授权 / 应用")
-                awaitMode(1, true)
+                check(prefs.getInt("mode", -1) == 1 && prefs.getInt("writes", -1) == 0)
                 passed++
             } finally { instrumentation.runOnMainSync { reopened.finish() } }
+            prefs.edit().clear().commit()
+            val denied = instrumentation.startActivitySync(Intent().setClassName(context,
+                "com.shixiaoshi0417.lunexsu.ui.AuthorizationTestActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .putExtra("ui", ui).putExtra("denied", true))
+            try {
+                SystemClock.sleep(700)
+                if (ui == "miuix") click("Root authorization duration", "Root 授权有效期")
+                click("Timed", "限时")
+                click("15 min", "15 分钟")
+                check(prefs.getInt("writes", -1) == 0 && !prefs.getBoolean("allowed", true))
+                click("Superuser", "超级用户")
+                awaitMode(2, true)
+                check(prefs.getLong("seconds", 0) == 900L)
+                passed++
+            } finally { instrumentation.runOnMainSync { denied.finish() } }
         }
         return Bundle().apply {
             putString("authorization_ui", "PASS: $passed UI save/readback cases, Material and MIUIX; injected storage, no Root grants")

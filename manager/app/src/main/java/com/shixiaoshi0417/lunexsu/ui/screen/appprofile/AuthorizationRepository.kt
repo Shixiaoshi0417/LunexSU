@@ -53,3 +53,14 @@ fun authorizationGrant(profile: Natives.Profile, mode: Int, minutes: String): Na
     return profile.copy(allowSu = true, authorizationMode = mode,
         authorizationDurationSeconds = seconds, authorizationOperation = 1)
 }
+
+/** Off-state selections are local drafts, never writes or implicit Root grants.
+ * Selecting the current policy must not renew a deadline or rearm App-run credit.
+ */
+fun authorizationSelectionUpdate(profile: Natives.Profile, mode: Int, minutes: String): Natives.Profile? {
+    if (!profile.allowSu || profile.authorizationState == 2) return null
+    val candidate = authorizationGrant(profile, mode, minutes) ?: return null
+    if (candidate.authorizationMode == profile.authorizationMode &&
+        (mode != 2 || candidate.authorizationDurationSeconds == profile.authorizationDurationSeconds)) return null
+    return candidate
+}
