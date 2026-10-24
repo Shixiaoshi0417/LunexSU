@@ -90,8 +90,16 @@ Status distinguishes bundled bytes, desired state and actual root/shell Binder
 diagnostics. Manager separately tracks its live permission callback: readable
 payloads, existing processes or healthy server Binders do not prove this host is
 attached. Only the unlocked main Manager process may attach. Requests have a
-bounded queue, connection generation and deadline; grants revalidate package UID
-and signing identity at dispatch. Stale callbacks and unsent old-generation work
+bounded queue, connection generation and deadline. The shared Material/MIUIX/Fina
+prompt lists every package returned for the requesting UID and warns that Sui
+grants apply to that whole UID. Admission captures the complete sorted package
+set, each member's UID, install/update times and APK signer digests; every allowed
+reply revalidates that snapshot at dispatch. Missing/unreadable members, added or
+removed packages, UID changes, updates and signer changes fail closed without
+sending a grant. Denials and expiry remain available even after identity changes.
+This is a point-in-time PackageManager check, not an atomic package-install/Binder
+transaction or revocation of previously persisted grants after a future install.
+Stale callbacks and unsent old-generation work
 are rejected after reconnect. An already-sent Binder RPC cannot be cancelled by
 the Manager; its result must be verified after a timeout.
 The Sui protocol supports persistent Shell and Root, one-time Root and deny;

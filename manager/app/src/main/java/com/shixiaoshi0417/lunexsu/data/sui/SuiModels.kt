@@ -54,6 +54,7 @@ data class SuiRequest(
     val requestCode: Int,
     val receivedAt: Long,
     val identity: String = "",
+    val packages: List<String> = listOf(packageName),
 ) {
     fun expired(now: Long, timeoutMillis: Long = 60_000): Boolean =
         receivedAt < 0 || now < receivedAt || now - receivedAt >= timeoutMillis

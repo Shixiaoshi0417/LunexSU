@@ -258,12 +258,10 @@ object SuiManager {
         override fun showPermissionConfirmation(uid: Int, pid: Int, packageName: String?, requestCode: Int) {
             requireRoot()
             val name = packageName.orEmpty()
-            val identity = runCatching {
-                val info = packageInfo(name)
-                check(info.applicationInfo?.uid == uid)
-                fingerprint(listOf(info))
-            }.getOrDefault("")
-            val request = SuiRequest(generation, uid, pid, name, requestCode, SystemClock.elapsedRealtime(), identity)
+            // Throw synchronously on incomplete identity: Sui consumes and denies this callback.
+            val identity = uidIdentity(uid, name)
+            val request = SuiRequest(generation, uid, pid, name, requestCode, SystemClock.elapsedRealtime(),
+                identity.fingerprint, identity.packages)
             synchronized(SuiManager) {
                 check(session?.epoch == generation) { "Expired Sui connection" }
                 // This callback is synchronous. Sui catches rejection and consumes/denies
@@ -333,9 +331,9 @@ object SuiManager {
             val current = active()
             check(current.epoch == request.connection) { "Expired Sui connection" }
             if (decision.allowed && !request.expired(SystemClock.elapsedRealtime())) {
-                val info = packageInfo(request.packageName)
-                check(info.applicationInfo?.uid == request.uid && fingerprint(listOf(info)) == request.identity) {
-                    "Requesting application changed; no permission was granted"
+                val identity = uidIdentity(request.uid, request.packageName)
+                check(identity.packages == request.packages && identity.fingerprint == request.identity) {
+                    "Shared UID applications changed; no permission was granted"
                 }
             }
             check(session?.epoch == current.epoch) { "Expired Sui connection" }
@@ -375,15 +373,19 @@ object SuiManager {
     private fun packageInfo(name: String): PackageInfo =
         context.packageManager.getPackageInfo(name, PackageManager.GET_SIGNING_CERTIFICATES)
 
+    private fun uidIdentity(uid: Int, requester: String): SuiUidIdentity = SuiUidIdentity.capture(uid, requester,
+        { context.packageManager.getPackagesForUid(uid)?.toList().orEmpty() },
+        { name -> packageIdentity(packageInfo(name)) })
+
+    private fun packageIdentity(info: PackageInfo): SuiPackageIdentity = SuiPackageIdentity(
+        info.packageName, checkNotNull(info.applicationInfo).uid, info.firstInstallTime, info.lastUpdateTime,
+        checkNotNull(info.signingInfo?.apkContentsSigners).map { signer ->
+            MessageDigest.getInstance("SHA-256").digest(signer.toByteArray()).joinToString("") { "%02x".format(it) }
+        })
+
     private fun fingerprint(packages: List<PackageInfo>): String {
         check(packages.isNotEmpty())
-        return packages.sortedBy { it.packageName }.joinToString("\n") { info ->
-            val signers = checkNotNull(info.signingInfo?.apkContentsSigners).map { signer ->
-                MessageDigest.getInstance("SHA-256").digest(signer.toByteArray()).joinToString("") { "%02x".format(it) }
-            }.sorted()
-            check(signers.isNotEmpty())
-            "${info.packageName}|${info.applicationInfo?.uid}|${info.firstInstallTime}|${info.lastUpdateTime}|${signers.joinToString()}"
-        }
+        return packages.sortedBy { it.packageName }.joinToString("\n") { packageIdentity(it).fingerprint() }
     }
 
     private fun publishRequests() {

@@ -116,6 +116,8 @@ fun SuiPermissionPrompt() {
         text = { Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
             Text("${request.packageName}\nUID ${request.uid} · PID ${request.pid}")
             Text(stringResource(R.string.sui_separate_permissions))
+            Text(stringResource(R.string.sui_shared_uid))
+            request.packages.forEach { Text(it) }
             SuiDecision.entries.forEach { option -> TextButton(onClick = { decision = option }) {
                 Text((if (decision == option) "✓ " else "") + stringResource(when (option) {
                     SuiDecision.ROOT -> R.string.sui_root

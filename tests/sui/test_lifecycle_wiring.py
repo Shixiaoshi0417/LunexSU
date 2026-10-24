@@ -18,7 +18,9 @@ class LifecycleWiringTests(unittest.TestCase):
         source = (KOTLIN / "data/sui/SuiManager.kt").read_text(encoding="utf-8")
         reply = source.split("private fun reply(", 1)[1].split("private fun loadApps", 1)[0]
         self.assertIn("current.epoch == request.connection", reply)
-        self.assertIn("fingerprint(listOf(info)) == request.identity", reply)
+        self.assertIn("uidIdentity(request.uid, request.packageName)", reply)
+        self.assertIn("identity.packages == request.packages && identity.fingerprint == request.identity", reply)
+        self.assertLess(reply.index("uidIdentity("), reply.index("beforeDispatch()"))
         self.assertIn("session?.epoch == current.epoch", reply)
         self.assertIn("request.expired(SystemClock.elapsedRealtime())) SuiDecision.DENY_ONCE", reply)
         self.assertNotIn("newSingleThreadExecutor", source)
@@ -29,6 +31,23 @@ class LifecycleWiringTests(unittest.TestCase):
         self.assertIn("lease.checkActive()", reply)
         self.assertIn("catch (error: TimeoutException)", source)
         self.assertIn("disconnect() // Invalidates", source)
+
+    def test_shared_uid_snapshot_is_complete_and_visible_in_the_common_prompt(self):
+        source = (KOTLIN / "data/sui/SuiManager.kt").read_text(encoding="utf-8")
+        callback = source.split("override fun showPermissionConfirmation", 1)[1].split("private fun disconnect", 1)[0]
+        self.assertIn("uidIdentity(uid, name)", callback)
+        self.assertIn("identity.fingerprint, identity.packages", callback)
+        self.assertLess(callback.index("uidIdentity("), callback.index("requests.requireOffer(request)"))
+        self.assertIn("context.packageManager.getPackagesForUid(uid)", source)
+        self.assertIn("PackageManager.GET_SIGNING_CERTIFICATES", source)
+        self.assertIn("info.signingInfo?.apkContentsSigners", source)
+        self.assertIn("info.firstInstallTime, info.lastUpdateTime", source)
+        screen = (KOTLIN / "ui/screen/sui/SuiScreen.kt").read_text(encoding="utf-8")
+        prompt = screen.split("fun SuiPermissionPrompt()", 1)[1]
+        self.assertIn("R.string.sui_shared_uid", prompt)
+        self.assertIn("request.packages.forEach { Text(it) }", prompt)
+        self.assertIn("Modifier.fillMaxWidth().verticalScroll(rememberScrollState())", prompt)
+        self.assertIn("ui.screen.susfs.AlertDialog", screen)
 
     def test_lifecycle_timeout_retains_unknown_outcome_until_authoritative_status(self):
         source = (KOTLIN / "data/sui/SuiManager.kt").read_text(encoding="utf-8")
