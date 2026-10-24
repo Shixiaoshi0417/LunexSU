@@ -150,6 +150,7 @@ import com.shixiaoshi0417.lunexsu.ui.component.bottombar.LocalFloatingBarReserve
 import com.shixiaoshi0417.lunexsu.ui.component.bottombar.LocalFloatingBarVisible
 import com.shixiaoshi0417.lunexsu.ui.component.bottombar.LocalIsFloatingNavMode
 import androidx.compose.ui.unit.IntOffset
+import top.yukonga.miuix.kmp.nav.gesture.WindowNavigationEventBridge
 
 @SuppressLint("StringFormatInvalid")
 @Composable
@@ -589,6 +590,7 @@ private fun ModuleShortcutSheet(
             enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
         )
     ) {
+        WindowNavigationEventBridge()
         Column(
             verticalArrangement = Arrangement.spacedBy(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

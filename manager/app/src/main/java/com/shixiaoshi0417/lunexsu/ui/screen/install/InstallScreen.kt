@@ -25,8 +25,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.shixiaoshi0417.lunexsu.data.Superkey
-import com.shixiaoshi0417.lunexsu.ui.util.getLoadedBlockableModules
-import com.shixiaoshi0417.lunexsu.ui.util.isBlockModulesValid
 import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.getKernelVersion
 import com.shixiaoshi0417.lunexsu.ui.LocalUiMode
@@ -71,29 +69,11 @@ fun InstallScreen() {
     var allowShell by rememberSaveable { mutableStateOf(false) }
     var enableAdb by rememberSaveable { mutableStateOf(false) }
     var forceBackup by rememberSaveable { mutableStateOf(false) }
-    var blockModulesEnabled by rememberSaveable { mutableStateOf(false) }
-    var blockModules by rememberSaveable { mutableStateOf("") }
-    var blockModulesPrefilled by rememberSaveable { mutableStateOf(false) }
     // Secrets deliberately do not participate in saved instance state/navigation state.
     var superkeyEnabled by remember { mutableStateOf(false) }
     var superkey by remember { mutableStateOf("") }
     var superkeyConfirmation by remember { mutableStateOf("") }
     var preparing by remember { mutableStateOf(false) }
-    // Blocking a module the device needs can bootloop it, so nothing is
-    // blocked unless the user explicitly opts in.
-    val effectiveBlockModules = if (blockModulesEnabled) blockModules else ""
-
-    // Pre-fill the block list with the known anti-root modules actually loaded
-    // on this device, once. It only takes effect once the user opts in.
-    LaunchedEffect(Unit) {
-        if (!blockModulesPrefilled) {
-            blockModulesPrefilled = true
-            val detected = getLoadedBlockableModules()
-            if (detected.isNotEmpty() && blockModules.isBlank()) {
-                blockModules = detected.joinToString(",")
-            }
-        }
-    }
 
     val currentKmi by produceState(initialValue = "") { value = getCurrentKmi() }
     val partitions by produceState(initialValue = emptyList()) { value = getAvailablePartitions() }
@@ -148,12 +128,7 @@ fun InstallScreen() {
         }
     }
 
-    val blockModulesInvalidMessage = stringResource(R.string.install_block_modules_invalid)
     fun prepareInstall(): FlashIt? {
-        if (!isBlockModulesValid(effectiveBlockModules)) {
-            showMessage(blockModulesInvalidMessage)
-            return null
-        }
         return installMethod?.let { method ->
             when (method) {
                 is InstallMethod.DownloadFile -> FlashIt.DownloadBoot(
@@ -163,7 +138,6 @@ fun InstallScreen() {
                     allowShell = allowShell,
                     enableAdb = enableAdb,
                     backup = forceBackup,
-                    blockModules = effectiveBlockModules,
                 )
                 else -> FlashIt.FlashBoot(
                     boot = if (method is InstallMethod.SelectFile) method.uri else null,
@@ -173,7 +147,6 @@ fun InstallScreen() {
                     allowShell = allowShell,
                     enableAdb = enableAdb,
                     backup = method is InstallMethod.SelectFile && forceBackup,
-                    blockModules = effectiveBlockModules,
                 )
             }
         }
@@ -298,9 +271,6 @@ fun InstallScreen() {
         enableAdb = enableAdb,
         forceBackup = forceBackup,
         canForceBackup = installMethod is InstallMethod.SelectFile,
-        blockModulesEnabled = blockModulesEnabled,
-        blockModules = blockModules,
-        blockModulesValid = isBlockModulesValid(effectiveBlockModules),
         superkeyEnabled = superkeyEnabled,
         superkey = superkey,
         superkeyConfirmation = superkeyConfirmation,
@@ -355,18 +325,12 @@ fun InstallScreen() {
         onSelectForceBackup = {
             forceBackup = it
         },
-        onSelectBlockModules = {
-            blockModulesEnabled = it
-        },
         onSuperkeyEnabled = {
             superkeyEnabled = it
             if (!it) { superkey = ""; superkeyConfirmation = "" }
         },
         onSuperkeyChange = { superkey = it },
         onSuperkeyConfirmation = { superkeyConfirmation = it },
-        onBlockModulesChange = {
-            blockModules = it
-        }
     )
 
     when (LocalUiMode.current) {

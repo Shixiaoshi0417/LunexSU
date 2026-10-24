@@ -26,8 +26,6 @@ OWNERS = {
     "component/profile/RootProfileConfigMaterial.kt": "profile/template viewport or scrolling SELinux dialog",
     "component/profile/RootProfileConfigMiuix.kt": "profile/template viewport or scrolling native overlay",
     "screen/home/HomeSuperkey.kt": "resizing dialogs; scrollable body above actions",
-    "screen/install/InstallMaterial.kt": "scrolling IME-padded page",
-    "screen/install/InstallMiuix.kt": "scrolling IME-padded page",
     "screen/install/InstallSuperkey.kt": "install viewport or Superkey dialog",
     "screen/module/ModuleMaterial.kt": "Material sheet owns IME; shortcut form scrolls",
     "screen/module/ModuleMiuix.kt": "native overlay owns IME; shortcut form scrolls",
@@ -80,6 +78,14 @@ class InputLayoutTests(unittest.TestCase):
                                             for line in code(source(path)).splitlines()):
                 actual.add(path.removeprefix(UI))
         self.assertEqual(set(OWNERS), actual, "Audit the owner of every new or removed input file")
+
+    def test_install_pages_delegate_remaining_fields_to_superkey(self):
+        for path in ("screen/install/InstallMaterial.kt", "screen/install/InstallMiuix.kt"):
+            with self.subTest(path=path):
+                text = code(source(UI + path))
+                self.assertIn("InstallSuperkey(uiState, actions)", text)
+                self.assertIsNone(INPUT.search(text))
+                self.assertNotIn("blockModules", text)
 
     def test_full_screen_forms_reserve_ime_before_scroll_content(self):
         for path in (

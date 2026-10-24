@@ -75,7 +75,7 @@ class DemoSafetyTest {
     @Test fun flashSimulationNeverReadsOrDownloadsInput() {
         val output = mutableListOf<String>()
         val result = downloadBoot("invalid://never-request", "init_boot", LkmSelection.KmiNone,
-            false, false, false, "", output::add, { error("Unexpected stderr") })
+            false, false, false, output::add, { error("Unexpected stderr") })
         assertEquals(0, result.code)
         assertFalse(result.showReboot)
         assertEquals(listOf(DemoState.NOTICE), output)
@@ -101,11 +101,14 @@ class DemoSafetyTest {
         assertTrue(toggleModule("demo_theme", true))
         assertFalse(toggleModule("not-a-demo-module", true))
     }
-    @Test fun blockListValidationMatchesNormalUiRules() {
-        assertTrue(isBlockModulesValid("one,two_2"))
-        assertFalse(isBlockModulesValid("one two"))
-        assertFalse(isBlockModulesValid("bad-name"))
-        assertFalse(isBlockModulesValid("a".repeat(65)))
-        assertEquals(listOf("one", "two"), parseBlockModules("one, ,two"))
+    @Test fun bootInstallSimulationNeverFlashesOrAuthenticates() {
+        val output = mutableListOf<String>()
+        val result = installBoot(null, LkmSelection.KmiNone, false, "init_boot",
+            false, false, false, output::add, { error("Unexpected stderr") },
+            superkeyRecord = byteArrayOf(1, 2, 3))
+        assertEquals(0, result.code)
+        assertFalse(result.showReboot)
+        assertEquals(listOf(DemoState.NOTICE), output)
+        assertNull(Natives.superkeySalt())
     }
 }

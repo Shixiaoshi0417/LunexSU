@@ -77,17 +77,11 @@ fun uninstallPermanently(onStdout: (String) -> Unit, onStderr: (String) -> Unit)
     data class KmiString(val value: String) : LkmSelection()
     data object KmiNone : LkmSelection()
 }
-fun parseBlockModules(input: String): List<String> = input.split(',').map(String::trim).filter(String::isNotEmpty)
-fun isBlockModulesValid(input: String): Boolean {
-    val names = parseBlockModules(input)
-    return names.all { name -> name.length <= 64 && name.all { it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' || it == '_' } } &&
-        names.joinToString(",").length <= 255
-}
 fun installBoot(bootUri: Uri?, lkm: LkmSelection, ota: Boolean, partition: String?, allowShell: Boolean,
-    enableAdb: Boolean, forceBackup: Boolean, blockModules: String, onStdout: (String) -> Unit,
+    enableAdb: Boolean, forceBackup: Boolean, onStdout: (String) -> Unit,
     onStderr: (String) -> Unit, superkeyRecord: ByteArray? = null) = preview(onStdout)
 fun downloadBoot(url: String, partition: String, lkm: LkmSelection, allowShell: Boolean, enableAdb: Boolean,
-    forceBackup: Boolean, blockModules: String, onStdout: (String) -> Unit, onStderr: (String) -> Unit,
+    forceBackup: Boolean, onStdout: (String) -> Unit, onStderr: (String) -> Unit,
     superkeyRecord: ByteArray? = null) = preview(onStdout)
 suspend fun probeRemoteBootPartitions(url: String) = ProbeResult(listOf("boot", "init_boot", "vendor_boot"), "android14-6.1")
 fun reboot(reason: String = "") = Unit
@@ -98,7 +92,6 @@ suspend fun isAbDevice() = true
 suspend fun getDefaultPartition() = "init_boot"
 suspend fun getSlotSuffix(ota: Boolean) = if (ota) "_b" else "_a"
 suspend fun getAvailablePartitions() = listOf("boot", "init_boot", "vendor_boot")
-suspend fun getLoadedBlockableModules() = listOf("demo_module")
 fun hasMagisk() = false
 fun isSepolicyValid(rules: String?) = !rules.isNullOrBlank()
 fun getSepolicy(pkg: String) = DemoState.policies[pkg].orEmpty()
