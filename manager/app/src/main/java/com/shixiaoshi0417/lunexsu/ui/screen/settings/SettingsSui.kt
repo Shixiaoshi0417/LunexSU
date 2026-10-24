@@ -9,13 +9,18 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.data.sui.SuiUiState
 import com.shixiaoshi0417.lunexsu.ui.screen.sui.suiStatusText
+import com.shixiaoshi0417.lunexsu.ui.screen.sui.suiZygiskText
 
 /** What the Sui switch does next boot, or why it cannot change now. */
 @Composable
 internal fun suiSwitchSummary(ui: SuiUiState): String {
     val status = ui.status
     val idle = !ui.reconciling && !status.desiredEnabled && !status.pendingReboot && status.payloadAvailable
-    return ui.error ?: if (idle) stringResource(R.string.sui_switch_summary) else suiStatusText(ui)
+    return ui.error ?: when {
+        idle && !status.zygisk.ready -> suiZygiskText(ui)
+        idle -> stringResource(R.string.sui_switch_summary)
+        else -> suiStatusText(ui)
+    }
 }
 
 /** The direction awaiting confirmation; leaving or backgrounding Settings discards it. */

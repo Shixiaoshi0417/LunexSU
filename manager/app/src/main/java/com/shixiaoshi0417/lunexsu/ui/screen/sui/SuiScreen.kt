@@ -84,6 +84,19 @@ internal fun suiStatusText(ui: SuiUiState): String = stringResource(when {
 @Composable
 internal fun SuiSwitchDialog(enable: Boolean?, ui: SuiUiState, onDismiss: () -> Unit) {
     if (enable == null) return
+    LaunchedEffect(enable) { SuiManager.refresh(false) }
+    if (enable && !ui.status.zygisk.ready) {
+        AlertDialog(onDismissRequest = onDismiss,
+            title = { Text(stringResource(R.string.sui_zygisk_required)) },
+            text = { Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(suiZygiskText(ui))
+                Text(stringResource(R.string.sui_zygisk_instructions), Modifier.padding(top = 12.dp))
+            } },
+            confirmButton = { TextButton(enabled = !ui.busy && !ui.reconciling,
+                onClick = { SuiManager.refresh(false) }) { Text(stringResource(R.string.sui_refresh)) } },
+            dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.sui_cancel)) } })
+        return
+    }
     val action = stringResource(if (enable) R.string.sui_enable else R.string.sui_disable)
     AlertDialog(onDismissRequest = onDismiss, title = { Text(action) },
         text = { Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -97,6 +110,14 @@ internal fun SuiSwitchDialog(enable: Boolean?, ui: SuiUiState, onDismiss: () -> 
         }) { Text(action) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.sui_cancel)) } })
 }
+
+@Composable
+internal fun suiZygiskText(ui: SuiUiState): String = stringResource(when (ui.status.zygisk.state) {
+    "missing" -> R.string.sui_zygisk_missing
+    "pending_reboot" -> R.string.sui_zygisk_pending
+    "conflict" -> R.string.sui_zygisk_conflict
+    else -> R.string.sui_zygisk_unavailable
+})
 
 @Composable
 private fun SuiSearchField(query: String, onQueryChange: (String) -> Unit, modifier: Modifier) {

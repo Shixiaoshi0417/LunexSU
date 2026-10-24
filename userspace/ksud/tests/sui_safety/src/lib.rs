@@ -34,6 +34,12 @@ mod module {
 #[path = "../../../src/sui/deployment.rs"]
 mod deployment;
 
+#[cfg(all(test, unix))]
+#[path = "../../../src/sui/provider.rs"]
+mod provider;
+#[cfg(all(test, unix))]
+mod provider_tests;
+
 #[cfg(test)]
 mod tests {
     use super::payload;

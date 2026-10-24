@@ -2,7 +2,14 @@
 <resources>
     <string name="sui_title">Sui management</string>
     <string name="sui_switch_title">Sui (Shizuku API)</string>
-    <string name="sui_switch_summary">Off by default. Requires an active ReZygisk or NeoZygisk backend; every change takes effect after a full reboot.</string>
+    <string name="sui_switch_summary">Off by default. Requires one enabled built-in or external ReZygisk, NeoZygisk or Zygisk Next provider; every change takes effect after a full reboot.</string>
+    <string name="sui_zygisk_required">Enable Zygisk first</string>
+    <string name="sui_zygisk_missing">No enabled Zygisk provider was detected. Sui cannot be enabled.</string>
+    <string name="sui_zygisk_pending">The Zygisk setup has pending changes. Fully reboot before enabling Sui.</string>
+    <string name="sui_zygisk_conflict">Multiple Zygisk providers are enabled or staged. Keep only one and fully reboot.</string>
+    <string name="sui_zygisk_unavailable">The Zygisk prerequisite could not be verified. Sui cannot be enabled; use a matching updated ksud and refresh.</string>
+    <string name="sui_zygisk_instructions">Enable built-in Zygisk in Settings, or install and enable an external ReZygisk, NeoZygisk or Zygisk Next module, then fully reboot and refresh. External providers do not need to be installed by LunexSU. This dialog does not enable Zygisk or Sui. Detection is a prerequisite check, not proof of successful injection.</string>
+    <string name="sui_refresh">Refresh</string>
     <string name="sui_payload_missing">The bundled Sui payload is unavailable</string>
     <string name="sui_apps">App permissions</string>
     <string name="sui_status">Service and permission host</string>
@@ -11,7 +18,7 @@
     <string name="sui_disable">Disable Sui</string>
     <string name="sui_payload_version">Bundled Sui: %1$s</string>
     <string name="sui_disable_warning">Disabling requests the broker to stop. A full reboot is required to remove injection and end privileges or user services already running. Updating Manager does not automatically replace an installed Sui module.</string>
-    <string name="sui_enable_warning">Requires an active ReZygisk or NeoZygisk backend and a full reboot. SystemUI and Settings must not be excluded from injection. This does not enable ZNN or ADB Root. Keep a working recovery path. Sui has its own privileged permission database.</string>
+    <string name="sui_enable_warning">Requires one enabled built-in or external ReZygisk, NeoZygisk or Zygisk Next provider and a full reboot. SystemUI and Settings must not be excluded from injection. This does not enable ZNN or ADB Root. Keep a working recovery path. Sui has its own privileged permission database.</string>
     <string name="sui_pending_reboot">A full reboot is required</string>
     <string name="sui_ready">Root and Shell services connected; permission host attached</string>
     <string name="sui_unavailable">Enabled but service or permission host is unavailable</string>

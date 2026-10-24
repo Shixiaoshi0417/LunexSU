@@ -2,7 +2,14 @@
 <resources>
     <string name="sui_title">Sui 管理</string>
     <string name="sui_switch_title">Sui（Shizuku API）</string>
-    <string name="sui_switch_summary">默认关闭。需要已启用的 ReZygisk 或 NeoZygisk 后端，每次更改都需完整重启后生效</string>
+    <string name="sui_switch_summary">默认关闭。需要启用一个内置或外置 ReZygisk、NeoZygisk 或 Zygisk Next，每次更改都需完整重启后生效</string>
+    <string name="sui_zygisk_required">请先启用 Zygisk</string>
+    <string name="sui_zygisk_missing">未检测到已启用的 Zygisk，无法开启 Sui。</string>
+    <string name="sui_zygisk_pending">Zygisk 配置有待生效的更改，请完整重启后再开启 Sui。</string>
+    <string name="sui_zygisk_conflict">检测到多个已启用或待安装的 Zygisk，请仅保留一个并完整重启。</string>
+    <string name="sui_zygisk_unavailable">无法核实 Zygisk 前置条件，禁止开启 Sui。请使用配套更新的 ksud 后刷新。</string>
+    <string name="sui_zygisk_instructions">请在设置中启用内置 Zygisk，或安装并启用外置 ReZygisk、NeoZygisk、Zygisk Next 模块，然后完整重启并刷新。外置模块无需由 LunexSU 安装。此弹窗不会自动开启 Zygisk 或 Sui；检测通过仅代表满足前置条件，不保证注入成功。</string>
+    <string name="sui_refresh">刷新</string>
     <string name="sui_payload_missing">内置 Sui 组件不可用</string>
     <string name="sui_apps">应用授权</string>
     <string name="sui_status">服务与授权宿主</string>
@@ -11,7 +18,7 @@
     <string name="sui_disable">停用 Sui</string>
     <string name="sui_payload_version">内置 Sui：%1$s</string>
     <string name="sui_disable_warning">停用会请求停止服务。彻底移除注入、结束已有权限或正在运行的用户服务仍需完整重启。更新管理器不会自动替换已安装的 Sui 模块。</string>
-    <string name="sui_enable_warning">需要已启用的 ReZygisk 或 NeoZygisk 后端，并完整重启。SystemUI 和设置不能被排除注入。不会自动启用 ZNN 或 ADB Root。请保留可用的恢复方式；Sui 使用独立的高权限授权数据库。</string>
+    <string name="sui_enable_warning">需要启用一个内置或外置 ReZygisk、NeoZygisk 或 Zygisk Next，并完整重启。SystemUI 和设置不能被排除注入。不会自动启用 ZNN 或 ADB Root。请保留可用的恢复方式；Sui 使用独立的高权限授权数据库。</string>
     <string name="sui_pending_reboot">需要完整重启</string>
     <string name="sui_ready">Root、Shell 服务已连接，授权宿主已附着</string>
     <string name="sui_unavailable">已启用，但服务或授权宿主不可用</string>

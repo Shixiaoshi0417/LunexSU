@@ -68,8 +68,8 @@ run the Android broker or prove injection health.
 
 ## Runtime and permission hosting
 
-`ksud sui enable` requires the matching Core API, `u:r:ksu:s0`, an active ReZygisk
-or NeoZygisk backend, owned module/data paths, and a trusted Manager. It never
+`ksud sui enable` requires the matching Core API, `u:r:ksu:s0`, exactly one enabled
+ReZygisk, NeoZygisk or Zygisk Next provider, owned Sui module/data paths, and a trusted Manager. It never
 enables a provider or ZNN. Explicit enable writes only the two broker transition
 rules; the vendor ADB-root policy is retained as provenance, not applied. The
 intent is committed after module flags/policy are durable. Boot reconciliation
@@ -121,6 +121,25 @@ permission leaves requests available in-app. Keep Manager running for prompts:
 there is no claim that Android will always allow background UI or process startup.
 No Root Demo has a separate in-memory controller and excludes the privileged
 controller, Sui AIDL, daemon calls and payload from its actual APK.
+
+Before showing the enable confirmation, a missing, unverified, conflicting or
+pending-reboot Zygisk prerequisite instead opens an explanatory dialog. It asks
+the user to enable a built-in or external provider and fully reboot; its Refresh
+button only reads status and never enables either feature. Manager reads fresh
+status again before even preparing Sui, and ksud rechecks the same detector under
+the module lock before enabling or starting the broker. Disabling Sui remains
+possible when the provider is missing. Older daemon status without this assessment
+fails closed for new enables, not for disabling an existing Sui installation.
+
+The read-only detector recognizes exact module IDs `rezygisk` and `zygisksu`
+(NeoZygisk and external Zygisk Next share the latter), without requiring LunexSU
+ownership markers. Enabled live modules are distinguished from disabled, removed
+or staged copies; pending changes require a reboot. Symlink directories, unsafe
+metadata and failed reads cannot satisfy the check. It does not identify providers
+by a `zygisk/` plugin directory, a display name or a running process: LSPosed,
+Sui and ordinary plugins alone do not satisfy it. This prerequisite assessment is
+not proof that injection works or that SystemUI/Settings are included. Demo uses
+the same gate with in-memory Zygisk state and performs no real module inspection.
 
 ## Operating and validation limits
 

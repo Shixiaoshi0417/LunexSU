@@ -100,7 +100,16 @@ object SuiManager {
     }
 
     fun prepare() = operation { try { command("prepare") } finally { refreshLater() } }
-    fun enable() = operation { try { command("prepare"); command("enable") } finally { refreshLater() } }
+    fun enable() = operation {
+        try {
+            // Check freshly, before even staging Sui. The daemon rechecks under its module lock.
+            val latest = SuiStatus.parse(command("status"))
+            mutable.update { it.copy(status = latest) }
+            check(latest.zygisk.ready) { "Enable exactly one built-in or external Zygisk provider and fully reboot first" }
+            command("prepare")
+            command("enable")
+        } finally { refreshLater() }
+    }
     fun disable() = operation { disconnect(); try { command("disable") } finally { refreshLater() } }
 
     fun setPermission(app: SuiApp, permission: SuiPermission) = operation {

@@ -97,22 +97,11 @@ fn check_module(path: &Path) -> Result<()> {
 
 fn provider() -> Result<()> {
     // Presence is only a startup prerequisite, never evidence that injection succeeded.
-    let ready = ["rezygisk", "zygisksu"]
-        .iter()
-        .filter(|id| {
-            let path = Path::new(crate::defs::MODULE_DIR).join(id);
-            fs::symlink_metadata(&path).is_ok_and(|m| m.is_dir())
-                && ["disable", "remove", "update"]
-                    .iter()
-                    .all(|flag| !path.join(flag).exists())
-                && !Path::new(crate::defs::MODULE_UPDATE_DIR).join(id).exists()
-        })
-        .count();
-    ensure!(
-        ready == 1,
-        "Enable exactly one ReZygisk or NeoZygisk provider and reboot first"
-    );
-    Ok(())
+    super::provider::inspect(
+        Path::new(crate::defs::MODULE_DIR),
+        Path::new(crate::defs::MODULE_UPDATE_DIR),
+    )?
+    .require_ready()
 }
 
 fn private_data(create: bool) -> Result<()> {

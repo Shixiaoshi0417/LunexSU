@@ -3,6 +3,7 @@ mod deployment;
 mod identity;
 mod payload;
 mod process_helper;
+mod provider;
 mod runtime;
 mod state;
 mod supervision;
@@ -114,6 +115,17 @@ pub fn run(command: &Command) -> Result<()> {
                 Err(error) => status.reason = format!("{error:#}"),
             }
             let mut value = serde_json::to_value(&status)?;
+            // Report prerequisites even while Sui is off or its payload/runtime is unavailable.
+            let zygisk = if unsafe { libc::geteuid() } == 0 {
+                provider::inspect(
+                    std::path::Path::new(crate::defs::MODULE_DIR),
+                    std::path::Path::new(crate::defs::MODULE_UPDATE_DIR),
+                )
+                .unwrap_or_else(|_| provider::Assessment::unavailable())
+            } else {
+                provider::Assessment::unavailable()
+            };
+            value["zygisk"] = serde_json::to_value(zygisk)?;
             if unsafe { libc::geteuid() } == 0 && status.payload_available {
                 match runtime::status() {
                     Ok(actual) => {

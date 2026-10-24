@@ -17,6 +17,28 @@ enum class SuiDecision(val allowed: Boolean, val once: Boolean, val shell: Boole
     DENY(false, false, false), DENY_ONCE(false, true, false),
 }
 
+/** A module prerequisite, not proof that Zygote injection or the Sui service is healthy. */
+data class SuiZygiskStatus(val state: String = "unavailable", val providers: List<String> = emptyList()) {
+    val ready: Boolean
+        get() = state == "ready" && providers.isNotEmpty() && providers.size <= 2 &&
+            providers.distinct().size == providers.size && providers.all { it in KNOWN_IDS }
+
+    companion object {
+        private val KNOWN_IDS = setOf("rezygisk", "zygisksu")
+        internal fun parse(json: JSONObject?): SuiZygiskStatus {
+            if (json == null) return SuiZygiskStatus()
+            val state = json.opt("state") as? String ?: return SuiZygiskStatus()
+            if (state !in setOf("ready", "missing", "pending_reboot", "conflict", "unavailable")) return SuiZygiskStatus()
+            val ids = json.optJSONArray("providers") ?: return SuiZygiskStatus()
+            if (ids.length() > 2) return SuiZygiskStatus()
+            val providers = (0 until ids.length()).map { ids.opt(it) as? String ?: return SuiZygiskStatus() }
+            if (providers.any { it !in KNOWN_IDS } || providers.distinct().size != providers.size ||
+                (state == "ready" && providers.isEmpty())) return SuiZygiskStatus()
+            return SuiZygiskStatus(state, providers)
+        }
+    }
+}
+
 data class SuiStatus(
     val state: String = "unavailable",
     val payloadAvailable: Boolean = false,
@@ -25,6 +47,7 @@ data class SuiStatus(
     val serviceHealthy: Boolean = false,
     val version: String = "",
     val reason: String = "",
+    val zygisk: SuiZygiskStatus = SuiZygiskStatus(),
 ) {
     companion object {
         fun parse(text: String): SuiStatus {
@@ -38,6 +61,7 @@ data class SuiStatus(
                 state, json.getBoolean("payload_available"), runtime?.optBoolean("desired_enabled") == true,
                 runtime?.optBoolean("pending_reboot") == true, runtime?.optBoolean("service_healthy") == true,
                 json.optString("payload_version", ""), json.optString("reason", ""),
+                SuiZygiskStatus.parse(json.optJSONObject("zygisk")),
             )
         }
     }
@@ -168,7 +192,8 @@ data class SuiUiState(
         get() = !busy && !reconciling && (status.desiredEnabled || status.payloadAvailable)
 
     /** A confirmation only applies while it still changes the next-boot setting. */
-    fun canSwitchTo(enabled: Boolean): Boolean = switchEnabled && status.desiredEnabled != enabled
+    fun canSwitchTo(enabled: Boolean): Boolean = switchEnabled && status.desiredEnabled != enabled &&
+        (!enabled || status.zygisk.ready)
 
     /** Permission management is offered only once Sui is switched on. */
     val managementVisible: Boolean get() = status.desiredEnabled
