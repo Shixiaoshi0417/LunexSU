@@ -108,6 +108,14 @@ Root. SystemUI cannot replace the Manager's permission callback. Upstream legacy
 SystemUI/Settings management APIs remain, so this is not an exclusive-admin claim.
 
 Material, MIUIX and Fina use shared, keyboard-aware management/request screens.
+The Sui switch sits in Settings directly below built-in Zygisk. Like that switch,
+its checked state is the next-boot setting; turning it on or off first shows the
+enable or disable warning, which is discarded when Settings is left or
+backgrounded and rechecked against current state when confirmed. The **Sui
+management** entry appears only after Sui is switched on; that page lists
+per-UID permissions and no longer enables or disables the broker. Each style uses
+its own native bar (MIUIX blur, Material collapsing, Fina pinned) with the shared
+theme colors, so a theme-pack wallpaper is not covered by an opaque top band.
 Background notifications open the same global request host; denied notification
 permission leaves requests available in-app. Keep Manager running for prompts:
 there is no claim that Android will always allow background UI or process startup.

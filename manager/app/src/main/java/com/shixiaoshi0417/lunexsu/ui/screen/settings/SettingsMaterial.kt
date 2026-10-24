@@ -301,6 +301,7 @@ fun SettingPagerMaterial(
                 )
 
                 ZygiskCardMaterial(uiState, actions)
+                SuiCardMaterial(onOpenSui = actions.onOpenSui)
 
                 SegmentedColumn(
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 13.dp),
@@ -370,14 +371,6 @@ fun SettingPagerMaterial(
                                     stringResource(id = R.string.send_log)
                                 )
                             },
-                        )
-                    },
-                    {
-                        SegmentedListItem(
-                            onClick = actions.onOpenSui,
-                            headlineContent = { Text(stringResource(R.string.sui_title)) },
-                            supportingContent = { Text(stringResource(R.string.sui_separate_permissions)) },
-                            leadingContent = { Icon(Icons.Filled.Info, null) },
                         )
                     },
                     {

@@ -365,6 +365,7 @@ fun SettingPagerMiuix(
                         }
 
                         ZygiskCardMiuix(uiState, actions)
+                        SuiCardMiuix(onOpenSui = actions.onOpenSui)
 
                         Card(
                             modifier = Modifier
@@ -476,12 +477,6 @@ fun SettingPagerMiuix(
                                 Icon(Icons.Rounded.Info, null, Modifier.padding(end = 6.dp), tint = colorScheme.onBackground)
                             },
                             onClick = actions.onOpenSusfs,
-                        )
-                        ArrowPreference(
-                            title = stringResource(R.string.sui_title),
-                            summary = stringResource(R.string.sui_separate_permissions),
-                            startAction = { Icon(Icons.Rounded.Info, null, Modifier.padding(end = 6.dp), tint = colorScheme.onBackground) },
-                            onClick = actions.onOpenSui,
                         )
                         ArrowPreference(
                             title = about,

@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="sui_title">Sui 管理</string>
+    <string name="sui_switch_title">Sui（Shizuku API）</string>
+    <string name="sui_switch_summary">默认关闭。需要已启用的 ReZygisk 或 NeoZygisk 后端，每次更改都需完整重启后生效</string>
+    <string name="sui_payload_missing">内置 Sui 组件不可用</string>
+    <string name="sui_apps">应用授权</string>
     <string name="sui_status">服务与授权宿主</string>
     <string name="sui_separate_permissions">Sui 权限与内核 Root 权限相互独立。</string>
     <string name="sui_enable">启用 Sui</string>

@@ -1,18 +1,15 @@
 package com.shixiaoshi0417.lunexsu.ui.screen.sui
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,89 +17,97 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.shixiaoshi0417.lunexsu.BuildConfig
 import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.data.sui.*
+import com.shixiaoshi0417.lunexsu.ui.LocalUiMode
+import com.shixiaoshi0417.lunexsu.ui.UiMode
 import com.shixiaoshi0417.lunexsu.ui.navigation3.LocalNavigator
 import com.shixiaoshi0417.lunexsu.ui.screen.susfs.AlertDialog
-import com.shixiaoshi0417.lunexsu.ui.screen.susfs.OutlinedTextField
-import com.shixiaoshi0417.lunexsu.ui.screen.susfs.SegmentedColumn
-import com.shixiaoshi0417.lunexsu.ui.screen.susfs.SegmentedListItem
-import com.shixiaoshi0417.lunexsu.ui.screen.susfs.SusfsScaffold
+import com.shixiaoshi0417.lunexsu.ui.screen.susfs.RadioButton
 import com.shixiaoshi0417.lunexsu.ui.screen.susfs.TextButton
 
+/** Permission management only; the Sui switch lives in Settings next to built-in Zygisk. */
 @Composable
 fun SuiScreen() {
     val ui by SuiManager.state.collectAsStateWithLifecycle()
     val navigator = LocalNavigator.current
     var query by remember { mutableStateOf("") }
     var editing by remember { mutableStateOf<SuiApp?>(null) }
-    var confirmEnable by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { SuiManager.refresh() }
-    SusfsScaffold(ui.busy, { navigator.pop() }, { SuiManager.refresh() }, title = stringResource(R.string.sui_title)) { inner ->
-        LazyColumn(Modifier.fillMaxSize().padding(inner).consumeWindowInsets(inner)
-            .navigationBarsPadding().imePadding().padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item {
-                SegmentedColumn(title = stringResource(R.string.sui_status)) {
-                    item { SegmentedListItem(headlineContent = { Text(stringResource(R.string.sui_payload_version, ui.status.version.ifEmpty { "Sui" })) },
-                        supportingContent = { Text(stringResource(when {
-                            ui.reconciling -> R.string.sui_outcome_pending
-                            ui.status.pendingReboot -> R.string.sui_pending_reboot
-                            ui.status.serviceHealthy && ui.hostAttached -> R.string.sui_ready
-                            ui.status.desiredEnabled -> R.string.sui_unavailable
-                            else -> R.string.sui_disabled
-                        })) }) }
-                    item { Text(stringResource(R.string.sui_separate_permissions), Modifier.padding(16.dp)) }
-                    if (ui.status.reason.isNotBlank()) item {
-                        Text(ui.status.reason, Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    item { TextButton(enabled = !ui.busy && !ui.reconciling && ui.status.payloadAvailable && !ui.status.desiredEnabled,
-                        onClick = { confirmEnable = true }) { Text(stringResource(R.string.sui_enable)) } }
-                    item { TextButton(enabled = !ui.busy && !ui.reconciling, onClick = SuiManager::disable) { Text(stringResource(R.string.sui_disable)) } }
-                    item { Text(stringResource(R.string.sui_disable_warning), Modifier.padding(16.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                }
-            }
-            if (BuildConfig.NO_ROOT_DEMO) item { Text(stringResource(R.string.sui_demo)) }
-            ui.error?.let { error -> item { Text(error, color = MaterialTheme.colorScheme.error) } }
-            item {
-                OutlinedTextField(query, { query = it.take(256) }, Modifier.fillMaxWidth(),
-                    singleLine = true, label = { Text(stringResource(R.string.sui_search)) })
-            }
-            if (!ui.hostAttached) item { Text(stringResource(R.string.sui_host_required)) }
-            items(ui.apps.filter { query.isBlank() || it.label.contains(query, true) || it.packages.contains(query, true) }, key = { it.uid }) { app ->
-                SegmentedColumn(title = app.label) {
-                    item { SegmentedListItem(enabled = ui.hostAttached && !ui.busy && !ui.reconciling, onClick = { editing = app },
-                        headlineContent = { Text(app.packages) }, supportingContent = {
-                            Text("UID ${app.uid} · ${stringResource(app.permission.label())}")
-                        }) }
-                }
-            }
-        }
+    val apps = remember(ui.apps, query) {
+        ui.apps.filter { query.isBlank() || it.label.contains(query, true) || it.packages.contains(query, true) }
     }
-    if (confirmEnable) AlertDialog(onDismissRequest = { confirmEnable = false },
-        title = { Text(stringResource(R.string.sui_enable)) },
-        text = { Text(stringResource(R.string.sui_enable_warning)) },
-        confirmButton = { TextButton(onClick = { confirmEnable = false; SuiManager.enable() }) {
-            Text(stringResource(R.string.sui_enable)) } },
-        dismissButton = { TextButton(onClick = { confirmEnable = false }) { Text(stringResource(R.string.sui_cancel)) } })
+    val editable = ui.hostAttached && !ui.busy && !ui.reconciling
+    val search: @Composable (Modifier) -> Unit = { modifier -> SuiSearchField(query, { query = it.take(256) }, modifier) }
+    if (LocalUiMode.current == UiMode.Miuix) {
+        SuiScreenMiuix(ui, apps, editable, { navigator.pop() }, { SuiManager.refresh() }, { editing = it }, search)
+    } else {
+        SuiScreenMaterial(ui, apps, editable, { navigator.pop() }, { SuiManager.refresh() }, { editing = it }, search)
+    }
     editing?.takeIf { ui.requests.isEmpty() }?.let { app ->
         var selected by remember(app) { mutableStateOf(app.permission) }
         AlertDialog(onDismissRequest = { editing = null }, title = { Text(app.label) },
             text = { Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text(stringResource(R.string.sui_shared_uid))
-                SuiPermission.entries.forEach { mode -> TextButton(onClick = { selected = mode }) {
-                    Text((if (selected == mode) "✓ " else "") + stringResource(mode.label()))
-                } }
-            } }, confirmButton = { TextButton(onClick = {
+                SuiPermission.entries.forEach { mode ->
+                    Row(Modifier.fillMaxWidth().selectable(selected = selected == mode, role = Role.RadioButton,
+                        onClick = { selected = mode }).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = selected == mode, onClick = null)
+                        Text(stringResource(mode.label()), Modifier.padding(start = 12.dp))
+                    }
+                }
+            } }, confirmButton = { TextButton(enabled = editable, onClick = {
                 editing = null; SuiManager.setPermission(app, selected)
             }) { Text(stringResource(R.string.sui_apply)) } },
             dismissButton = { TextButton(onClick = { editing = null }) { Text(stringResource(R.string.sui_cancel)) } })
+    }
+}
+
+/** Shared by the Settings switch and the management page, in every UI style. */
+@Composable
+internal fun suiStatusText(ui: SuiUiState): String = stringResource(when {
+    ui.reconciling -> R.string.sui_outcome_pending
+    ui.status.pendingReboot -> R.string.sui_pending_reboot
+    ui.status.serviceHealthy && ui.hostAttached -> R.string.sui_ready
+    ui.status.desiredEnabled -> R.string.sui_unavailable
+    !ui.status.payloadAvailable -> R.string.sui_payload_missing
+    else -> R.string.sui_disabled
+})
+
+/** Both directions explain the reboot boundary; the request is rechecked when confirmed. */
+@Composable
+internal fun SuiSwitchDialog(enable: Boolean?, ui: SuiUiState, onDismiss: () -> Unit) {
+    if (enable == null) return
+    val action = stringResource(if (enable) R.string.sui_enable else R.string.sui_disable)
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(action) },
+        text = { Column(Modifier.verticalScroll(rememberScrollState())) {
+            Text(stringResource(if (enable) R.string.sui_enable_warning else R.string.sui_disable_warning))
+        } },
+        confirmButton = { TextButton(enabled = ui.canSwitchTo(enable), onClick = {
+            onDismiss()
+            if (SuiManager.state.value.canSwitchTo(enable)) {
+                if (enable) SuiManager.enable() else SuiManager.disable()
+            }
+        }) { Text(action) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.sui_cancel)) } })
+}
+
+@Composable
+private fun SuiSearchField(query: String, onQueryChange: (String) -> Unit, modifier: Modifier) {
+    if (LocalUiMode.current == UiMode.Miuix) {
+        top.yukonga.miuix.kmp.basic.TextField(value = query, onValueChange = onQueryChange,
+            modifier = modifier.fillMaxWidth(), label = stringResource(R.string.sui_search), singleLine = true)
+    } else {
+        androidx.compose.material3.OutlinedTextField(value = query, onValueChange = onQueryChange,
+            modifier = modifier.fillMaxWidth(), singleLine = true,
+            leadingIcon = { Icon(Icons.Filled.Search, null) },
+            placeholder = { Text(stringResource(R.string.sui_search)) })
     }
 }
 
@@ -130,7 +135,7 @@ fun SuiPermissionPrompt() {
         } }, confirmButton = { TextButton(onClick = { SuiManager.decide(request, decision) }) { Text(stringResource(R.string.sui_apply)) } })
 }
 
-private fun SuiPermission.label() = when (this) {
+internal fun SuiPermission.label() = when (this) {
     SuiPermission.ASK -> R.string.sui_ask
     SuiPermission.ROOT -> R.string.sui_root
     SuiPermission.SHELL -> R.string.sui_shell

@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="sui_title">Sui management</string>
+    <string name="sui_switch_title">Sui (Shizuku API)</string>
+    <string name="sui_switch_summary">Off by default. Requires an active ReZygisk or NeoZygisk backend; every change takes effect after a full reboot.</string>
+    <string name="sui_payload_missing">The bundled Sui payload is unavailable</string>
+    <string name="sui_apps">App permissions</string>
     <string name="sui_status">Service and permission host</string>
     <string name="sui_separate_permissions">Sui permissions are separate from kernel Root permissions.</string>
     <string name="sui_enable">Enable Sui</string>

@@ -160,4 +160,16 @@ data class SuiUiState(
     val busy: Boolean = false,
     val error: String? = null,
     val reconciling: Boolean = false,
-)
+) {
+    /** Like the built-in Zygisk switch, the checked state is the next-boot setting. */
+    val switchChecked: Boolean get() = status.desiredEnabled
+
+    val switchEnabled: Boolean
+        get() = !busy && !reconciling && (status.desiredEnabled || status.payloadAvailable)
+
+    /** A confirmation only applies while it still changes the next-boot setting. */
+    fun canSwitchTo(enabled: Boolean): Boolean = switchEnabled && status.desiredEnabled != enabled
+
+    /** Permission management is offered only once Sui is switched on. */
+    val managementVisible: Boolean get() = status.desiredEnabled
+}
