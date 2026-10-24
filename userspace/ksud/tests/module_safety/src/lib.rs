@@ -37,6 +37,8 @@ mod module_config;
 mod ota_hook;
 #[path = "../../../src/module/transaction.rs"]
 mod transaction;
+#[path = "../../../src/zygisk.rs"]
+mod zygisk;
 
 #[cfg(test)]
 mod tests {

@@ -80,6 +80,7 @@ data class SettingsUiState(
     val zygiskBackends: List<ZygiskBackend> = emptyList(),
     val zygiskBusy: Boolean = false,
     val showZygiskRebootDialog: Boolean = false,
+    val showZygiskEnableDialog: Boolean = false,
     val showZnnRiskDialog: Boolean = false,
     val znnRiskSecondsRemaining: Int = 10,
     val znnRecoveryConfirmed: Boolean = false,
@@ -95,11 +96,16 @@ data class SettingsUiState(
 
     val zygiskSwitchEnabled: Boolean
         get() = zygiskStatus != null && !zygiskBusy && !isLateLoadMode &&
-            (zygiskEnabled || (zygiskStatus.conflictId == null && zygiskBackends.isNotEmpty()))
+            (zygiskEnabled || zygiskBackends.isNotEmpty())
+
+    val canConfirmZygiskEnable: Boolean
+        get() = showZygiskEnableDialog && zygiskSwitchEnabled && !zygiskEnabled &&
+            zygiskStatus?.conflictFor(zygiskSelected) == null &&
+            !(zygiskSelected == ZygiskBackend.Re && zygiskStatus?.legacyVex == true)
 
     val zygiskBackendEnabled: Boolean
         get() = zygiskEnabled && !zygiskBusy && !isLateLoadMode &&
-            zygiskStatus?.conflictId == null && zygiskBackends.size > 1
+            zygiskBackends.size > 1
 
     val zygiskNextNext: Boolean get() = zygiskStatus?.nextNextConfigured == true
 
@@ -109,7 +115,7 @@ data class SettingsUiState(
 
     val zygiskNextNextEnabled: Boolean
         get() = zygiskEnabled && !zygiskBusy && !isLateLoadMode &&
-            zygiskStatus?.conflictId == null && zygiskStatus?.legacyVex != true
+            zygiskStatus?.conflictFor(zygiskStatus.configured, nextNext = true) == null && zygiskStatus?.legacyVex != true
 }
 
 @Immutable
@@ -140,4 +146,6 @@ data class SettingsScreenActions(
     val onSetZnnRecoveryConfirmed: (Boolean) -> Unit = {},
     val onDismissZnnRisk: () -> Unit = {},
     val onConfirmZnnRisk: () -> Unit = {},
+    val onDismissZygiskEnable: () -> Unit = {},
+    val onConfirmZygiskEnable: () -> Unit = {},
 )

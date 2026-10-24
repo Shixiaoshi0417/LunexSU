@@ -171,6 +171,26 @@ pub fn foreach_module(
             continue;
         }
 
+        if module_type == Active {
+            let id = entry.file_name();
+            let id = id.to_string_lossy();
+            match crate::zygisk::active_allowed(
+                Path::new(MODULE_DIR),
+                Path::new(MODULE_UPDATE_DIR),
+                &id,
+            ) {
+                Ok(true) => {}
+                Ok(false) => {
+                    info!("conflicting Zygisk provider {id}, skip");
+                    continue;
+                }
+                Err(e) => {
+                    warn!("unsafe Zygisk provider {id}, skip: {e}");
+                    continue;
+                }
+            }
+        }
+
         f(&path)?;
     }
 
@@ -651,7 +671,11 @@ pub fn regenerate_preinit() -> Result<()> {
     .into_iter()
     .filter(|d| *d != preinit_str)
     .collect();
-    let modules = next_boot_modules();
+    let mut modules = next_boot_modules();
+    if let Err(e) = crate::zygisk::filter_next_boot(&mut modules) {
+        // Still publish the safe filtered snapshot, not stale injector hooks.
+        warn!("filter next-boot Zygisk providers failed: {e}");
+    }
 
     let rc = regenerate_preinit_rc(preinit_str, &modules, con);
     // Clear stale modules.rc at the other candidate paths.
