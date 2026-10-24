@@ -55,7 +55,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.nav.gesture.WindowNavigationEventBridge
 
 @Composable
 fun SearchAppBar(
@@ -212,7 +211,6 @@ fun SearchAppBar(
         inputField = inputField,
         windowInsets = { SearchBarDefaults.fullScreenWindowInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal) },
         content = {
-            WindowNavigationEventBridge()
             val bottomPadding = SearchBarDefaults.fullScreenWindowInsets.asPaddingValues().calculateBottomPadding()
             Box(modifier = Modifier.fillMaxSize()) {
                 if (currentQuery.isNotEmpty()) {
