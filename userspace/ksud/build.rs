@@ -9,7 +9,30 @@ const BOOTSTRAP_SOURCE: &str = "src/lkm_image_bootstrap.S";
 const BOOTSTRAP_OBJECT: &str = "lkm_image_bootstrap.o";
 const PREPARED_BOOTSTRAP_OBJECT: &str = ".lkm_image_bootstrap.o";
 
+fn track_git_version() -> io::Result<()> {
+    // A linked worktree has its own HEAD but shares refs, packed-refs, tags and
+    // shallow history with the common directory. Watch both metadata trees so
+    // creation/deletion of a previously absent ref or shallow file also counts.
+    // These directories contain no Cargo build outputs.
+    let output = Command::new("git")
+        .args([
+            "rev-parse",
+            "--path-format=absolute",
+            "--git-dir",
+            "--git-common-dir",
+        ])
+        .output()?;
+    if !output.status.success() {
+        return Err(io::Error::other("Failed to locate git version inputs"));
+    }
+    for path in String::from_utf8_lossy(&output.stdout).lines() {
+        println!("cargo:rerun-if-changed={path}");
+    }
+    Ok(())
+}
+
 fn get_git_version() -> Result<(u32, String), std::io::Error> {
+    track_git_version()?;
     let output = Command::new("git")
         .args(["rev-list", "--count", "HEAD"])
         .output()?;
@@ -29,7 +52,7 @@ fn get_git_version() -> Result<(u32, String), std::io::Error> {
             .stdout,
     )
     .map_err(|_| std::io::Error::other("Failed to read git describe stdout"))?;
-    let version_name = version_name.trim_start_matches('v').to_string();
+    let version_name = version_name.trim().trim_start_matches('v').to_string();
     Ok((version_code, version_name))
 }
 

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
 import argparse
+import json
 import os
 import platform
+import shlex
 import sys
 from pathlib import Path
 
@@ -79,7 +81,7 @@ def resolve_host_tag(ndk_root: Path, cli_value: str | None) -> str:
 
 
 def toml_string(value: str) -> str:
-    return '"' + value.replace("\\", "\\\\") + '"'
+    return json.dumps(value, ensure_ascii=False)
 
 
 def render_config(ndk_root: Path, host_tag: str, api_level: int) -> str:
@@ -102,8 +104,16 @@ def render_config(ndk_root: Path, host_tag: str, api_level: int) -> str:
     # sysroot should use slash, not backslash
     sysroot_with_slashes = str(sysroot).replace('\\', '/')
 
-    aarch64_bindgen = f"--sysroot={sysroot_with_slashes} -I{sysroot / 'usr' / 'include' / 'aarch64-linux-android'}"
-    x86_64_bindgen = f"--sysroot={sysroot_with_slashes} -I{sysroot / 'usr' / 'include' / 'x86_64-linux-android'}"
+    # Bindgen parses this value with shell_words even on Windows. TOML quoting
+    # alone does not preserve a path as one clang argument at that second layer.
+    aarch64_bindgen = shlex.join([
+        f"--sysroot={sysroot_with_slashes}",
+        f"-I{sysroot_with_slashes}/usr/include/aarch64-linux-android",
+    ])
+    x86_64_bindgen = shlex.join([
+        f"--sysroot={sysroot_with_slashes}",
+        f"-I{sysroot_with_slashes}/usr/include/x86_64-linux-android",
+    ])
 
     return "\n".join(
         [

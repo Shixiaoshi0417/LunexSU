@@ -10,6 +10,7 @@ import zipfile
 
 from sui_source_inputs import source_inputs
 import sui_manager_binding
+from sui_build_provenance import verify as verify_build_provenance
 
 
 def locked_version(source):
@@ -26,6 +27,7 @@ def prepare(source, output, manager_binding=None):
     archives = list((source / "out").glob("*-release.zip"))
     if len(archives) != 1:
         raise ValueError(f"Expected exactly one Sui release ZIP, found {len(archives)}")
+    provenance = verify_build_provenance(source, archives[0], manager_binding)
     version = locked_version(source)
     spec = importlib.util.spec_from_file_location("sui_package", source / "package.py")
     package = importlib.util.module_from_spec(spec)
@@ -54,15 +56,18 @@ def prepare(source, output, manager_binding=None):
         "manager_binding": manager_binding,
         "version": version["version"],
         "version_code": int(version["version_code"]),
-        "zip_sha256": hashlib.sha256(archives[0].read_bytes()).hexdigest(),
+        "zip_sha256": provenance["zip_sha256"],
         "source_commit": json.loads((source / "SOURCE.lock.json").read_text(encoding="utf-8"))["commit"],
-        "source_inputs": source_inputs(source),
+        "source_inputs": provenance["source_inputs"],
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".sui-artifact-", dir=output.parent) as temporary:
         staged = Path(temporary) / "payload"
         staged.mkdir()
         shutil.copyfile(archives[0], staged / "sui.zip")
+        if (hashlib.sha256((staged / "sui.zip").read_bytes()).hexdigest() != metadata["zip_sha256"]
+                or source_inputs(source) != metadata["source_inputs"]):
+            raise ValueError("Sui ZIP or source changed while preparing the artifact")
         (staged / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
         staged.rename(output)
     return metadata

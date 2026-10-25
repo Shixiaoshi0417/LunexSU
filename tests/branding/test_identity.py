@@ -154,17 +154,17 @@ class IdentityTests(unittest.TestCase):
         script = shell_step(".github/workflows/build-manager.yml", "Write key")
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
-            password = "fixture-$()'literal"
+            password = " fixture-$()'literal\\t\\u0041\nsecond line "
             env = dict(os.environ, PROD_KEYSTORE=base64.b64encode(b"fixture").decode(), PROD_KEYSTORE_PASSWORD=password, PROD_KEY_PASSWORD=password, PROD_KEY_ALIAS="fixture")
             subprocess.run(["bash", "-eu", "-c", script], cwd=base, env=env, check=True)
             self.assertEqual(b"fixture", (base / "key.jks").read_bytes())
-            properties = (base / "gradle.properties").read_text()
-            self.assertIn(f"KEY_PASSWORD={password}\n", properties)
-            (base / "gradle.properties").unlink()
+            self.assertFalse((base / "gradle.properties").exists())
+            (base / "key.jks").unlink()
             env["PROD_KEY_PASSWORD"] = ""
             failure = subprocess.run(["bash", "-eu", "-c", script], cwd=base, env=env)
             self.assertNotEqual(0, failure.returncode)
             self.assertFalse((base / "gradle.properties").exists())
+            self.assertFalse((base / "key.jks").exists())
 
     def test_apk_signature_gate_rejects_mismatch_and_verification_failure(self):
         script = shell_step(".github/workflows/build-manager.yml", "Verify APK signature matches Core")

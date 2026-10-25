@@ -12,12 +12,21 @@ from sui_source_inputs import source_inputs
 SOURCE = ROOT / 'userspace/sui'
 BASE = '40c97e24d155f23364d8ebfe4b247034dc6547ef'
 CHANGED = {
+    '.gitignore',
+    'build.gradle.kts',
     'gradle/wrapper/gradle-wrapper.properties', 'module.gradle.kts',
     'module/build.gradle.kts', 'module/src/main/cpp/CMakeLists.txt',
     'module/src/main/cpp/main/sui_main.hpp', 'module/src/main/cpp/util/include/selinux.h',
     'module/src/main/cpp/util/selinux.cpp',
+    'module/src/main/cpp/core/system_server.cpp',
+    'api/rish/src/main/java/rikka/rish/RishService.java',
+    'api/server-shared/src/main/java/rikka/shizuku/server/ClientRecord.java',
+    'api/server-shared/src/main/java/rikka/shizuku/server/UserServiceManager.java',
     'module/src/main/java/rikka/sui/server/FinasuManagerGate.java',
     'module/src/main/java/rikka/sui/server/SuiConfigManager.java',
+    'module/src/main/java/rikka/sui/server/SuiConfig.java',
+    'module/src/main/java/rikka/sui/server/SuiDatabase.java',
+    'module/src/main/java/rikka/sui/server/ServerConstants.java',
     'module/src/main/java/rikka/sui/server/SuiService.java',
     'module/src/main/java/rikka/sui/systemserver/BridgeService.java',
     'module/src/main/java/rikka/sui/systemserver/SystemProcess.java', 'package.py',
@@ -25,6 +34,7 @@ CHANGED = {
 ADDED = {'SOURCE.lock.json', 'LUNEXSU.md',
           'module/src/main/java/rikka/sui/server/LunexsuManagerGate.java',
           'module/src/main/java/rikka/sui/server/ManagerTrust.java',
+          'module/src/main/java/rikka/sui/server/UidIdentity.java',
           # The shell runtime directory is UID 2000's: root reaches it only through descriptors.
           'module/src/main/cpp/util/include/shell_runtime.h', 'module/src/main/cpp/util/shell_runtime.cpp',
           'module/src/main/java/rikka/sui/server/ShellRuntimeFiles.java'}

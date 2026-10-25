@@ -18,6 +18,7 @@
  */
 import com.android.build.api.dsl.ApplicationExtension
 import com.android.build.api.dsl.LibraryExtension
+import java.io.File
 import java.util.Properties
 
 buildscript {
@@ -190,4 +191,69 @@ tasks.register("format") {
     dependsOn("spotlessApply")
     group = "formatting"
     description = "Formats the code using Spotless"
+}
+
+// Managed release provenance is captured before any release compilation. A
+// subsequent packaging command can verify this record, but cannot attest an old
+// ZIP against whatever source happens to be checked out at packaging time.
+val provenanceScript = rootProject.file("../../scripts/sui_build_provenance.py")
+val provenanceSnapshot = layout.buildDirectory.file("sui-provenance/release-inputs.json")
+val provenancePython = if (System.getProperty("os.name").startsWith("Windows")) "python" else "python3"
+fun provenanceArguments(phase: String, archive: File): List<String> {
+    val arguments = mutableListOf(
+        provenancePython, provenanceScript.absolutePath, phase,
+        "--source", rootDir.absolutePath,
+        "--snapshot", provenanceSnapshot.get().asFile.absolutePath,
+        "--archive", archive.absolutePath,
+    )
+    mapOf(
+        "lunexsu.managerPackage" to "--manager-package",
+        "lunexsu.managerCertSize" to "--manager-size",
+        "lunexsu.managerCertSha256" to "--manager-hash",
+    ).forEach { (property, option) ->
+        providers.gradleProperty(property).orNull?.let { arguments.addAll(listOf(option, it)) }
+    }
+    return arguments
+}
+
+val captureReleaseInputs = tasks.register<Exec>("captureSuiReleaseInputs") {
+    outputs.file(provenanceSnapshot)
+    outputs.upToDateWhen { false }
+    doFirst {
+        val local = Properties()
+        rootProject.file("local.properties").takeIf(File::isFile)?.inputStream()?.use(local::load)
+        val api = if (local.getProperty("api.useLocal") == "true") {
+            rootProject.file(local.getProperty("api.dir") ?: "api")
+        } else rootProject.file("api")
+        require(api.canonicalFile == rootProject.file("api").canonicalFile) {
+            "Managed Sui provenance requires the vendored API source"
+        }
+        val archive = project(":module").tasks.named<Zip>("zipRelease").get().archiveFile.get().asFile
+        commandLine(provenanceArguments("begin", archive))
+    }
+}
+
+captureReleaseInputs.configure {
+    mustRunAfter(rootProject.allprojects.map { project -> project.tasks.matching { it.name == "clean" } })
+}
+allprojects {
+    tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+        dependsOn(captureReleaseInputs)
+    }
+}
+project(":module").tasks.withType<Zip>().configureEach {
+    if (name == "zipRelease") {
+        dependsOn(captureReleaseInputs)
+        outputs.upToDateWhen { false }
+        outputs.doNotCacheIf("Provenance belongs to this source-build invocation") { true }
+        doLast {
+            // assembleRelease also finalizes zipRelease after a failed build.
+            check(gradle.taskGraph.allTasks.none { it.state.failure != null }) {
+                "Cannot publish Sui provenance after a failed build"
+            }
+            providers.exec {
+                commandLine(provenanceArguments("finish", archiveFile.get().asFile))
+            }.result.get().assertNormalExitValue()
+        }
+    }
 }
