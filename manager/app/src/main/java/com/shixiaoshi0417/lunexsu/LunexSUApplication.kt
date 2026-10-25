@@ -45,6 +45,11 @@ class LunexSUApplication : Application(), ViewModelStoreOwner {
             return
         }
 
+        // The boot helper is a separate process: it must never steal the UI's Sui callback.
+        if (getProcessName() == applicationInfo.processName) {
+            com.shixiaoshi0417.lunexsu.data.sui.SuiManager.start(this)
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             val enable = SettingsRepositoryImpl().enablePredictiveBack
             HiddenApiBypass.addHiddenApiExemptions("Landroid/content/pm/ApplicationInfo;->setEnableOnBackInvokedCallback")

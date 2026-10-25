@@ -29,6 +29,7 @@
 #include "policy/app_session.h"
 #include "manager/manager_identity.h"
 #include "infra/su_mount_ns.h"
+#include "infra/task_work.h"
 #include "policy/authorization_state.h"
 #include "policy/authorization_persistence.h"
 #include "policy/authorization_path.h"
@@ -988,6 +989,7 @@ static void do_persistent_allow_list(struct callback_head *_cb)
         pr_err("failed to persist allowlist\n");
     mutex_unlock(&allowlist_mutex);
     kfree(_cb);
+    module_put(THIS_MODULE);
 }
 
 void ksu_persistent_allow_list()
@@ -1009,7 +1011,7 @@ void ksu_persistent_allow_list()
         goto put_task;
     }
     cb->func = do_persistent_allow_list;
-    if (task_work_add(tsk, cb, TWA_RESUME)) {
+    if (ksu_task_work_add(tsk, cb)) {
         kfree(cb);
         pr_warn("save_allow_list add task_work failed\n");
     }

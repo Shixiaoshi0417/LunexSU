@@ -597,7 +597,7 @@ mod tests {
     }
 
     #[test]
-    fn recovers_load_info_and_loading_module() {
+    fn recovers_load_info_layout() {
         let blob = build_btf(&[(136, 16, 24)], &[2], 3);
         let mut image = vec![0xaa; 32];
         image.extend_from_slice(&blob);
@@ -668,13 +668,15 @@ mod tests {
     }
 
     #[test]
-    fn rejects_conflicting_loading_module_values() {
+    fn unrelated_enum_values_do_not_change_the_load_module_abi() {
         let blob = build_btf(&[(136, 16, 24)], &[2, 3], 3);
-        assert!(
-            recover_single_btf(&blob)
-                .unwrap_err()
-                .to_string()
-                .contains("conflicting LOADING_MODULE values")
+        // The loader calls load_module directly; it no longer consumes the
+        // security_kernel_load_data LOADING_MODULE enum.
+        assert_eq!(
+            recover_single_btf(&blob).unwrap().load_info,
+            recover_single_btf(&build_btf(&[(136, 16, 24)], &[], 3))
+                .unwrap()
+                .load_info
         );
     }
 }

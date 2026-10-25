@@ -29,7 +29,7 @@ use crate::defs::{MODULE_DIR, MODULE_UPDATE_DIR, UPDATE_FILE_NAME};
 use crate::module::ModuleType::{Active, All};
 use std::os::unix::{prelude::PermissionsExt, process::CommandExt};
 
-mod transaction;
+pub mod transaction;
 
 fn transaction_store() -> Result<transaction::Store> {
     transaction::Store::open(
@@ -169,6 +169,26 @@ pub fn foreach_module(
         if module_type == Active && path.join(defs::REMOVE_FILE_NAME).exists() {
             warn!("{} is removed, skip", path.display());
             continue;
+        }
+
+        if module_type == Active {
+            let id = entry.file_name();
+            let id = id.to_string_lossy();
+            match crate::zygisk::active_allowed(
+                Path::new(MODULE_DIR),
+                Path::new(MODULE_UPDATE_DIR),
+                &id,
+            ) {
+                Ok(true) => {}
+                Ok(false) => {
+                    info!("conflicting Zygisk provider {id}, skip");
+                    continue;
+                }
+                Err(e) => {
+                    warn!("unsafe Zygisk provider {id}, skip: {e}");
+                    continue;
+                }
+            }
         }
 
         f(&path)?;
@@ -640,6 +660,12 @@ fn regenerate_preinit_rc(
 /// Rebuild what the kernel picks up from the preinit partition on the next boot: modules.rc and
 /// the modules' preinit dirs.
 pub fn regenerate_preinit() -> Result<()> {
+    // One stable lock covers collection, both publications, and stale cleanup.
+    // Keep it outside /metadata: sync may remove a whole preinit directory.
+    ensure_dir_exists(defs::WORKING_DIR)?;
+    let _lock =
+        crate::file_lock::FileLock::exclusive(&Path::new(defs::WORKING_DIR).join(".preinit.lock"))
+            .context("lock preinit refresh")?;
     let preinit_str = preinit_ksu_dir();
     let con = preinit_con(preinit_str);
     // The candidates we are not using this boot; clean any leftover from them.
@@ -651,7 +677,11 @@ pub fn regenerate_preinit() -> Result<()> {
     .into_iter()
     .filter(|d| *d != preinit_str)
     .collect();
-    let modules = next_boot_modules();
+    let mut modules = next_boot_modules();
+    if let Err(e) = crate::zygisk::filter_next_boot(&mut modules) {
+        // Still publish the safe filtered snapshot, not stale injector hooks.
+        warn!("filter next-boot Zygisk providers failed: {e}");
+    }
 
     let rc = regenerate_preinit_rc(preinit_str, &modules, con);
     // Clear stale modules.rc at the other candidate paths.

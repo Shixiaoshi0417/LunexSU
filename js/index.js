@@ -73,7 +73,8 @@ function Stdio() {
       args = [];
     } else if (!(args instanceof Array)) {
         // allow for (command, options) signature
-        options = args;
+         options = args;
+         args = [];
     }
     
     if (typeof options === "undefined") {
@@ -92,17 +93,26 @@ function Stdio() {
         cleanup(childCallbackName);
     });
 
-    try {
-      ksu.spawn(
+    // Native validation may fail synchronously. Start after callers have had a chance
+    // to register listeners on the returned child, including its error listener.
+    Promise.resolve().then(() => {
+      try {
+        ksu.spawn(
         command,
         JSON.stringify(args),
         JSON.stringify(options),
         childCallbackName
-      );
-    } catch (error) {
-      child.emit("error", error);
-      cleanup(childCallbackName);
-    }
+        );
+      } catch (error) {
+        try {
+          child.emit("error", error);
+        } catch (listenerError) {
+          console.error(listenerError);
+        } finally {
+          cleanup(childCallbackName);
+        }
+      }
+    });
     return child;
   }
 

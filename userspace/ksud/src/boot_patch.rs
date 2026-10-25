@@ -19,6 +19,9 @@ use regex_lite::Regex;
 use crate::assets;
 use crate::feature_id::{FeatureId, parse_feature_id};
 
+#[path = "boot_patch_safety.rs"]
+mod safety;
+
 #[cfg(target_os = "android")]
 #[path = "boot_lifecycle.rs"]
 mod lifecycle;
@@ -48,7 +51,7 @@ mod android {
 
     pub(super) fn ensure_gki_kernel() -> Result<()> {
         let version = get_kernel_version()?;
-        let is_gki = version.0 == 5 && version.1 >= 10 || version.2 > 5;
+        let is_gki = super::safety::is_gki_version(version);
         ensure!(is_gki, "only support GKI kernel");
         Ok(())
     }
@@ -390,6 +393,24 @@ fn parse_kmi_from_boot(image: &Path) -> Result<String> {
     }
 }
 
+fn detect_target_kmi(
+    image: Option<&Path>,
+    kernel: Option<&Path>,
+    ramdisk: bool,
+    local_kmi: impl FnOnce() -> Result<String>,
+) -> Result<String> {
+    // Explicit inputs describe the target, not the running device.
+    if let Some(kernel) = kernel {
+        return parse_kmi_from_kernel(kernel);
+    }
+    ensure!(!ramdisk, "please specify kmi manually for a raw ramdisk");
+    if let Some(image) = image {
+        return parse_kmi_from_boot(image)
+            .context("Cannot detect target image KMI; specify --kmi or --module");
+    }
+    local_kmi()
+}
+
 /// For vendor boot, prefer the `init_boot` ramdisk entry over the one with empty name,
 /// matching the original magiskboot lookup order (init_boot.cpio before ramdisk.cpio).
 fn extract_ramdisk(ramdisk_image: &RamdiskImage) -> Result<(Cpio, Option<usize>)> {
@@ -539,8 +560,11 @@ pub struct KsuConfigArgs {
     #[arg(long, value_name = "FEATURE=VALUE", value_parser = parse_force_feature)]
     force_feature: Vec<(FeatureId, u64)>,
 
-    /// Block a kernel module from loading at boot by name, e.g.
+    /// [Developer only] Block a kernel module from loading at boot by name, e.g.
     /// `oplus_secure_guard`. Comma-separated and/or repeated. Omitting clears it.
+    /// Blocked modules fail to load with EPERM; blocking one that first stage
+    /// init loads (modules.load / modules.load.recovery) or that others depend
+    /// on can bootloop the device. You are on your own.
     #[arg(long = "block-module", value_name = "NAME", value_delimiter = ',', value_parser = parse_block_module)]
     block_module: Vec<String>,
 }
@@ -702,39 +726,23 @@ pub fn patch(args: BootPatchArgs) -> Result<()> {
                 if kmod.is_some() || (no_install && image.is_some()) {
                     return Ok(String::new());
                 }
-                #[cfg(target_os = "android")]
-                if ota {
-                    let slot_suffix = get_slot_suffix(true);
-                    println!("- Trying to auto detect KMI version from boot");
-                    return parse_kmi_from_boot(Path::new(&format!(
-                        "/dev/block/by-name/boot{slot_suffix}"
-                    )));
-                }
-                #[cfg(target_os = "android")]
-                match get_current_kmi() {
-                    Ok(value) => {
-                        return Ok(value);
+                detect_target_kmi(image.as_deref(), kernel.as_deref(), ramdisk, || {
+                    #[cfg(target_os = "android")]
+                    if ota {
+                        let slot_suffix = get_slot_suffix(true);
+                        println!("- Trying to auto detect KMI version from boot");
+                        return parse_kmi_from_boot(Path::new(&format!(
+                            "/dev/block/by-name/boot{slot_suffix}"
+                        )));
                     }
-                    Err(e) => {
-                        println!("- {e}");
+                    #[cfg(target_os = "android")]
+                    {
+                        get_current_kmi()
                     }
-                }
-                Ok(if ramdisk {
-                    bail!("please specify kmi manually")
-                } else if let Some(image_path) = &image {
-                    println!(
-                        "- Trying to auto detect KMI version for {}",
-                        image_path.display()
-                    );
-                    parse_kmi_from_boot(image_path)?
-                } else if let Some(kernel_path) = &kernel {
-                    println!(
-                        "- Trying to auto detect KMI version for {}",
-                        kernel_path.display()
-                    );
-                    parse_kmi_from_kernel(kernel_path)?
-                } else {
-                    String::new()
+                    #[cfg(not(target_os = "android"))]
+                    {
+                        bail!("Please specify a boot image")
+                    }
                 })
             },
             Ok,
@@ -838,6 +846,10 @@ pub fn patch(args: BootPatchArgs) -> Result<()> {
                 (Cpio::new(), None)
             };
 
+        if cpio.exists("kernelsu.ko") {
+            safety::ensure_tracked_adb(&cpio)?;
+        }
+
         if !no_install {
             ensure!(
                 !cpio.is_magisk_patched(),
@@ -887,11 +899,6 @@ pub fn patch(args: BootPatchArgs) -> Result<()> {
 
         if enable_adbd || adb_debug_prop.is_some() {
             println!("- Adding adb_debug props");
-            cpio.add(
-                "force_debuggable",
-                CpioEntry::regular(0o644, Box::new(Vec::<u8>::new())),
-            )?;
-
             let mut prop = Vec::<u8>::new();
             if enable_adbd {
                 println!("- Adding props to enable adbd");
@@ -903,16 +910,9 @@ pub fn patch(args: BootPatchArgs) -> Result<()> {
                 println!("- Adding custom props");
                 prop.extend_from_slice(extra.as_bytes());
             }
-            cpio.add("adb_debug.prop", CpioEntry::regular(0o644, Box::new(prop)))?;
+            safety::apply_adb(&mut cpio, Some(prop))?;
         } else {
-            if cpio.exists("force_debuggable") {
-                println!("- Removing /force_debuggable");
-                cpio.rm("force_debuggable", false);
-            }
-            if cpio.exists("adb_debug.prop") {
-                println!("- Removing /adb_debug.prop");
-                cpio.rm("adb_debug.prop", false);
-            }
+            safety::apply_adb(&mut cpio, None)?;
         }
 
         let mut new_cpio = Vec::<u8>::new();
@@ -1153,6 +1153,8 @@ fn rebuild_without_ksu(
     vendor_ramdisk_idx: Option<usize>,
 ) -> Result<Vec<u8>> {
     println!("- Removing LunexSU from boot image");
+    safety::ensure_tracked_adb(cpio)?;
+    safety::restore_adb(cpio)?;
     cpio.rm("kernelsu.ko", false);
     if cpio.exists("init.real") {
         cpio.mv("init.real", "init")?;
@@ -1177,6 +1179,72 @@ fn rebuild_without_ksu(
 #[cfg(test)]
 mod block_modules_tests {
     use super::*;
+
+    #[test]
+    fn fallback_rebuild_restores_init_and_original_adb_state() {
+        for stock_debug in [false, true] {
+            let mut cpio = Cpio::new();
+            cpio.add(
+                "init",
+                CpioEntry::regular(0o750, Box::new(b"stock init".to_vec())),
+            )
+            .unwrap();
+            if stock_debug {
+                cpio.add(
+                    "force_debuggable",
+                    CpioEntry::regular(0o400, Box::new(Vec::<u8>::new())),
+                )
+                .unwrap();
+                cpio.add(
+                    "adb_debug.prop",
+                    CpioEntry::regular(0o640, Box::new(b"ro.adb.secure=1\n".to_vec())),
+                )
+                .unwrap();
+            }
+            let mut original = Vec::new();
+            cpio.dump(&mut original).unwrap();
+            cpio.mv("init", "init.real").unwrap();
+            cpio.add(
+                "init",
+                CpioEntry::regular(0o755, Box::new(b"ksuinit".to_vec())),
+            )
+            .unwrap();
+            cpio.add(
+                "kernelsu.ko",
+                CpioEntry::regular(0o755, Box::new(b"module".to_vec())),
+            )
+            .unwrap();
+            safety::apply_adb(&mut cpio, Some(b"ro.adb.secure=0\n".to_vec())).unwrap();
+            let mut patched = Vec::new();
+            cpio.dump(&mut patched).unwrap();
+            let image = BootImage::parse_raw_ramdisk(&patched).unwrap();
+            let restored = rebuild_without_ksu(&image, &mut cpio, None).unwrap();
+            let restored = BootImage::parse_raw_ramdisk(&restored).unwrap();
+            let (restored, _) =
+                extract_ramdisk(restored.get_blocks().get_ramdisk().unwrap()).unwrap();
+            let mut result = Vec::new();
+            restored.dump(&mut result).unwrap();
+            assert_eq!(result, original);
+        }
+    }
+
+    #[test]
+    fn explicit_inputs_never_fall_back_to_running_device_kmi() {
+        let temp = tempfile::tempdir().unwrap();
+        let kernel = temp.path().join("kernel");
+        std::fs::write(&kernel, b"Linux version 6.1.0-android14-test\0").unwrap();
+        let local = || panic!("must not use running device KMI");
+        assert_eq!(
+            detect_target_kmi(None, Some(&kernel), false, local).unwrap(),
+            "android14-6.1"
+        );
+        assert!(detect_target_kmi(Some(&kernel), None, false, local).is_err());
+        assert!(detect_target_kmi(None, None, true, local).is_err());
+        assert_eq!(
+            detect_target_kmi(None, None, false, || Ok("local".into())).unwrap(),
+            "local"
+        );
+    }
 
     #[test]
     fn parse_block_module_accepts_valid_names() {

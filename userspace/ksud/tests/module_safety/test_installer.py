@@ -9,6 +9,7 @@ import errno
 import os
 from pathlib import Path
 import subprocess
+import shlex
 import tempfile
 import unittest
 
@@ -50,7 +51,7 @@ class InstallerTransactions(unittest.TestCase):
             self.assertEqual((first / "version").read_text(), "new")
 
     def setUp(self):
-        fixtures = HERE / "fixtures"
+        fixtures = Path(os.environ.get("KSUD_MODULE_FIXTURE_ROOT", HERE / "fixtures"))
         fixtures.mkdir(exist_ok=True)
         self.temp = tempfile.TemporaryDirectory(prefix="installer-", dir=fixtures)
         self.addCleanup(self.temp.cleanup)
@@ -115,7 +116,8 @@ install_module
             LEGACY=str(legacy is not None).lower(),
         )
         return subprocess.run(
-            ["sh", "-c", script], env=environment, capture_output=True, timeout=10
+            [*shlex.split(os.environ.get("KSUD_TEST_SHELL", "sh")), "-c", script],
+            env=environment, capture_output=True, timeout=10
         )
 
     def assert_live_untouched(self):
@@ -159,6 +161,29 @@ install_module
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertFalse(self.staged.exists())
         self.assert_live_untouched()
+
+    def test_legacy_errexit_stops_before_later_success(self):
+        result = self.run_installer(
+            legacy='set -e\nprint_modname() { :; }\non_install() { false; touch "$FIXTURE/reached"; }\n'
+        )
+        self.assertNotEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.root / "reached").exists())
+        self.assert_live_untouched()
+
+    def test_replace_uses_overlay_opaque_and_propagates_failure(self):
+        for exit_code in [0, 9]:
+            result = self.run_installer(customize=f'''
+REPLACE=/system/app/Example
+setfattr() {{
+  [ "$1 $2 $3 $4" = "-n trusted.overlay.opaque -v y" ] || exit 8
+  [ -d "$5" ] || exit 8
+  echo "$5" > "$FIXTURE/replace-target"
+  return {exit_code}
+}}
+''')
+            self.assertEqual(result.returncode, 0 if exit_code == 0 else 1, result.stderr)
+            self.assertEqual((self.root / "replace-target").read_text().strip(), str(self.staged / "system/app/Example"))
+            self.assert_live_untouched()
 
     def test_second_parser_cannot_redirect_module_path(self):
         result = self.run_installer(module_id="../../escaped")

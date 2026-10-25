@@ -320,6 +320,11 @@ mark_remove() {
   chmod 644 $1
 }
 
+mark_replace() {
+  mkdir -p "$1" || return 1
+  setfattr -n trusted.overlay.opaque -v y "$1"
+}
+
 request_size_check() {
   reqSizeM=`du -ms "$1" | cut -f1`
 }
@@ -404,7 +409,10 @@ install_module() {
 
     # Callbacks
     print_modname
-    on_install || abort "! Legacy module installation failed!"
+    # A function in an OR-list ignores errexit throughout its body, even when
+    # install.sh explicitly enabled it. Keep this call in an unchecked context.
+    on_install
+    [ $? -eq 0 ] || abort "! Legacy module installation failed!"
 
     [ -f $TMPDIR/uninstall.sh ] && cp -af $TMPDIR/uninstall.sh $MODPATH/uninstall.sh
     $SKIPMOUNT && touch $MODPATH/skip_mount
@@ -442,7 +450,7 @@ install_module() {
   # Handle replace folders
   for TARGET in $REPLACE; do
     ui_print "- Replace target: $TARGET"
-    mark_replace $MODPATH$TARGET
+    mark_replace "$MODPATH$TARGET" || abort "! Unable to replace $TARGET!"
   done
 
   # Handle remove files

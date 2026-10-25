@@ -548,6 +548,8 @@ static bool add_filename_trans(struct policydb *db, const char *s, const char *t
     struct type_datum *src, *tgt, *def;
     struct class_datum *cls;
     struct filename_trans_key *new_key = NULL;
+    struct filename_trans_datum *old = NULL, *dest = NULL, *last = NULL, *trans;
+    bool had_ttype;
     int rc;
 
     src = symtab_search(&db->p_types, s);
@@ -576,57 +578,70 @@ static bool add_filename_trans(struct policydb *db, const char *s, const char *t
     key.tclass = cls->value;
     key.name = (char *)o;
 
-    struct filename_trans_datum *last = NULL;
-
-    struct filename_trans_datum *trans = policydb_filenametr_search(db, &key);
-    while (trans) {
-        if (ebitmap_get_bit(&trans->stypes, src->value - 1)) {
-            // Duplicate, overwrite existing data and return
-            trans->otype = def->value;
-            return true;
-        }
+    /* Search the whole chain: the destination can precede the old source's
+     * datum. Each datum's otype applies to every bit in its stypes bitmap.
+     */
+    for (trans = policydb_filenametr_search(db, &key); trans; trans = trans->next) {
+        if (ebitmap_get_bit(&trans->stypes, src->value - 1))
+            old = trans;
         if (trans->otype == def->value)
-            break;
+            dest = trans;
         last = trans;
-        trans = trans->next;
     }
+    if (old && old == dest)
+        return true;
+    if (!old && db->compat_filename_trans_count == U32_MAX)
+        return false;
 
-    if (trans == NULL) {
-        trans = (struct filename_trans_datum *)kcalloc(1, sizeof(*trans), GFP_KERNEL);
-        if (!trans) {
-            pr_err("add_filename_trans: alloc filename_trans_datum failed\n");
-            goto out;
-        }
-        new_key = (struct filename_trans_key *)kzalloc(sizeof(*new_key), GFP_KERNEL);
-        if (!new_key) {
-            pr_err("add_filename_trans: alloc filename_trans_key failed\n");
-            goto free_trans;
-        }
-        *new_key = key;
-        new_key->name = kstrdup(key.name, GFP_KERNEL);
-        if (!new_key->name) {
-            pr_err("add_filename_trans: kstrdup name failed\n");
-            goto free_key;
-        }
-        trans->next = last;
+    if (dest) {
+        if (ebitmap_set_bit(&dest->stypes, src->value - 1, 1))
+            return false;
+    } else {
+        trans = kzalloc(sizeof(*trans), GFP_KERNEL);
+        if (!trans)
+            return false;
         trans->otype = def->value;
-        rc = hashtab_insert(&db->filename_trans, new_key, trans, filenametr_key_params);
-        if (rc) {
-            pr_err("add_filename_trans: hashtab_insert failed: %d\n", rc);
-            goto free_name;
+        if (ebitmap_set_bit(&trans->stypes, src->value - 1, 1))
+            goto free_trans;
+        if (last) {
+            /* The key is already in the hash table; append, never reinsert. */
+            last->next = trans;
+        } else {
+            new_key = kzalloc(sizeof(*new_key), GFP_KERNEL);
+            if (!new_key)
+                goto free_trans;
+            *new_key = key;
+            new_key->name = kstrdup(key.name, GFP_KERNEL);
+            if (!new_key->name)
+                goto free_key;
+            had_ttype = ebitmap_get_bit(&db->filename_trans_ttypes, key.ttype);
+            if (ebitmap_set_bit(&db->filename_trans_ttypes, key.ttype, 1))
+                goto free_name;
+            rc = hashtab_insert(&db->filename_trans, new_key, trans, filenametr_key_params);
+            if (rc) {
+                if (!had_ttype)
+                    ebitmap_set_bit(&db->filename_trans_ttypes, key.ttype, 0);
+                goto free_name;
+            }
         }
     }
 
-    db->compat_filename_trans_count++;
-    return ebitmap_set_bit(&trans->stypes, src->value - 1, 1) == 0;
+    /* All fallible operations are complete. Clearing an existing bit cannot
+     * allocate. Empty source bitmaps are valid policydb datums and reusable.
+     */
+    if (old)
+        ebitmap_set_bit(&old->stypes, src->value - 1, 0);
+    else
+        db->compat_filename_trans_count++;
+    return true;
 
 free_name:
     kfree(new_key->name);
 free_key:
     kfree(new_key);
 free_trans:
+    ebitmap_destroy(&trans->stypes);
     kfree(trans);
-out:
     return false;
 }
 

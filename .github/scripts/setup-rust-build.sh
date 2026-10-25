@@ -11,4 +11,5 @@ export CC_$UTRIPLE="$CLANG_PATH"
 export CXX_$UTRIPLE="${CLANG_PATH}++"
 export AR_$UTRIPLE="$LLVM_BIN/llvm-ar"
 export CARGO_TARGET_${UUTRIPLE}_LINKER="$CLANG_PATH"
-export BINDGEN_EXTRA_CLANG_ARGS_$UTRIPLE="--sysroot=$LLVM_PATH/sysroot -I$LLVM_PATH/sysroot/usr/include/$TRIPLE"
+BINDGEN_ARGS=$(python3 -c 'import shlex, sys; print(shlex.join(sys.argv[1:]))' "--sysroot=$LLVM_PATH/sysroot" "-I$LLVM_PATH/sysroot/usr/include/$TRIPLE") || return $?
+export "BINDGEN_EXTRA_CLANG_ARGS_$UTRIPLE=$BINDGEN_ARGS"

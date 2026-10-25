@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sui_title">Sui management</string>
+    <string name="sui_switch_title">Sui (Shizuku API)</string>
+    <string name="sui_switch_summary">Off by default. Requires one enabled built-in or external ReZygisk, NeoZygisk or Zygisk Next provider; every change takes effect after a full reboot.</string>
+    <string name="sui_zygisk_required">Enable Zygisk first</string>
+    <string name="sui_zygisk_missing">No enabled Zygisk provider was detected. Sui cannot be enabled.</string>
+    <string name="sui_zygisk_pending">The Zygisk setup has pending changes. Fully reboot before enabling Sui.</string>
+    <string name="sui_zygisk_conflict">Multiple Zygisk providers are enabled or staged. Keep only one and fully reboot.</string>
+    <string name="sui_zygisk_unavailable">The Zygisk prerequisite could not be verified. Sui cannot be enabled; use a matching updated ksud and refresh.</string>
+    <string name="sui_zygisk_instructions">Enable built-in Zygisk in Settings, or install and enable an external ReZygisk, NeoZygisk or Zygisk Next module, then fully reboot and refresh. External providers do not need to be installed by LunexSU. This dialog does not enable Zygisk or Sui. Detection is a prerequisite check, not proof of successful injection.</string>
+    <string name="sui_refresh">Refresh</string>
+    <string name="sui_payload_missing">The bundled Sui payload is unavailable</string>
+    <string name="sui_apps">App permissions</string>
+    <string name="sui_status">Sui service</string>
+    <string name="sui_separate_permissions">Sui permissions are separate from kernel Root permissions.</string>
+    <string name="sui_enable">Enable Sui</string>
+    <string name="sui_disable">Disable Sui</string>
+    <string name="sui_payload_version">Bundled Sui: %1$s</string>
+    <string name="sui_disable_warning">Disabling requests the broker to stop. A full reboot is required to remove injection and end privileges or user services already running. Updating Manager does not automatically replace an installed Sui module.</string>
+    <string name="sui_enable_warning">Requires one enabled built-in or external ReZygisk, NeoZygisk or Zygisk Next provider and a full reboot. SystemUI and Settings must not be excluded from injection. This does not enable ZNN or ADB Root. Keep a working recovery path. Sui has its own privileged permission database.</string>
+    <string name="sui_pending_reboot">A full reboot is required</string>
+    <string name="sui_ready">Root and Shell services connected</string>
+    <string name="sui_unavailable">Enabled but the Sui service is unavailable</string>
+    <string name="sui_disabled">Disabled</string>
+    <string name="sui_demo">UI simulation only. Refresh simulates a completed reboot; no real Sui service runs.</string>
+    <string name="sui_request_dialog">Apps request permission through Sui\'s own dialog in SystemUI; the Manager does not need to be open. Requests are denied while SystemUI is excluded from injection. Enabling Sui does not automatically grant apps access.</string>
+    <string name="sui_search">Search Sui applications</string>
+    <string name="sui_shared_uid">Changes apply to every package sharing this UID. Revoking Sui permissions does not change kernel Root grants.</string>
+    <string name="sui_ask">Ask</string>
+    <string name="sui_root">Allow Root</string>
+    <string name="sui_shell">Allow Shell</string>
+    <string name="sui_deny">Deny</string>
+    <string name="sui_hidden">Hide Sui</string>
+    <string name="sui_apply">Confirm</string>
+    <string name="sui_cancel">Cancel</string>
+    <string name="sui_outcome_pending">Sui command outcome is unconfirmed. It may still finish; do not reboot until status is verified. New changes are blocked while checking.</string>
+    <string name="sui_ipc_timeout">Sui IPC timed out; the connection was reset. Refresh to verify any permission change before retrying.</string>
+</resources>

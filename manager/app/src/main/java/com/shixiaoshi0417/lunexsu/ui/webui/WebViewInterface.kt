@@ -48,16 +48,13 @@ class WebViewInterface(private val state: WebUIState) {
             JSONObject(options)
         }
 
-        val cwd = opts.optString("cwd")
-        if (!TextUtils.isEmpty(cwd)) {
-            sb.append("cd ${cwd};")
-        }
-
+        val environment = linkedMapOf<String, String>()
         opts.optJSONObject("env")?.let { env ->
             env.keys().forEach { key ->
-                sb.append("export ${key}=${env.getString(key)};")
+                environment[key] = env.getString(key)
             }
         }
+        sb.append(WebUIShellCommand.options(opts.optString("cwd"), environment))
     }
 
     @JavascriptInterface
@@ -93,17 +90,10 @@ class WebViewInterface(private val state: WebUIState) {
 
         processOptions(finalCommand, options)
 
-        if (!TextUtils.isEmpty(args)) {
-            finalCommand.append(command).append(" ")
-            JSONArray(args).let { argsArray ->
-                for (i in 0 until argsArray.length()) {
-                    finalCommand.append(argsArray.getString(i))
-                    finalCommand.append(" ")
-                }
-            }
-        } else {
-            finalCommand.append(command)
+        val arguments = if (TextUtils.isEmpty(args)) emptyList() else JSONArray(args).let { array ->
+            List(array.length()) { array.getString(it) }
         }
+        finalCommand.append(WebUIShellCommand.spawn(command, arguments))
 
         val shell = createRootShell(true)
 
@@ -131,33 +121,39 @@ class WebViewInterface(private val state: WebUIState) {
             }
         }
 
-        val future = shell.newJob().add(finalCommand.toString()).to(stdout, stderr).enqueue()
+        val future = try {
+            shell.newJob().add(finalCommand.toString()).to(stdout, stderr).enqueue()
+        } catch (error: Exception) {
+            runCatching { shell.close() }
+            throw error
+        }
         val completableFuture = CompletableFuture.supplyAsync {
             future.get()
         }
 
-        completableFuture.thenAccept { result ->
-            val emitExitCode =
-                "(function() { try { ${callbackFunc}.emit('exit', ${result.code}); } catch(e) { console.error(`emitExit error: \${e}`); } })();"
-            webView?.post {
-                webView?.evaluateJavascript(emitExitCode, null)
-            }
-
-            if (result.code != 0) {
-                val emitErrCode =
-                    "(function() { try { var err = new Error(); err.exitCode = ${result.code}; err.message = ${
-                        JSONObject.quote(
-                            result.err.joinToString(
-                                "\n"
-                            )
-                        )
-                    };${callbackFunc}.emit('error', err); } catch(e) { console.error('emitErr', e); } })();"
-                webView?.post {
-                    webView?.evaluateJavascript(emitErrCode, null)
-                }
-            }
-        }.whenComplete { _, _ ->
+        completableFuture.whenComplete { result, failure ->
             runCatching { shell.close() }
+            val code = result?.code ?: -1
+            val message = failure?.message ?: result?.err?.joinToString("\n").orEmpty()
+            // Hold the child locally: its exit listener deletes the global callback. An
+            // error must be delivered first, and throwing listeners must not prevent exit.
+            val jsCode = """
+                (function() {
+                    var child = window[${JSONObject.quote(callbackFunc)}];
+                    if (!child) return;
+                    try {
+                        if (${failure != null || code != 0}) {
+                            var error = new Error(${JSONObject.quote(message)});
+                            error.exitCode = $code;
+                            child.emit('error', error);
+                        }
+                    } catch (e) { console.error(e); }
+                    finally {
+                        try { child.emit('exit', $code); } catch (e) { console.error(e); }
+                    }
+                })();
+            """.trimIndent()
+            webView?.post { webView?.evaluateJavascript(jsCode, null) }
         }
     }
 

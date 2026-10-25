@@ -39,6 +39,12 @@ if (errno === 0) {
 
 Spawns a new process using the given `command` in **root** shell, with command-line arguments in `args`. If omitted, `args` defaults to an empty array.
 
+`spawn(command, options)` is also supported. The executable, arguments, working
+directory and environment values are passed literally, including spaces and shell
+metacharacters. Use `exec` for intentional shell expressions such as pipelines.
+Both APIs stop before running the command if changing to `cwd` fails. Environment
+names must be valid shell identifiers.
+
 Returns a `ChildProcess` instance. Instances of `ChildProcess` represent spawned child processes.
 
 - `command` `<string>` The command to run.
@@ -73,16 +79,20 @@ ls.on('exit', (code) => {
 
 - `code` `<number>` The exit code if the child process exited on its own.
 
-The `'exit'` event is emitted when the child process ends. If the process exits, `code` contains the final exit code; otherwise, it is null.
+The `'exit'` event is emitted when the native command completes. `code` contains
+the final exit code, or `-1` if native execution fails without an exit status.
 
 ##### Event 'error'
 
-- `err` `<Error>` The error.
+- `err` `<Error | Object>` The error, including a message and, when available, an exit code.
 
 The `'error'` event is emitted whenever:
 
 - The process could not be spawned.
-- The process could not be killed.
+- Native execution fails, or the command exits with a nonzero status.
+
+Listeners can be registered immediately after `spawn` returns. When native
+completion reports both an error and an exit, the error is delivered first.
 
 ##### `stdout`
 

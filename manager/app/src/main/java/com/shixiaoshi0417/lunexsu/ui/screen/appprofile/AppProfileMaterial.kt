@@ -173,7 +173,8 @@ private fun AppProfileInner(
     } else {
         Mode.Custom
     }
-    var rootMode by rememberSaveable(profile) {
+    // Authorization polling changes the countdown, not the user's pending mode selection.
+    var rootMode by rememberSaveable(profile.currentUid, profile.rootUseDefault, profile.rootTemplate) {
         mutableStateOf(initialRootMode)
     }
     val nonRootMode = if (profile.nonRootUseDefault) Mode.Default else Mode.Custom
@@ -232,15 +233,15 @@ private fun AppProfileInner(
                     )
                 }
                 if (!isSpecialApp) add {
-                    SegmentedSwitchItem(
-                        icon = Icons.Filled.Security,
-                        title = stringResource(id = R.string.superuser),
-                        checked = isRootGranted && (profile.authorizationMode == 0 || profile.authorizationState == 1),
-                        enabled = !saving && profile.authorizationReadError == 0,
-                        onCheckedChange = {
-                            onProfileChange(profile.copy(allowSu = it, authorizationOperation = if (it) 1 else 0))
-                        },
-                    )
+                    AuthorizationConfig(profile, onProfileChange, saving) { enabled, onCheckedChange ->
+                        SegmentedSwitchItem(
+                            icon = Icons.Filled.Security,
+                            title = stringResource(id = R.string.superuser),
+                            checked = isRootGranted && (profile.authorizationMode == 0 || profile.authorizationState == 1),
+                            enabled = enabled,
+                            onCheckedChange = onCheckedChange,
+                        )
+                    }
                 }
                 add {
                     SegmentedListItem(
@@ -252,7 +253,6 @@ private fun AppProfileInner(
             }
         )
 
-        if (!isSpecialApp) AuthorizationConfig(profile, onProfileChange, saving)
         Crossfade(targetState = isRootGranted, label = "") { current ->
             Column(
                 modifier = Modifier.padding(bottom = 6.dp + 48.dp + 6.dp /* SnackBar height */)
