@@ -8,7 +8,7 @@ use libc::c_int;
 use log::error;
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
-use std::{cmp::Ordering, env, io};
+use std::{env, io};
 use std::{
     ffi::{CStr, CString},
     process::Command,
@@ -19,6 +19,9 @@ use rustix::{
     process::getuid,
     thread::{Gid, Uid, set_thread_res_gid, set_thread_res_uid},
 };
+
+#[path = "su_args.rs"]
+mod args;
 
 pub fn grant_root(global_mnt: bool) -> Result<()> {
     crate::ksucalls::grant_root()?;
@@ -117,44 +120,11 @@ pub fn root_shell() -> Result<()> {
 
     let env_args: Vec<String> = env::args().collect();
     let program = env_args[0].clone();
-    let mut executable: Option<String> = None;
-    let mut exec_args: Option<Vec<String>> = None;
-    let first_option_c = env_args
-        .iter()
-        .position(|arg| arg == "-c")
-        .unwrap_or(usize::MAX);
-    let first_non_option = env_args
-        .windows(3)
-        .position(|arg| {
-            !arg[1].starts_with('-')
-                && !arg[2].starts_with('-')
-                && !(arg[0].starts_with("-g")
-                    || arg[0].starts_with("-G")
-                    || arg[0].starts_with("-s")
-                    || arg[0].starts_with("-Z")
-                    || arg[0] == "--group"
-                    || arg[0] == "--supp-group="
-                    || arg[0] == "--shell="
-                    || arg[0] == "--context=")
-        })
-        .map_or(usize::MAX, |idx| idx + 1);
-    let args = match first_non_option.cmp(&first_option_c) {
-        Ordering::Equal => env_args,
-        Ordering::Less => {
-            executable = Some(env_args[first_non_option + 1].clone());
-            exec_args = Some(env_args[first_non_option + 2..].to_vec());
-            env_args[..=first_non_option].to_vec()
-        }
-        Ordering::Greater => {
-            let rest = env_args[first_option_c + 1..].to_vec();
-            let mut new_args = env_args[..first_option_c].to_vec();
-            new_args.push("-c".to_string());
-            if !rest.is_empty() {
-                new_args.push(rest.join(" "));
-            }
-            new_args
-        }
-    };
+    let args::ShellArgs {
+        args,
+        executable,
+        exec_args,
+    } = args::split(env_args);
 
     let mut opts = Options::new();
     opts.optopt(

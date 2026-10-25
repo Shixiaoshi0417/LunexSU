@@ -660,6 +660,12 @@ fn regenerate_preinit_rc(
 /// Rebuild what the kernel picks up from the preinit partition on the next boot: modules.rc and
 /// the modules' preinit dirs.
 pub fn regenerate_preinit() -> Result<()> {
+    // One stable lock covers collection, both publications, and stale cleanup.
+    // Keep it outside /metadata: sync may remove a whole preinit directory.
+    ensure_dir_exists(defs::WORKING_DIR)?;
+    let _lock =
+        crate::file_lock::FileLock::exclusive(&Path::new(defs::WORKING_DIR).join(".preinit.lock"))
+            .context("lock preinit refresh")?;
     let preinit_str = preinit_ksu_dir();
     let con = preinit_con(preinit_str);
     // The candidates we are not using this boot; clean any leftover from them.

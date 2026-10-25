@@ -263,6 +263,7 @@ fn remove_all(ksu_dir: &Path) {
 
 /// Make `<ksu_dir>/preinit/` mirror the `preinit/` dirs of `modules` (id -> module dir, enabled
 /// modules for the next boot only). Unchanged modules are left alone to spare /metadata writes.
+/// The caller holds the refresh lock across module collection, rc publication and this sync.
 pub fn sync(
     ksu_dir: &Path,
     stale_ksu_dirs: &[&Path],

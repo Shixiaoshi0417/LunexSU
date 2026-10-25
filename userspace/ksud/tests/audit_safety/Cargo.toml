@@ -1,0 +1,24 @@
+[package]
+name = "ksud-audit-safety-tests"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+anyhow = "1"
+android-bootimg = { git = "https://github.com/5ec1cff/android_bootimg", rev = "150425b027c76ea104c82e408571651f2181b2c2" }
+chrono = "0.4"
+clap = { version = "4", features = ["derive"] }
+const_format = "0.2"
+derive-new = "0.7"
+libc = "0.2"
+log = "0.4"
+memmap2 = "0.9"
+nom = "8"
+regex-lite = "0.1"
+tempfile = "3"
+
+[build-dependencies]
+bindgen = "0.73"

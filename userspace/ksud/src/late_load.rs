@@ -35,7 +35,7 @@ fn dump_process_info(label: &str) {
     );
 }
 
-pub fn run(package_name: &String, kmi: Option<String>, allow_shell: bool) -> Result<()> {
+pub fn run(package_name: &str, kmi: Option<String>, allow_shell: bool) -> Result<()> {
     utils::daemonize(false)?;
     info!("late-load command triggered!");
     dump_process_info("late-load start");
@@ -83,6 +83,16 @@ pub fn run(package_name: &String, kmi: Option<String>, allow_shell: bool) -> Res
 
     crate::hot_install::clean_trash();
 
+    crate::feature::init_forced_features();
+    if utils::is_safe_mode() {
+        warn!("safe mode, skip late-load module effects and disable all modules");
+        if let Err(e) = crate::module::disable_all_modules() {
+            warn!("disable all modules failed: {e}");
+        }
+        restart_manager(package_name);
+        return Ok(());
+    }
+
     // 5. Handle module updates
     if let Err(e) = handle_updated_modules() {
         warn!("handle updated modules failed: {e}");
@@ -106,7 +116,6 @@ pub fn run(package_name: &String, kmi: Option<String>, allow_shell: bool) -> Res
     }
 
     // 7. Initialize features
-    crate::feature::init_forced_features();
     if let Err(e) = crate::feature::init_features() {
         warn!("init features failed: {e}");
     }
@@ -135,6 +144,12 @@ pub fn run(package_name: &String, kmi: Option<String>, allow_shell: bool) -> Res
     init_event::run_stage("boot-completed", ScriptWait::NoWait);
 
     // 14. Restart Manager so it gets a fresh ksu fd from the newly loaded kernel module
+    restart_manager(package_name);
+
+    Ok(())
+}
+
+fn restart_manager(package_name: &str) {
     info!("Restarting LunexSU Manager {package_name}...");
     let _ = Command::new("am")
         .args(["force-stop", package_name])
@@ -146,6 +161,4 @@ pub fn run(package_name: &String, kmi: Option<String>, allow_shell: bool) -> Res
             &format!("{package_name}/com.shixiaoshi0417.lunexsu.ui.MainActivity"),
         ])
         .status();
-
-    Ok(())
 }
