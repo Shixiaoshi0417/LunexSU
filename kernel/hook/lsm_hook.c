@@ -41,7 +41,7 @@ int ksu_hook_lifecycle_ready(void)
     return 0;
 }
 
-void __nocfi ksu_hook_synchronize(void)
+void __nocfi ksu_hook_synchronize_srcu(struct srcu_struct *srcu)
 {
     void (*sync)(void) = READ_ONCE(ksu_synchronize_rcu_tasks);
 
@@ -52,8 +52,13 @@ void __nocfi ksu_hook_synchronize(void)
      * The last Tasks grace period covers return instructions after SRCU unlock.
      */
     sync();
-    synchronize_srcu(&ksu_hook_srcu);
+    synchronize_srcu(srcu);
     sync();
+}
+
+void ksu_hook_synchronize(void)
+{
+    ksu_hook_synchronize_srcu(&ksu_hook_srcu);
 }
 
 static bool ksu_lsm_hook_is_tracked(struct ksu_lsm_hook *hook)

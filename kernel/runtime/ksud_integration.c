@@ -19,6 +19,9 @@
 #include <linux/workqueue.h>
 #include <linux/uio.h>
 #include <linux/stat.h>
+#include <linux/module.h>
+#include <linux/mutex.h>
+#include <linux/spinlock.h>
 
 #include "arch.h"
 #include "klog.h" // IWYU pragma: keep
@@ -28,6 +31,7 @@
 #include "policy/feature.h"
 #include "selinux/selinux.h"
 #include "hook/syscall_hook.h"
+#include "hook/syscall_lifecycle.h"
 #include "hook/syscall_event_bridge.h"
 #include "preinit/preinit.h"
 
@@ -55,6 +59,13 @@ static void stop_init_rc_hook();
 static void stop_execve_hook();
 
 static struct work_struct stop_input_hook_work;
+/* The gate serializes enqueue with exit, including the schedule_work call.
+ * Probe handlers cannot take the sleeping registration mutex.
+ */
+static DEFINE_SPINLOCK(input_hook_lock);
+static bool input_hook_accepting;
+static DEFINE_MUTEX(input_hook_mutex);
+static bool input_hook_registered;
 
 #define MAX_ARG_STRINGS 0x7FFFFFFF
 struct user_arg_ptr {
@@ -188,6 +199,9 @@ void ksu_handle_execveat_ksud(const char *path, struct user_arg_ptr *argv)
 static ssize_t (*orig_read)(struct file *, char __user *, size_t, loff_t *);
 static ssize_t (*orig_read_iter)(struct kiocb *, struct iov_iter *);
 static struct file_operations fops_proxy;
+static const struct file_operations *orig_rc_fops;
+static DEFINE_MUTEX(rc_hook_mutex);
+static bool rc_hooked;
 static ssize_t ksu_rc_pos = 0;
 const size_t ksu_rc_len = sizeof(KERNEL_SU_RC) - 1;
 
@@ -296,6 +310,8 @@ static void free_module_rc(void)
 
 static ssize_t read_proxy(struct file *file, char __user *buf, size_t count, loff_t *pos)
 {
+    /* Pair with publication of the immutable proxy operations/metadata. */
+    smp_rmb();
     ssize_t ret = 0;
     size_t append_count;
     if (ksu_rc_pos && ksu_rc_pos < ksu_rc_len)
@@ -352,6 +368,7 @@ append_module_rc:
 
 static ssize_t read_iter_proxy(struct kiocb *iocb, struct iov_iter *to)
 {
+    smp_rmb();
     ssize_t ret = 0;
     size_t append_count;
     if (ksu_rc_pos && ksu_rc_pos < ksu_rc_len)
@@ -428,43 +445,67 @@ static bool is_init_rc(struct file *fp)
     return true;
 }
 
+static int release_proxy(struct inode *inode, struct file *file)
+{
+    int ret = 0;
+
+    smp_rmb();
+    /* Keep the original owner pinned through every copied callback, including
+     * release. VFS drops the proxy's THIS_MODULE reference only after we return.
+     */
+    if (orig_rc_fops->release)
+        ret = orig_rc_fops->release(inode, file);
+    fops_put(orig_rc_fops);
+    return ret;
+}
+
 static void ksu_install_rc_hook(struct file *file)
 {
+    const struct file_operations *original, *proxy;
+
     if (!is_init_rc(file)) {
         return;
     }
 
-    // we only process the first read
-    static bool rc_hooked = false;
-    if (rc_hooked) {
-        // we don't need these hooks, unregister it!
+    /* Publish once, even if two init threads race their first read. The caller
+     * holds a file reference, so final release cannot race this installation.
+     */
+    mutex_lock(&rc_hook_mutex);
+    if (rc_hooked)
+        goto out;
+    original = fops_get(file->f_op);
+    if (!original)
+        goto out;
 
-        return;
-    }
-    rc_hooked = true;
-    stop_init_rc_hook();
-
-    // now we can sure that the init process is reading
-    // `/system/etc/init/init.rc`
-
-    load_module_rc_once();
-
-    pr_info("read init.rc, comm: %s, rc_count: %zu, module_rc: %zu\n", current->comm, ksu_rc_len, module_rc_len);
-
-    // Now we need to proxy the read and modify the result!
-    // But, we can not modify the file_operations directly, because it's in read-only memory.
-    // We just replace the whole file_operations with a proxy one.
-    memcpy(&fops_proxy, file->f_op, sizeof(struct file_operations));
-    orig_read = file->f_op->read;
+    memcpy(&fops_proxy, original, sizeof(fops_proxy));
+    fops_proxy.owner = THIS_MODULE;
+    fops_proxy.release = release_proxy;
+    orig_read = original->read;
     if (orig_read) {
         fops_proxy.read = read_proxy;
     }
-    orig_read_iter = file->f_op->read_iter;
+    orig_read_iter = original->read_iter;
     if (orig_read_iter) {
         fops_proxy.read_iter = read_iter_proxy;
     }
-    // replace the file_operations
-    file->f_op = &fops_proxy;
+    proxy = fops_get(&fops_proxy);
+    if (!proxy) {
+        fops_put(original);
+        goto out;
+    }
+    orig_rc_fops = original;
+    load_module_rc_once();
+    pr_info("read init.rc, comm: %s, rc_count: %zu, module_rc: %zu\n", current->comm, ksu_rc_len, module_rc_len);
+
+    /* replace_fops drops the file's old owner reference; orig_rc_fops owns the
+     * additional one until release_proxy. VFS owns the new module reference.
+     */
+    smp_wmb();
+    replace_fops(file, proxy);
+    rc_hooked = true;
+    stop_init_rc_hook();
+out:
+    mutex_unlock(&rc_hook_mutex);
 }
 
 static void ksu_handle_sys_read(unsigned int fd, char __user **buf_ptr, size_t *count_ptr)
@@ -570,17 +611,26 @@ void ksu_execveat_hook_ksud(const struct pt_regs *regs)
 static long (*orig_sys_read)(const struct pt_regs *regs);
 static long ksu_sys_read(const struct pt_regs *regs)
 {
+    struct ksu_syscall_guard guard;
+    long ret;
+
+    ksu_syscall_enter(&guard);
     unsigned int fd = PT_REGS_SYSCALL_PARM1(regs);
     char __user **buf_ptr = (char __user **)&PT_REGS_PARM2(regs);
     size_t *count_ptr = (size_t *)&PT_REGS_PARM3(regs);
 
     ksu_handle_sys_read(fd, buf_ptr, count_ptr);
-    return orig_sys_read(regs);
+    ret = orig_sys_read(regs);
+    ksu_syscall_leave(&guard);
+    return ret;
 }
 
 static long (*orig_sys_fstat)(const struct pt_regs *regs);
 static long ksu_sys_fstat(const struct pt_regs *regs)
 {
+    struct ksu_syscall_guard guard;
+
+    ksu_syscall_enter(&guard);
     unsigned int fd = PT_REGS_SYSCALL_PARM1(regs);
     void __user *statbuf = (void __user *)PT_REGS_PARM2(regs);
     bool is_rc = false;
@@ -615,6 +665,7 @@ static long ksu_sys_fstat(const struct pt_regs *regs)
         }
     }
 
+    ksu_syscall_leave(&guard);
     return ret;
 }
 
@@ -631,9 +682,19 @@ static struct kprobe input_event_kp = {
     .pre_handler = input_handle_event_handler_pre,
 };
 
+static void unregister_input_hook(void)
+{
+    mutex_lock(&input_hook_mutex);
+    if (input_hook_registered) {
+        unregister_kprobe(&input_event_kp);
+        input_hook_registered = false;
+    }
+    mutex_unlock(&input_hook_mutex);
+}
+
 static void do_stop_input_hook(struct work_struct *work)
 {
-    unregister_kprobe(&input_event_kp);
+    unregister_input_hook();
 }
 
 static void stop_init_rc_hook()
@@ -645,35 +706,59 @@ static void stop_init_rc_hook()
 
 void ksu_stop_input_hook_runtime(void)
 {
-    static bool input_hook_stopped = false;
-    if (input_hook_stopped) {
-        return;
+    unsigned long flags;
+
+    spin_lock_irqsave(&input_hook_lock, flags);
+    if (input_hook_accepting) {
+        input_hook_accepting = false;
+        schedule_work(&stop_input_hook_work);
     }
-    input_hook_stopped = true;
-    bool ret = schedule_work(&stop_input_hook_work);
-    pr_info("unregister input kprobe: %d!\n", ret);
+    spin_unlock_irqrestore(&input_hook_lock, flags);
 }
 
 // ksud: module support
 void __init ksu_ksud_init()
 {
     int ret;
+    unsigned long flags;
+
+    /* Before publishing either syscall hook or enabling any work producer. */
+    INIT_WORK(&stop_input_hook_work, do_stop_input_hook);
 
     ksu_syscall_table_hook(__NR_read, ksu_sys_read, &orig_sys_read);
     ksu_syscall_table_hook(__NR_fstat, ksu_sys_fstat, &orig_sys_fstat);
 
+    /* A probe can fire before register_kprobe returns. Let it queue safely,
+     * but keep the worker from unregistering until registration is complete.
+     */
+    mutex_lock(&input_hook_mutex);
+    spin_lock_irqsave(&input_hook_lock, flags);
+    input_hook_accepting = true;
+    spin_unlock_irqrestore(&input_hook_lock, flags);
     ret = register_kprobe(&input_event_kp);
+    input_hook_registered = !ret;
+    if (ret) {
+        spin_lock_irqsave(&input_hook_lock, flags);
+        input_hook_accepting = false;
+        spin_unlock_irqrestore(&input_hook_lock, flags);
+    }
+    mutex_unlock(&input_hook_mutex);
     pr_info("ksud: input_event_kp: %d\n", ret);
-
-    INIT_WORK(&stop_input_hook_work, do_stop_input_hook);
 }
 
 void __exit ksu_ksud_exit()
 {
-    // TODO:
-    // this should be done before unregister vfs_read_kp
-    // stop_init_rc_hook();
-    unregister_kprobe(&input_event_kp);
+    unsigned long flags;
+
+    /* Syscall/supercall producers are already drained by kernelsu_exit. Close
+     * admission under the enqueue lock, then remove the remaining probe source.
+     * Never hold that lock or the registration mutex across cancel_work_sync.
+     */
+    spin_lock_irqsave(&input_hook_lock, flags);
+    input_hook_accepting = false;
+    spin_unlock_irqrestore(&input_hook_lock, flags);
+    unregister_input_hook();
+    cancel_work_sync(&stop_input_hook_work);
 
     if (module_rc_buf) {
         free_module_rc();

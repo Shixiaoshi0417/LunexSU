@@ -19,12 +19,6 @@
 #include "infra/su_mount_ns.h"
 #include "hook/tp_marker.h"
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
-static struct group_info root_groups = { .usage = REFCOUNT_INIT(2) };
-#else
-static struct group_info root_groups = { .usage = ATOMIC_INIT(2) };
-#endif
-
 void setup_groups(struct root_profile *profile, struct cred *cred)
 {
     if (profile->groups_count > KSU_MAX_GROUPS) {
@@ -32,15 +26,10 @@ void setup_groups(struct root_profile *profile, struct cred *cred)
         return;
     }
 
-    if (profile->groups_count == 1 && profile->groups[0] == 0) {
-        // setgroup to root and return early.
-        if (cred->group_info)
-            put_group_info(cred->group_info);
-        cred->group_info = get_group_info(&root_groups);
-        return;
-    }
-
-    u32 ngroups = profile->groups_count;
+    /* Preserve the default profile's empty supplementary group list, but let
+     * the core allocator own its lifetime: credentials can outlive this LKM.
+     */
+    u32 ngroups = profile->groups_count == 1 && profile->groups[0] == 0 ? 0 : profile->groups_count;
     struct group_info *group_info = groups_alloc(ngroups);
     if (!group_info) {
         pr_warn("Failed to setgroups, ENOMEM for: %d\n", profile->uid);

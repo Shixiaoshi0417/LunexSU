@@ -15,6 +15,7 @@
 #include "supercall/internal.h"
 #include "arch.h"
 #include "util.h"
+#include "infra/task_work.h"
 #include "klog.h" // IWYU pragma: keep
 
 #define KSU_DRIVER_PERMISSION_SU_SESSION (1UL << 0)
@@ -102,7 +103,12 @@ bool ksu_is_su_session_fd(const struct file *filp)
 static void ksu_install_fd_tw_func(struct callback_head *cb)
 {
     struct ksu_install_fd_tw *tw = container_of(cb, struct ksu_install_fd_tw, cb);
-    int fd = ksu_install_fd();
+    int fd;
+
+    /* exit_task_work() runs after exit_files(). */
+    if (current->flags & PF_EXITING)
+        goto out;
+    fd = ksu_install_fd();
 
     pr_info("[%d] install ksu fd: %d\n", current->pid, fd);
     if (copy_to_user(tw->outp, &fd, sizeof(fd))) {
@@ -110,7 +116,9 @@ static void ksu_install_fd_tw_func(struct callback_head *cb)
         ksu_close_fd(fd);
     }
 
+out:
     kfree(tw);
+    module_put(THIS_MODULE);
 }
 
 static int reboot_handler_pre(struct kprobe *p, struct pt_regs *regs)
@@ -130,7 +138,7 @@ static int reboot_handler_pre(struct kprobe *p, struct pt_regs *regs)
         tw->outp = (int __user *)arg4;
         tw->cb.func = ksu_install_fd_tw_func;
 
-        if (task_work_add(current, &tw->cb, TWA_RESUME)) {
+        if (ksu_task_work_add(current, &tw->cb)) {
             kfree(tw);
             pr_warn("install fd add task_work failed\n");
         }

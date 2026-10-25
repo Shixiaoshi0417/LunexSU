@@ -42,5 +42,8 @@ config KSU_X86_PATCH_SYSCALL_DISPATCHER
 	help
 	  Dynamically patch x64's hardened syscall dispatcher to support syscall hooks. This is a
 	  replacement for a kernel source code patch, and is useful for x86_64 LKM mode.
+	  This mode pins the module until reboot: its global C syscall entry wrappers
+	  can remain on sleeping syscall stacks, including the unloading task itself.
+	  Use the kernel indirect syscall bypass patch for an unloadable x86_64 LKM.
 
 endmenu

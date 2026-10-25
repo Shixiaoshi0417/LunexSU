@@ -1,10 +1,13 @@
 #ifdef __x86_64__
 
 #include "../syscall_hook.h"
+#include "../syscall_lifecycle.h"
+#include "../lsm_hook.h"
 
 #include <linux/kallsyms.h>
 #include <linux/mutex.h>
 #include <linux/nospec.h>
+#include <linux/module.h>
 #include <asm/cacheflush.h>
 #include "infra/symbol_resolver.h"
 #include "../patch_memory.h"
@@ -84,9 +87,12 @@ void ksu_syscall_table_hook(int nr, sys_call_ptr_t fn, sys_call_ptr_t *old)
             hooked_count++;
         } else {
             pr_warn("hooked_entries full, cannot track syscall %d for restoration\n", nr);
+            mutex_unlock(&hooked_entries_lock);
+            return;
         }
     }
 
+    smp_wmb();
     patch_syscall_table(nr, fn);
 
     mutex_unlock(&hooked_entries_lock);
@@ -106,7 +112,7 @@ void ksu_syscall_table_unhook(int nr)
 
     for (i = 0; i < hooked_count; i++) {
         if (hooked_entries[i].nr == nr) {
-            patch_syscall_table(nr, hooked_entries[i].orig);
+            ksu_hook_restore_slot((void **)&ksu_syscall_table[nr], (void *)hooked_entries[i].orig, "syscall");
             // Remove entry by swapping with last
             hooked_entries[i] = hooked_entries[--hooked_count];
             mutex_unlock(&hooked_entries_lock);
@@ -149,26 +155,31 @@ static int ksu_find_ni_syscall_slots(int *out_slots, int max_slots)
 // otherwise it's a spurious call — return -ENOSYS.
 static long __nocfi ksu_syscall_dispatcher(const struct pt_regs *regs)
 {
+    struct ksu_syscall_guard guard;
+    long ret = -ENOSYS;
+
+    ksu_syscall_enter(&guard);
     if (regs->orig_ax != ksu_dispatcher_nr)
-        return -ENOSYS;
+        goto out;
 
     // On x86_64, orig_ax was overwritten by our tracepoint to route here.
     // The original syscall number passed by userspace is still sitting untouched in ax.
     int orig_nr = (int)regs->ax;
 
     if (regs->orig_ax == orig_nr)
-        return -ENOSYS;
+        goto out;
 
     // Restore registers to original state before dispatching
     ((struct pt_regs *)regs)->orig_ax = orig_nr;
 
     if (likely(orig_nr >= 0 && orig_nr < __NR_syscalls)) {
         ksu_syscall_hook_fn fn = READ_ONCE(syscall_hooks[orig_nr]);
-        if (likely(fn))
-            return fn(orig_nr, regs);
+        ret = likely(fn) ? fn(orig_nr, regs) : ksu_syscall_table[orig_nr](regs);
     }
 
-    return -ENOSYS;
+out:
+    ksu_syscall_leave(&guard);
+    return ret;
 }
 
 // Register a handler into the dispatcher's routing table.
@@ -305,6 +316,14 @@ void __init __nocfi ksu_syscall_hook_init(void)
         return;
 
 #ifdef CONFIG_KSU_X86_PATCH_SYSCALL_DISPATCHER
+    /* These global C replacements stay on the stack of arbitrary sleeping
+     * syscalls, including delete_module itself. No grace period can drain the
+     * unloading task's own return frame. Keep this compatibility mode resident;
+     * unloadable x86 LKMs must use the kernel's indirect syscall bypass patch.
+     * Pin before publishing either text patch, even if patching later fails.
+     */
+    __module_get(THIS_MODULE);
+    pr_warn("x86 dynamic syscall entry patch: module is resident until reboot\n");
     patch_abs_jump("x64_sys_call", &x64_sys_call_patch_addr, my_x64_sys_call, x64_sys_call_patch_orig_insn);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 16, 0)
     syscall_enter_from_user_mode_fn = find_kernel_symbol_exact("syscall_enter_from_user_mode");
@@ -364,18 +383,16 @@ void __exit ksu_syscall_hook_exit(void)
         sys_call_ptr_t orig = hooked_entries[i].orig;
 
         pr_info("restore syscall %d to 0x%lx\n", nr, (unsigned long)orig);
-        if (ksu_patch_text(&ksu_syscall_table[nr], &orig, sizeof(orig), KSU_PATCH_TEXT_FLUSH_DCACHE)) {
-            pr_err("restore syscall %d failed\n", nr);
-        }
+        ksu_hook_restore_slot((void **)&ksu_syscall_table[nr], (void *)orig, "syscall");
     }
     hooked_count = 0;
     mutex_unlock(&hooked_entries_lock);
 
 clear_state:
-    // Now that the syscall table is restored, clear internal state.
-    // At this point the tracepoint is already unregistered and synchronized
-    // (done by ksu_syscall_hook_manager_exit before calling us), so no new
-    // dispatches will occur.
+    /* Close fetched-pointer entry windows, drain sleeping handlers, then close
+     * their return windows before clearing metadata or freeing hook state.
+     */
+    ksu_syscall_synchronize();
     memset(syscall_hooks, 0, sizeof(syscall_hooks));
     ksu_dispatcher_nr = -1;
 
