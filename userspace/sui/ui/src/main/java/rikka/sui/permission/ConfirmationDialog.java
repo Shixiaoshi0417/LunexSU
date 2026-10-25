@@ -50,6 +50,8 @@ import androidx.core.text.HtmlCompat;
 import com.google.android.material.color.DynamicColors;
 import dev.rikka.tools.refine.Refine;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
+import moe.shizuku.server.IShizukuService;
 import rikka.sui.R;
 import rikka.sui.databinding.ConfirmationDialogBinding;
 import rikka.sui.ktx.HandlerKt;
@@ -68,6 +70,9 @@ public class ConfirmationDialog {
 
     private static final IBinder TOKEN = new Binder();
     private static final Logger LOGGER = new Logger("SuiConfirmationDialog");
+    private static final String REQUEST_PERMISSION_REPLY_IDENTITY = "lunexsu:permission-identity";
+    // The server refuses grants 75 seconds after the request; close well before that.
+    private static final long REQUEST_TIMEOUT_MS = 60 * 1000L;
 
     private final Context context;
     private final Resources resources;
@@ -113,26 +118,62 @@ public class ConfirmationDialog {
     }
 
     public void show(int requestUid, int requestPid, String requestPackageName, int requestCode) {
-        HandlerKt.getMainHandler().post(() -> showInternal(requestUid, requestPid, requestPackageName, requestCode));
+        // This runs inside the server's synchronous callback: a throw here makes the server deny
+        // the request once. The reply goes to this server instance with the identity shown.
+        IShizukuService service = Objects.requireNonNull(BridgeServiceClient.getService(), "Sui service unavailable");
+        RequestIdentity identity;
+        try {
+            identity = RequestIdentity.parse(
+                    requestUid, requestPackageName, BridgeServiceClient.getUidIdentity(service, requestUid));
+        } catch (Exception e) {
+            throw new IllegalStateException("Cannot verify the requesting UID", e);
+        }
+        Reply reply = new Reply(service, identity, requestUid, requestPid, requestCode);
+        HandlerKt.getMainHandler().post(() -> {
+            try {
+                showInternal(reply, identity, requestUid, requestPid, requestPackageName);
+            } catch (Throwable e) {
+                LOGGER.e("showInternal", e);
+                reply.send(false, true, false);
+            }
+        });
     }
 
-    private void setResult(
-            int requestUid, int requestPid, int requestCode, boolean allowed, boolean onetime, boolean isShell) {
-        Bundle data = new Bundle();
-        data.putBoolean(REQUEST_PERMISSION_REPLY_ALLOWED, allowed);
-        data.putBoolean(REQUEST_PERMISSION_REPLY_IS_ONETIME, onetime);
-        data.putBoolean(REQUEST_PERMISSION_REPLY_IS_SHELL, isShell);
+    /** Exactly one reply per request; every way of closing without a choice denies once. */
+    private static final class Reply {
+        private final AtomicBoolean sent = new AtomicBoolean();
+        private final IShizukuService service;
+        private final RequestIdentity identity;
+        private final int requestUid, requestPid, requestCode;
 
-        try {
-            BridgeServiceClient.getService()
-                    .dispatchPermissionConfirmationResult(requestUid, requestPid, requestCode, data);
-        } catch (Throwable e) {
-            LOGGER.e("dispatchPermissionConfirmationResult");
+        Reply(IShizukuService service, RequestIdentity identity, int requestUid, int requestPid, int requestCode) {
+            this.service = service;
+            this.identity = identity;
+            this.requestUid = requestUid;
+            this.requestPid = requestPid;
+            this.requestCode = requestCode;
+        }
+
+        void send(boolean allowed, boolean onetime, boolean isShell) {
+            if (!sent.compareAndSet(false, true)) return;
+            Bundle data = new Bundle();
+            data.putBoolean(REQUEST_PERMISSION_REPLY_ALLOWED, allowed);
+            data.putBoolean(REQUEST_PERMISSION_REPLY_IS_ONETIME, onetime);
+            data.putBoolean(REQUEST_PERMISSION_REPLY_IS_SHELL, isShell);
+            data.putString(REQUEST_PERMISSION_REPLY_IDENTITY, identity.fingerprint);
+
+            try {
+                service.dispatchPermissionConfirmationResult(requestUid, requestPid, requestCode, data);
+            } catch (Throwable e) {
+                // A dead server already ended this request; never send it to a new instance.
+                LOGGER.e("dispatchPermissionConfirmationResult");
+            }
         }
     }
 
     @SuppressWarnings("deprecation")
-    private void showInternal(int requestUid, int requestPid, String requestPackageName, int requestCode) {
+    private void showInternal(
+            Reply reply, RequestIdentity identity, int requestUid, int requestPid, String requestPackageName) {
 
         MiuixBottomSheetLayout sheetLayout = new MiuixBottomSheetLayout(context);
 
@@ -146,8 +187,12 @@ public class ConfirmationDialog {
 
             @Override
             public void onClose() {
-                setResult(requestUid, requestPid, requestCode, false, true, false);
+                reply.send(false, true, false);
             }
+        };
+        Runnable timeout = () -> {
+            reply.send(false, true, false);
+            sheetLayout.dismiss();
         };
         root.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                 | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
@@ -194,10 +239,14 @@ public class ConfirmationDialog {
             @Override
             public void onViewAttachedToWindow(View v) {
                 sheetLayout.show();
+                HandlerKt.getMainHandler().postDelayed(timeout, REQUEST_TIMEOUT_MS);
             }
 
             @Override
-            public void onViewDetachedFromWindow(View v) {}
+            public void onViewDetachedFromWindow(View v) {
+                HandlerKt.getMainHandler().removeCallbacks(timeout);
+                reply.send(false, true, false);
+            }
         });
 
         String label = requestPackageName;
@@ -219,6 +268,17 @@ public class ConfirmationDialog {
                         label,
                         resources.getString(R.string.permission_description)),
                 HtmlCompat.FROM_HTML_MODE_LEGACY));
+        // Grants apply to the whole UID: show every member the identity covers.
+        StringBuilder details = new StringBuilder(
+                resources.getString(R.string.permission_request_uid, requestUid, requestPid));
+        if (identity.packages.size() > 1) {
+            details.append("\n\n").append(resources.getString(R.string.permission_shared_uid, identity.packages.size()));
+        }
+        for (String name : identity.packages) {
+            details.append('\n').append(name);
+        }
+        binding.details.setText(details);
+
         binding.button1Root.setText(resources.getString(R.string.grant_dialog_button_allow_always));
         binding.button1Shell.setText(resources.getString(R.string.grant_dialog_button_allow_always_shell));
         binding.button2.setText(resources.getString(R.string.grant_dialog_button_allow_one_time));
@@ -233,22 +293,22 @@ public class ConfirmationDialog {
 
         binding.button1Root.setOnClickListener(v -> {
             if (sheetLayout.isDismissing()) return;
-            setResult(requestUid, requestPid, requestCode, true, false, false);
+            reply.send(true, false, false);
             sheetLayout.dismiss();
         });
         binding.button1Shell.setOnClickListener(v -> {
             if (sheetLayout.isDismissing()) return;
-            setResult(requestUid, requestPid, requestCode, true, false, true);
+            reply.send(true, false, true);
             sheetLayout.dismiss();
         });
         binding.button2.setOnClickListener(v -> {
             if (sheetLayout.isDismissing()) return;
-            setResult(requestUid, requestPid, requestCode, true, true, false);
+            reply.send(true, true, false);
             sheetLayout.dismiss();
         });
         binding.button3.setOnClickListener(v -> {
             if (sheetLayout.isDismissing()) return;
-            setResult(requestUid, requestPid, requestCode, false, false, false);
+            reply.send(false, false, false);
             sheetLayout.dismiss();
         });
 
@@ -324,5 +384,9 @@ public class ConfirmationDialog {
                 attr, WindowKt.getPrivateFlags(attr) | WindowKt.getSYSTEM_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS());
 
         root.show(attr);
+        if (root.getParent() == null) {
+            // The window could not be added, so no user can answer it.
+            reply.send(false, true, false);
+        }
     }
 }

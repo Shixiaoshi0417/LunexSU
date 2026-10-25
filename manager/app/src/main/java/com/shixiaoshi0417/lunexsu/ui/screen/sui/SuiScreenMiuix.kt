@@ -141,7 +141,7 @@ internal fun SuiScreenMiuix(
                                 ui.error?.let { Text(it, style = textStyles.body2, color = colorScheme.error) }
                                 listOfNotNull(
                                     ui.status.reason.takeIf { it.isNotBlank() },
-                                    stringResource(R.string.sui_host_required).takeIf { !ui.hostAttached },
+                                    stringResource(R.string.sui_request_dialog),
                                     stringResource(R.string.sui_demo).takeIf { BuildConfig.NO_ROOT_DEMO },
                                 ).forEach { Text(it, style = textStyles.body2, color = colorScheme.onSurfaceVariantSummary) }
                             }

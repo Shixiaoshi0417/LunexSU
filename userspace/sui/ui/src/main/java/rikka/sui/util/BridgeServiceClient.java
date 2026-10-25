@@ -45,6 +45,7 @@ public class BridgeServiceClient {
     private static final int BINDER_TRANSACTION_BATCH_UPDATE_UNCONFIGURED = 10006;
     private static final int BINDER_TRANSACTION_setGlobalSettings = 10007;
     private static final int BINDER_TRANSACTION_getGlobalSettings = 10008;
+    private static final int BINDER_TRANSACTION_getUidIdentity = 10013;
     private static final int RETRY_MAX = 5;
     private static final long RETRY_DELAY_MS = 1000;
     private static IBinder binder;
@@ -280,6 +281,24 @@ public class BridgeServiceClient {
         }
         android.util.Log.e("SuiBridgeDebug", "getApplications failed after max retries.");
         return Collections.emptyList();
+    }
+
+    /** The root server's full-UID identity JSON for {@code uid}, from exactly this server instance. */
+    public static String getUidIdentity(IShizukuService s, int uid) throws RemoteException {
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(ShizukuApiConstants.BINDER_DESCRIPTOR);
+            data.writeInt(uid);
+            if (!s.asBinder().transact(BINDER_TRANSACTION_getUidIdentity, data, reply, 0)) {
+                throw new IllegalStateException("Sui identity query unavailable");
+            }
+            reply.readException();
+            return reply.readString();
+        } finally {
+            data.recycle();
+            reply.recycle();
+        }
     }
 
     public static void requestPinnedShortcut() throws RemoteException {

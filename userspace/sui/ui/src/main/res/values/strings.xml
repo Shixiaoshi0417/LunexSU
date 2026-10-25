@@ -25,6 +25,8 @@
     <string name="grant_dialog_button_allow_always_shell">Always (Shell)</string>
     <string name="grant_dialog_button_allow_one_time">Only this time (root)</string>
     <string name="grant_dialog_button_deny_and_dont_ask_again">Deny, don\'t ask again</string>
+    <string name="permission_request_uid" translatable="false">UID %1$d, PID %2$d</string>
+    <string name="permission_shared_uid">%1$d apps share this UID. Sui permissions apply to all of them:</string>
     <string name="brackets_format">%1$s (%2$s)</string>
     <string name="permission_allowed">Allowed</string>
     <string name="permission_allowed_shell">Allowed (Shell)</string>

@@ -43,14 +43,14 @@ fun SuiScreen() {
     val apps = remember(ui.apps, query) {
         ui.apps.filter { query.isBlank() || it.label.contains(query, true) || it.packages.contains(query, true) }
     }
-    val editable = ui.hostAttached && !ui.busy && !ui.reconciling
+    val editable = ui.connected && !ui.busy && !ui.reconciling
     val search: @Composable (Modifier) -> Unit = { modifier -> SuiSearchField(query, { query = it.take(256) }, modifier) }
     if (LocalUiMode.current == UiMode.Miuix) {
         SuiScreenMiuix(ui, apps, editable, { navigator.pop() }, { SuiManager.refresh() }, { editing = it }, search)
     } else {
         SuiScreenMaterial(ui, apps, editable, { navigator.pop() }, { SuiManager.refresh() }, { editing = it }, search)
     }
-    editing?.takeIf { ui.requests.isEmpty() }?.let { app ->
+    editing?.let { app ->
         var selected by remember(app) { mutableStateOf(app.permission) }
         AlertDialog(onDismissRequest = { editing = null }, title = { Text(stringResource(R.string.sui_apps)) },
             text = { Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -77,7 +77,7 @@ fun SuiScreen() {
 internal fun suiStatusText(ui: SuiUiState): String = stringResource(when {
     ui.reconciling -> R.string.sui_outcome_pending
     ui.status.pendingReboot -> R.string.sui_pending_reboot
-    ui.status.serviceHealthy && ui.hostAttached -> R.string.sui_ready
+    ui.status.serviceHealthy && ui.connected -> R.string.sui_ready
     ui.status.desiredEnabled -> R.string.sui_unavailable
     !ui.status.payloadAvailable -> R.string.sui_payload_missing
     else -> R.string.sui_disabled
@@ -133,30 +133,6 @@ private fun SuiSearchField(query: String, onQueryChange: (String) -> Unit, modif
             leadingIcon = { Icon(Icons.Filled.Search, null) },
             placeholder = { Text(stringResource(R.string.sui_search)) })
     }
-}
-
-@Composable
-fun SuiPermissionPrompt() {
-    val state by SuiManager.state.collectAsStateWithLifecycle()
-    val request = state.requests.firstOrNull() ?: return
-    var decision by remember(request) { mutableStateOf(SuiDecision.DENY_ONCE) }
-    AlertDialog(onDismissRequest = { SuiManager.decide(request, SuiDecision.DENY_ONCE) },
-        title = { Text(stringResource(R.string.sui_permission_request)) },
-        text = { Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-            Text("${request.packageName}\nUID ${request.uid} · PID ${request.pid}")
-            Text(stringResource(R.string.sui_separate_permissions))
-            Text(stringResource(R.string.sui_shared_uid))
-            request.packages.forEach { Text(it) }
-            SuiDecision.entries.forEach { option -> TextButton(onClick = { decision = option }) {
-                Text((if (decision == option) "✓ " else "") + stringResource(when (option) {
-                    SuiDecision.ROOT -> R.string.sui_root
-                    SuiDecision.ROOT_ONCE -> R.string.sui_root_once
-                    SuiDecision.SHELL -> R.string.sui_shell
-                    SuiDecision.DENY -> R.string.sui_deny
-                    SuiDecision.DENY_ONCE -> R.string.sui_deny_once
-                }))
-            } }
-        } }, confirmButton = { TextButton(onClick = { SuiManager.decide(request, decision) }) { Text(stringResource(R.string.sui_apply)) } })
 }
 
 internal fun SuiPermission.label() = when (this) {

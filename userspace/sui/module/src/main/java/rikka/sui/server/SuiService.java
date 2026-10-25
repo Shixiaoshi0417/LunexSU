@@ -77,6 +77,8 @@ import rikka.sui.util.UserHandleCompat;
 public class SuiService extends Service<SuiUserServiceManager, SuiClientManager, SuiConfigManager> {
 
     private static final long DELEGATED_PERMISSION_CALLBACK_TIMEOUT_MS = 5 * 60 * 1000L;
+    // The SystemUI dialog closes itself after 60 seconds; allow for delivery, never a stale grant.
+    private static final long PERMISSION_CONFIRMATION_TIMEOUT_MS = 75 * 1000L;
 
     private static SuiService instance;
     private static String filesPath;
@@ -633,6 +635,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         final DelegatedPermissionCallback delegatedCallback;
         final String identity;
         final String binding;
+        final long deadline;
 
         PendingPermissionConfirmation(String key, IBinder owner, ClientRecord client, int requestCode, UidIdentity snapshot) {
             this.key = key;
@@ -642,6 +645,11 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
             this.delegatedCallback = delegatedPermissionCallbacks.get(key);
             this.identity = snapshot != null ? snapshot.consentFingerprint() : null;
             this.binding = snapshot != null ? snapshot.binding() : null;
+            this.deadline = android.os.SystemClock.elapsedRealtime() + PERMISSION_CONFIRMATION_TIMEOUT_MS;
+        }
+
+        boolean expired() {
+            return android.os.SystemClock.elapsedRealtime() >= deadline;
         }
     }
 
@@ -757,7 +765,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
 
         if (allowed && pending != null) {
             String currentIdentity = capturePermissionIdentity(requestUid);
-            if (pending.identity == null || !pending.identity.equals(currentIdentity)
+            if (pending.identity == null || !pending.identity.equals(currentIdentity) || pending.expired()
                     || (expectedIdentity != null && !expectedIdentity.equals(currentIdentity))
                     || (pending.client.client != null
                         && clientManager.findClient(requestUid, requestPid) != pending.client)) {
@@ -1289,12 +1297,13 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
 
         isLunexsuManager = LunexsuManagerGate.accepts(callingUid)
                 && LunexsuManagerGate.isManagerPackage(requestPackageName);
-        isManager = systemUiPackageName.equals(requestPackageName) || isLunexsuManager;
+        boolean isSystemUi = callingUid == systemUiUid && systemUiPackageName.equals(requestPackageName);
+        isManager = isSystemUi || isLunexsuManager;
         isSettings = settingsPackageName.equals(requestPackageName);
 
-        // This managed distribution ships its permission UI in LunexSU, not sui.apk.
-        // A later SystemUI attach must not replace the signed Manager's callback.
-        if (isLunexsuManager) {
+        // Requests are answered by Sui's own sui.apk dialog inside SystemUI. The signed Manager
+        // only manages existing grants; its attach is never a permission host.
+        if (isSystemUi) {
             if (!attachPermissionHost(application, callingPid)) return;
         }
 
@@ -1359,7 +1368,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                 binder.linkToDeath(new IBinder.DeathRecipient() {
                     @Override
                     public void binderDied() {
-                        LOGGER.w("manager binder is dead, pid=%d", callingPid);
+                        LOGGER.w("SystemUI permission dialog binder is dead, pid=%d", callingPid);
                         onPermissionHostDied(binder);
                         binder.unlinkToDeath(this, 0);
                     }
@@ -1369,7 +1378,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                 return false;
             }
             systemUiApplication = application;
-            LOGGER.i("manager attached: pid=%d", callingPid);
+            LOGGER.i("SystemUI permission dialog attached: pid=%d", callingPid);
             return true;
         }
     }
@@ -1405,7 +1414,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
             RootBridgeDelegate.delegatePermissionConfirmationToRoot(
                     clientManager, requestCode, clientRecord.packageName, callingUid, callingPid);
         } else {
-            LOGGER.e("manager is null");
+            LOGGER.e("SystemUI permission dialog is not attached");
             finishPermissionConfirmation(callingUid, callingPid, requestCode, false, true, false, false, null);
         }
     }
@@ -1428,9 +1437,9 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
     @Override
     public void dispatchPermissionConfirmationResult(int requestUid, int requestPid, int requestCode, Bundle data) {
         int callingUid = Binder.getCallingUid();
-        if (callingUid != systemUiUid && !LunexsuManagerGate.accepts(callingUid)) {
+        if (callingUid != systemUiUid) {
             LOGGER.w(
-                    "dispatchPermissionConfirmationResult is allowed to be called only from the manager (callingUid=%d, systemUiUid=%d)",
+                    "dispatchPermissionConfirmationResult is allowed to be called only from the SystemUI dialog (callingUid=%d, systemUiUid=%d)",
                     callingUid, systemUiUid);
             return;
         }
@@ -1442,14 +1451,17 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         boolean allowed = data.getBoolean(REQUEST_PERMISSION_REPLY_ALLOWED);
         boolean onetime = data.getBoolean(REQUEST_PERMISSION_REPLY_IS_ONETIME);
         boolean isShell = data.getBoolean(ShizukuApiConstants.REQUEST_PERMISSION_REPLY_IS_SHELL);
+        String expectedIdentity = data.getString(ServerConstants.REQUEST_PERMISSION_REPLY_IDENTITY);
         // This protocol implements one-time grants only on the root server. Never turn an
         // unsupported one-time shell choice into the root grant in finishPermissionConfirmation.
-        if (onetime && isShell) {
+        // A grant must carry the full-UID identity the dialog displayed; without it, deny once.
+        if ((onetime && isShell) || (allowed && expectedIdentity == null)) {
             allowed = false;
+            onetime = true;
             isShell = false;
         }
         finishPermissionConfirmation(requestUid, requestPid, requestCode, allowed, onetime, isShell, true,
-                data.getString("lunexsu:permission-identity"));
+                expectedIdentity);
     }
 
     private int getFlagsForUidInternal(int uid, int mask) {

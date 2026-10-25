@@ -69,7 +69,7 @@ class SuiManagementUiTests(unittest.TestCase):
         self.assertIn("colors = expressiveTopAppBarColors())", susfs)
 
     def test_new_strings_exist_in_every_sui_locale(self):
-        keys = {"sui_switch_title", "sui_switch_summary", "sui_payload_missing", "sui_apps"}
+        keys = {"sui_switch_title", "sui_switch_summary", "sui_payload_missing", "sui_apps", "sui_request_dialog"}
         for locale in ("values", "values-zh-rCN", "values-zh-rHK"):
             with self.subTest(locale=locale):
                 names = {e.get("name") for e in ET.parse(RES / locale / "sui.xml").getroot()}

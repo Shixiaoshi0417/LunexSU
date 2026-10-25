@@ -350,7 +350,6 @@ class MainActivity : ComponentActivity() {
                         // Restore the ordinary full-window root, with no banner/inset wrapper left behind.
                         Box(Modifier.fillMaxSize().clipToBounds()) { scaffoldContent() }
                     }
-                    com.shixiaoshi0417.lunexsu.ui.screen.sui.SuiPermissionPrompt()
                     SideEffect { contentReady = true }
                 }
             }

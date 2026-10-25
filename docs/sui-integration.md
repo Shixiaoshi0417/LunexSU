@@ -81,33 +81,45 @@ both root and shell Binders every five seconds using the bounded diagnostics
 helper. Each generation gets a 60-second initial readiness window; after both
 Binders have been seen alive, loss of either (or failed diagnostics) kills and
 reaps root so the existing bounded restart loop recreates both servers. Root's
-death also stops shell through its parent-death guard. A background/disconnected
-Manager permission callback is not a server-liveness failure. Host process tests
+death also stops shell through its parent-death guard. A disconnected Manager or
+SystemUI permission host is not a server-liveness failure. Host process tests
 cover this monitor and cleanup; they do not execute Android Binder or prove
 on-device recovery.
 
 Status distinguishes bundled bytes, desired state and actual root/shell Binder
-diagnostics. Manager separately tracks its live permission callback: readable
-payloads, existing processes or healthy server Binders do not prove this host is
-attached. Only the unlocked main Manager process may attach. Requests have a
-bounded queue, connection generation and deadline. The shared Material/MIUIX/Fina
-prompt lists every package returned for the requesting UID and warns that Sui
-grants apply to that whole UID. Admission captures the complete sorted package
-set, each member's UID, install/update times and APK signer digests; every allowed
-reply revalidates that snapshot at dispatch. Missing/unreadable members, added or
-removed packages, UID changes, updates and signer changes fail closed without
-sending a grant. Denials and expiry remain available even after identity changes.
-This is a point-in-time PackageManager check, not an atomic package-install/Binder
-transaction or revocation of previously persisted grants after a future install.
-Stale callbacks and unsent old-generation work
-are rejected after reconnect. An already-sent Binder RPC cannot be cancelled by
-the Manager; its result must be verified after a timeout.
-The Sui protocol supports persistent Shell and Root, one-time Root and deny;
-unsupported one-time Shell is rejected by both UI and server, not converted into
-Root. SystemUI cannot replace the Manager's permission callback. Upstream legacy
-SystemUI/Settings management APIs remain, so this is not an exclusive-admin claim.
+diagnostics. Manager separately tracks its own verified management connection;
+healthy server Binders do not prove it is connected. Only the unlocked main
+Manager process connects, and it never attaches as a permission host.
 
-Material, MIUIX and Fina use shared, keyboard-aware management/request screens.
+Permission requests are answered by Sui's own `sui.apk` dialog, which the Zygisk
+companion injects into SystemUI; the Manager does not need to be open. The root
+server attaches a permission host only for the exact SystemUI UID and package and
+accepts results only from that UID. SystemUI loads the dialog before attaching and
+accepts host callbacks only from root. Before showing a request it queries the
+root server's full-UID identity: the complete sorted package set, each member's
+UID, install/update times and APK signer digests. The dialog lists every package
+of the requesting UID with its UID and PID, warns when the UID is shared, and
+returns that identity's consent fingerprint with the decision, to the same server
+instance that asked. Admission captures the same snapshot. An allowed reply is
+granted only while the request is pending and younger than 75 seconds, its client
+is unchanged, and both the admitted and the displayed fingerprint match a fresh
+capture; a grant without the displayed identity becomes a one-time denial.
+Missing/unreadable members, added or removed packages, UID changes, updates and
+signer changes fail closed without sending a grant. Denials remain available even
+after identity changes. Back, `CLOSE_SYSTEM_DIALOGS`, a window that cannot be
+added, any other dismissal and the dialog's 60-second timeout deny once; every
+request gets exactly one reply. This is a point-in-time PackageManager check, not
+an atomic package-install/Binder transaction or revocation of previously persisted
+grants after a future install. Requests pending on a dead SystemUI host are denied
+once, and with no host attached requests are denied, never granted, so SystemUI
+must not be excluded from injection.
+The Sui protocol supports persistent Shell and Root, one-time Root and deny;
+unsupported one-time Shell is rejected by the server, not converted into Root.
+The Manager edits existing grants; the server rechecks the full-UID identity of
+each edit. Upstream legacy SystemUI/Settings management APIs remain, so this is
+not an exclusive-admin claim.
+
+Material, MIUIX and Fina use shared, keyboard-aware management screens.
 The Sui switch sits in Settings directly below built-in Zygisk. Like that switch,
 its checked state is the next-boot setting; turning it on or off first shows the
 enable or disable warning, which is discarded when Settings is left or
@@ -116,9 +128,7 @@ management** entry appears only after Sui is switched on; that page lists
 per-UID permissions and no longer enables or disables the broker. Each style uses
 its own native bar (MIUIX blur, Material collapsing, Fina pinned) with the shared
 theme colors, so a theme-pack wallpaper is not covered by an opaque top band.
-Background notifications open the same global request host; denied notification
-permission leaves requests available in-app. Keep Manager running for prompts:
-there is no claim that Android will always allow background UI or process startup.
+The page states that requests appear in Sui's SystemUI dialog.
 No Root Demo has a separate in-memory controller and excludes the privileged
 controller, Sui AIDL, daemon calls and payload from its actual APK.
 

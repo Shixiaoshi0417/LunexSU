@@ -93,7 +93,7 @@ internal fun SuiScreenMaterial(
                                     Text(suiStatusText(ui))
                                     ui.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                                     if (ui.status.reason.isNotBlank()) Text(ui.status.reason)
-                                    if (!ui.hostAttached) Text(stringResource(R.string.sui_host_required))
+                                    Text(stringResource(R.string.sui_request_dialog))
                                     if (BuildConfig.NO_ROOT_DEMO) Text(stringResource(R.string.sui_demo))
                                 }
                             },

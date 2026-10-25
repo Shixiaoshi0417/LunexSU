@@ -30,11 +30,19 @@ CHANGED = {
     'module/src/main/java/rikka/sui/server/SuiService.java',
     'module/src/main/java/rikka/sui/systemserver/BridgeService.java',
     'module/src/main/java/rikka/sui/systemserver/SystemProcess.java', 'package.py',
+    # The SystemUI permission dialog binds its reply to the server-reported full-UID identity.
+    'module/src/main/java/rikka/sui/manager/ManagerProcess.java',
+    'ui/src/main/java/rikka/sui/permission/ConfirmationDialog.java',
+    'ui/src/main/java/rikka/sui/util/BridgeServiceClient.java',
+    'ui/src/main/res/layout/confirmation_dialog.xml',
+    'ui/src/main/res/values/strings.xml', 'ui/src/main/res/values-ja/strings.xml',
+    'ui/src/main/res/values-zh-rCN/strings.xml', 'ui/src/main/res/values-zh-rTW/strings.xml',
 }
 ADDED = {'SOURCE.lock.json', 'LUNEXSU.md',
           'module/src/main/java/rikka/sui/server/LunexsuManagerGate.java',
           'module/src/main/java/rikka/sui/server/ManagerTrust.java',
           'module/src/main/java/rikka/sui/server/UidIdentity.java',
+          'ui/src/main/java/rikka/sui/permission/RequestIdentity.java',
           # The shell runtime directory is UID 2000's: root reaches it only through descriptors.
           'module/src/main/cpp/util/include/shell_runtime.h', 'module/src/main/cpp/util/shell_runtime.cpp',
           'module/src/main/java/rikka/sui/server/ShellRuntimeFiles.java'}

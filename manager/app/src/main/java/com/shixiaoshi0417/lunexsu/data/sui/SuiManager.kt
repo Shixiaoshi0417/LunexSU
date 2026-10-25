@@ -1,22 +1,13 @@
 package com.shixiaoshi0417.lunexsu.data.sui
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
-import android.os.Binder
-import android.os.Bundle
 import android.os.IBinder
 import android.os.Parcel
 import android.os.Process
 import android.os.SystemClock
-import androidx.core.app.NotificationCompat
-import com.shixiaoshi0417.lunexsu.BuildConfig
 import com.shixiaoshi0417.lunexsu.R
-import com.shixiaoshi0417.lunexsu.ui.MainActivity
 import com.shixiaoshi0417.lunexsu.ui.util.getKsuDaemonPath
 import com.shixiaoshi0417.lunexsu.ui.util.submitRootShell
 import kotlinx.coroutines.CoroutineScope
@@ -29,7 +20,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import moe.shizuku.server.IShizukuApplication
 import moe.shizuku.server.IShizukuService
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import java.util.concurrent.TimeUnit
@@ -38,13 +28,15 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.security.MessageDigest
 
-/** Sui's ACL and callbacks are independent from the kernel root allowlist. */
+/**
+ * Sui's ACL is independent from the kernel root allowlist. The Manager switches Sui and edits
+ * existing grants; permission requests are answered by Sui's own dialog inside SystemUI.
+ */
 object SuiManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val operations = Mutex()
     private val mutable = MutableStateFlow(SuiUiState())
     val state = mutable.asStateFlow()
-    private val requests = SuiRequestQueue()
     private val epoch = AtomicLong()
     private val lastForeground = AtomicLong()
     private val ipc = SuiIpcExecutor()
@@ -57,24 +49,13 @@ object SuiManager {
     @Synchronized fun start(application: Context) {
         if (::context.isInitialized) return
         context = application.applicationContext
-        scope.launch {
-            while (true) {
-                delay(1_000)
-                // Requests kept across a local disconnect die with the server that counted them.
-                (requests.retained() as? IBinder)?.let { if (!it.isBinderAlive) requests.dropRetained(it) }
-                requests.expire(SystemClock.elapsedRealtime()).forEach {
-                    runCatching { replyQueued(it, SuiDecision.DENY_ONCE) }
-                }
-                publishRequests()
-            }
-        }
         refresh(false)
         scope.launch {
             repeat(5) {
                 delay(5_000)
                 val current = mutable.value
                 if (current.busy) return@repeat
-                if (current.hostAttached || !current.status.desiredEnabled || current.status.pendingReboot) return@launch
+                if (current.connected || !current.status.desiredEnabled || current.status.pendingReboot) return@launch
                 refresh(false)
             }
         }
@@ -132,13 +113,6 @@ object SuiManager {
             } finally { data.recycle(); reply.recycle() }
         }
         loadApps()
-    }
-
-    fun decide(request: SuiRequest, decision: SuiDecision) {
-        scope.launch {
-            runCatching { replyQueued(request, decision) }
-                .onFailure { error -> mutable.update { it.copy(error = error.message ?: error.javaClass.simpleName) } }
-        }
     }
 
     private fun operation(allowReconciliation: Boolean = false, block: suspend () -> Unit) {
@@ -211,7 +185,7 @@ object SuiManager {
     private fun <T> remote(block: (SuiIpcExecutor.Lease) -> T): T {
         return try { ipc.call(block) }
         catch (error: TimeoutException) {
-            disconnect() // Invalidates requests/callbacks and a late connect's session epoch.
+            disconnect() // Invalidates a late connect's session epoch.
             throw IllegalStateException(context.getString(R.string.sui_ipc_timeout), error)
         } catch (error: InterruptedException) { disconnect(); throw error }
     }
@@ -238,90 +212,31 @@ object SuiManager {
         val service = IShizukuService.Stub.asInterface(binder)
         check(service.uid == 0 && service.version == 13) { "Unexpected Sui server" }
         val death = IBinder.DeathRecipient {
-            if (disconnect(generation, serverDied = true)) recoverLater()
+            if (disconnect(generation)) recoverLater()
         }
         binder.linkToDeath(death, 0)
-        val resumed = synchronized(this) {
+        synchronized(this) {
             if (epoch.get() != generation || runCatching { lease.checkActive() }.isFailure) {
                 binder.unlinkToDeath(death, 0)
                 error("Sui connection was cancelled")
             }
+            // Management only: the Manager never attaches as Sui's permission host.
             session = Session(generation, service, death)
-            // Only the same live server still counts retained requests as pending.
-            requests.resume(binder, generation)
-        }
-        try {
-            service.attachApplication(application(generation), Bundle().apply {
-                putString("shizuku:attach-package-name", BuildConfig.APPLICATION_ID)
-                putInt("shizuku:attach-api-version", 13)
-            })
-        } catch (error: Exception) { disconnect(generation); throw error }
-        if (resumed.isNotEmpty()) runCatching { publishRequests(); notifyRequest() }
-    }
-
-    private fun application(generation: Long) = object : IShizukuApplication.Stub() {
-        private fun requireRoot() { check(Binder.getCallingUid() == 0) { "Only the root Sui server may call this host" } }
-        override fun bindApplication(data: Bundle?) {
-            requireRoot()
-            checkNotNull(data)
-            check(data.getInt("shizuku:attach-reply-uid", -1) == 0)
-            check(data.getInt("shizuku:attach-reply-version", -1) == 13)
-            synchronized(SuiManager) {
-                if (session?.epoch == generation) mutable.update { it.copy(hostAttached = true) }
-            }
-        }
-        override fun dispatchRequestPermissionResult(requestCode: Int, data: Bundle?) { requireRoot() }
-        override fun dispatchServerBinder(binder: IBinder?, packageName: String?, generation: Long): Boolean {
-            requireRoot()
-            return false // Never accept an unauthenticated replacement through a callback.
-        }
-        override fun showPermissionConfirmation(uid: Int, pid: Int, packageName: String?, requestCode: Int) {
-            requireRoot()
-            val name = packageName.orEmpty()
-            // Throw synchronously on incomplete identity: Sui consumes and denies this callback.
-            val identity = uidIdentity(uid, name)
-            val request = SuiRequest(generation, uid, pid, name, requestCode, SystemClock.elapsedRealtime(),
-                identity.fingerprint, identity.packages)
-            synchronized(SuiManager) {
-                check(session?.epoch == generation) { "Expired Sui connection" }
-                // This callback is synchronous. Sui catches rejection and consumes/denies
-                // exactly one pending request locally, without using our busy IPC worker.
-                requests.requireOffer(request)
-            }
-            // Once retained, UI/notification errors must not also trigger Sui's denial fallback.
-            runCatching { publishRequests(); notifyRequest() }
+            mutable.update { it.copy(connected = true) }
         }
     }
 
-    /**
-     * Drops this connection. Unlinking does not kill our still-live callback, so a server that is
-     * still running keeps counting admitted requests as pending and never denies them itself: keep
-     * them for that server (see [SuiRequestQueue.detach]) and reconnect. Only the server's death
-     * makes them moot.
-     */
-    private fun disconnect(expectedEpoch: Long? = null, serverDied: Boolean = false): Boolean {
-        var retained = false
+    /** Drops this connection; a stale death notification cannot drop a newer one. */
+    private fun disconnect(expectedEpoch: Long? = null): Boolean {
         val previous = synchronized(this) {
             if (expectedEpoch != null && session?.epoch != expectedEpoch) return false
             epoch.incrementAndGet()
             val old = session
             session = null
-            val server = old?.service?.asBinder()
-            when {
-                serverDied -> requests.clear()
-                server != null && server.isBinderAlive -> {
-                    requests.detach(server)
-                    retained = requests.snapshot().isNotEmpty()
-                }
-                old != null -> requests.clear()
-                // Already disconnected: keep any retention; the expiry loop drops a dead server's.
-            }
-            mutable.update { it.copy(hostAttached = false, requests = emptyList(), apps = emptyList()) }
+            mutable.update { it.copy(connected = false, apps = emptyList()) }
             old
         }
         runCatching { previous?.service?.asBinder()?.unlinkToDeath(previous.death, 0) }
-        if (::context.isInitialized) context.getSystemService(NotificationManager::class.java).cancel(NOTIFICATION)
-        if (retained) recoverLater()
         return true
     }
 
@@ -334,41 +249,6 @@ object SuiManager {
                 // A pending lifecycle command has its own observer; do not queue status behind it.
                 if (!lifecycle.isPending()) refresh(false)
             }
-        }
-    }
-
-    private fun replyQueued(request: SuiRequest, decision: SuiDecision) {
-        try {
-            requests.respond(request) { beforeDispatch ->
-                publishRequests()
-                reply(request, decision, beforeDispatch)
-            }
-        } finally { publishRequests() }
-    }
-
-    private fun reply(request: SuiRequest, decision: SuiDecision, beforeDispatch: () -> Unit) {
-        remote { lease ->
-            val current = active()
-            check(current.epoch == request.connection) { "Expired Sui connection" }
-            if (decision.allowed && !request.expired(SystemClock.elapsedRealtime())) {
-                val identity = uidIdentity(request.uid, request.packageName)
-                check(identity.packages == request.packages && identity.fingerprint == request.identity) {
-                    "Shared UID applications changed; no permission was granted"
-                }
-            }
-            check(session?.epoch == current.epoch) { "Expired Sui connection" }
-            // Recheck at dispatch, not only in the periodic expiry job: Binder/PM work can be slow.
-            val effective = if (request.expired(SystemClock.elapsedRealtime())) SuiDecision.DENY_ONCE else decision
-            val result = Bundle().apply {
-                putBoolean("shizuku:request-permission-reply-allowed", effective.allowed)
-                putBoolean("shizuku:request-permission-reply-is-onetime", effective.once)
-                putBoolean("shizuku:request-permission-reply-is-shell", effective.shell)
-                putString("lunexsu:permission-identity", request.identity)
-            }
-            lease.checkActive()
-            // Past this point the RPC may have been sent, even if it throws or times out.
-            beforeDispatch()
-            current.service.dispatchPermissionConfirmationResult(request.uid, request.pid, request.requestCode, result)
         }
     }
 
@@ -394,23 +274,6 @@ object SuiManager {
     private fun packageInfo(name: String): PackageInfo =
         context.packageManager.getPackageInfo(name, PackageManager.GET_SIGNING_CERTIFICATES)
 
-    private fun uidIdentity(uid: Int, requester: String): SuiUidIdentity {
-        // The root server queries PackageManager for uid / 100000. Using this app's Context
-        // would substitute user 0's install for a work-profile/secondary-user request.
-        val current = active()
-        val data = Parcel.obtain()
-        val reply = Parcel.obtain()
-        try {
-            data.writeInterfaceToken("moe.shizuku.server.IShizukuService")
-            data.writeInt(uid)
-            check(current.service.asBinder().transact(10013, data, reply, 0)) { "Sui identity query unavailable" }
-            reply.readException()
-            val identity = SuiUidIdentity.fromServer(uid, requester, checkNotNull(reply.readString()))
-            check(session?.epoch == current.epoch) { "Expired Sui connection" }
-            return identity
-        } finally { data.recycle(); reply.recycle() }
-    }
-
     private fun packageIdentity(info: PackageInfo): SuiPackageIdentity = SuiPackageIdentity(
         info.packageName, checkNotNull(info.applicationInfo).uid, info.firstInstallTime, info.lastUpdateTime,
         checkNotNull(info.signingInfo?.apkContentsSigners).map { signer ->
@@ -421,34 +284,4 @@ object SuiManager {
         check(packages.isNotEmpty())
         return packages.sortedBy { it.packageName }.joinToString("\n") { packageIdentity(it).fingerprint() }
     }
-
-    private fun publishRequests() {
-        val snapshot = synchronized(this) {
-            val current = requests.snapshot().filter { it.connection == session?.epoch }
-            mutable.update { it.copy(requests = current) }
-            current
-        }
-        if (snapshot.isEmpty() && ::context.isInitialized)
-            context.getSystemService(NotificationManager::class.java).cancel(NOTIFICATION)
-    }
-
-    private fun notifyRequest() {
-        if (!::context.isInitialized) return
-        val manager = context.getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(NotificationChannel(CHANNEL,
-            context.getString(R.string.sui_permission_request), NotificationManager.IMPORTANCE_HIGH))
-        val intent = Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        val pending = PendingIntent.getActivity(context, NOTIFICATION, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val notice = NotificationCompat.Builder(context, CHANNEL)
-            .setSmallIcon(android.R.drawable.ic_lock_lock)
-            .setContentTitle(context.getString(R.string.sui_permission_request))
-            .setContentText(context.getString(R.string.sui_open_manager))
-            .setContentIntent(pending).setAutoCancel(true).build()
-        // Notifications may be denied. The request remains visible inside the Manager.
-        runCatching { manager.notify(NOTIFICATION, notice) }
-    }
-
-    private const val CHANNEL = "lunexsu_sui_permissions"
-    private const val NOTIFICATION = 0x535549
 }

@@ -30,6 +30,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -70,6 +71,12 @@ public class ManagerProcess {
                 int requestUid, int requestPid, String requestPackageName, int requestCode) {
             LOGGER.i(
                     "showPermissionConfirmation: %d %d %s %d", requestUid, requestPid, requestPackageName, requestCode);
+
+            // Only the root Sui server holds this callback. A throw here is observed by the
+            // server, which then denies this request once.
+            if (Binder.getCallingUid() != 0) {
+                throw new SecurityException("Only the root Sui server may show permission requests");
+            }
 
             if (suiApk == null) {
                 throw new IllegalStateException("Cannot load apk");
@@ -160,6 +167,17 @@ public class ManagerProcess {
             return;
         }
 
+        // Attach as the permission host only once the dialog can be shown; requests that reach
+        // a host without its UI would only be denied.
+        if (suiApk == null) {
+            suiApk = SuiApk.createForSystemUI();
+        }
+        if (suiApk == null) {
+            LOGGER.w("Cannot load the permission dialog, retry in 5s");
+            WorkerHandler.get().postDelayed(() -> sendToService(packageName), 5000);
+            return;
+        }
+
         Bundle args = new Bundle();
         args.putString(ATTACH_APPLICATION_PACKAGE_NAME, packageName);
         args.putInt(ATTACH_APPLICATION_API_VERSION, SERVER_VERSION);
@@ -177,11 +195,6 @@ public class ManagerProcess {
         } catch (RemoteException e) {
             LOGGER.w(e, "attachApplication or linkToDeath failed");
             WorkerHandler.get().postDelayed(() -> sendToService(packageName), 1000);
-            return;
-        }
-
-        if (suiApk == null) {
-            suiApk = SuiApk.createForSystemUI();
         }
     }
 

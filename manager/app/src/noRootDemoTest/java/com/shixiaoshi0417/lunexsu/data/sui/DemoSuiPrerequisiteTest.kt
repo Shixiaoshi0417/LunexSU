@@ -30,7 +30,7 @@ class DemoSuiPrerequisiteTest {
             assertTrue(SuiManager.state.value.canSwitchTo(false))
             SuiManager.disable()
             assertFalse(SuiManager.state.value.status.desiredEnabled)
-            assertFalse(SuiManager.state.value.hostAttached)
+            assertFalse(SuiManager.state.value.connected)
         } finally {
             SuiManager.disable()
             BuiltinZygisk.apply(original.configured, original.nextNextConfigured)

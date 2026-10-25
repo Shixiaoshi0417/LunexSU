@@ -25,6 +25,7 @@
     <string name="grant_dialog_button_allow_always_shell">一律 (Shell)</string>
     <string name="grant_dialog_button_allow_one_time">僅允許這一次 (root)</string>
     <string name="grant_dialog_button_deny_and_dont_ask_again">拒絕且不要再詢問</string>
+    <string name="permission_shared_uid">%1$d 個應用程式共用此 UID，Sui 權限會同時套用至它們：</string>
     <string name="brackets_format">%1$s（%2$s）</string>
     <string name="permission_allowed">允許</string>
     <string name="permission_allowed_shell">允許 (Shell)</string>

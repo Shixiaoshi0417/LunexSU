@@ -39,4 +39,7 @@ public class ServerConstants {
     public static final int BINDER_TRANSACTION_registerUserServiceProcess = 10012;
     public static final int BINDER_TRANSACTION_getUidIdentity = 10013;
     public static final int BINDER_TRANSACTION_updateUidPermission = 10014;
+
+    /** The consent fingerprint of the full-UID identity shown by the SystemUI dialog. */
+    public static final String REQUEST_PERMISSION_REPLY_IDENTITY = "lunexsu:permission-identity";
 }

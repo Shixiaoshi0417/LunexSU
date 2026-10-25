@@ -16,8 +16,12 @@ from kernel root grants. No Root Demo must contain neither this payload nor a
 real privileged Sui bridge. Integration and runtime validation are in progress;
 importing this source does not establish Android/ROM compatibility.
 
-The managed permission callback belongs only to the Core-certificate-bound
-LunexSU Manager, not a later legacy SystemUI attachment. Pending confirmations
+Permission requests are answered by Sui's own `sui.apk` dialog in SystemUI. The
+server attaches the permission callback only for the exact SystemUI UID and
+package and accepts confirmation results only from that UID; the
+Core-certificate-bound LunexSU Manager manages existing grants and never attaches
+as a host. SystemUI loads the dialog before attaching and accepts callbacks only
+from root. With no host attached, requests are denied. Pending confirmations
 are owned by the callback Binder that received them. Its death atomically claims
 and denies its remaining requests, even if a replacement has already attached;
 client notifications happen outside the state lock and do not change saved ACLs
@@ -25,7 +29,7 @@ or other grants. A reply or callback failure can consume each request only once.
 Local reconnects with a still-live callback retain their requests as before.
 Shell delegation reserves each `(uid, pid, requestCode)` callback atomically.
 While that callback is pending, a duplicate is denied through its own new Binder
-before Manager admission; it cannot replace or unlink the original callback.
+before host admission; it cannot replace or unlink the original callback.
 This protocol supports one-time Root, but not one-time Shell:
 the UI does not offer the latter and the server explicitly denies that invalid
 combination instead of treating it as Root. The original SystemUI/Settings
@@ -46,11 +50,15 @@ The shell snapshot carries the same binding. Root periodically revokes stale
 materialized capabilities and retries shell revocation synchronization if needed.
 
 Permission requests additionally bind last-update timestamps and the requesting
-client instance. The Manager obtains complete identity snapshots through a
-root-server management RPC that queries PackageManager for the requested Android
-user, rather than substituting the Manager user's package installation. Its grant
-RPC includes the displayed fingerprint. UserService cache and package-cleanup
-keys include the full owner UID, isolating identical services across users.
+client instance. The SystemUI dialog obtains the complete identity snapshot
+through a root-server management RPC that queries PackageManager for the
+requested Android user, rather than substituting SystemUI's own user. It lists
+every shared-UID member and returns the displayed consent fingerprint with its
+decision to the same server instance; a grant without it becomes a one-time
+denial, and grants older than 75 seconds are refused. Manager permission edits
+also carry the displayed fingerprint, which the server rechecks. UserService
+cache and package-cleanup keys include the full owner UID, isolating identical
+services across users.
 
 The shell runtime directory under `/data/local/tmp` and that directory itself are
 owned by the shell user (UID 2000), who can swap any entry for a link between two

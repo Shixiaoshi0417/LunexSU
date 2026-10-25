@@ -39,6 +39,13 @@ public final class Parcel {
     public void recycle() {}
 }
 """,
+    "android/os/SystemClock.java": """
+package android.os;
+public final class SystemClock {
+    public static volatile long now = 1000;
+    public static long elapsedRealtime() { return now; }
+}
+""",
     "android/os/IBinder.java": """
 package android.os;
 public interface IBinder {
@@ -187,6 +194,7 @@ public class Check {
     }
     static final Logger LOGGER = new Logger();
     static final long DELEGATED_PERMISSION_CALLBACK_TIMEOUT_MS = 300000;
+    static final long PERMISSION_CONFIRMATION_TIMEOUT_MS = 75000;
     final Object managerBinderLock = new Object();
     final Map<String, List<PendingPermissionConfirmation>> pendingPermissionConfirmations = new HashMap<>();
     final java.util.concurrent.ConcurrentHashMap<String, DelegatedPermissionCallback>
@@ -601,6 +609,22 @@ server.reply(10123, 1234, 7);
 server.showPermissionConfirmation(8, client, 10123, 1234, 0);
 server.finishPermissionConfirmation(10123, 1234, 8, true, true, false, true, "old-prompt");
 check(client.results.equals(List.of(false, false)) && !client.allowed);
+check(server.pendingPermissionConfirmations.isEmpty());
+''')
+
+    def test_expired_confirmation_cannot_grant(self):
+        self.run_server(r'''
+Check server = new Check();
+server.host((uid, pid, name, code) -> {});
+ClientRecord client = new ClientRecord();
+server.showPermissionConfirmation(7, client, 10123, 1234, 0);
+android.os.SystemClock.now += PERMISSION_CONFIRMATION_TIMEOUT_MS;
+server.reply(10123, 1234, 7);
+check(client.results.equals(List.of(false)) && !client.allowed);
+server.showPermissionConfirmation(8, client, 10123, 1234, 0);
+android.os.SystemClock.now += PERMISSION_CONFIRMATION_TIMEOUT_MS - 1;
+server.reply(10123, 1234, 8);
+check(client.results.equals(List.of(false, true)) && client.allowed);
 check(server.pendingPermissionConfirmations.isEmpty());
 ''')
 
