@@ -90,7 +90,10 @@ final class ShellRuntimeFiles {
     }
 
     private static ParcelFileDescriptor openDirectory(String path) throws ErrnoException, IOException {
-        FileDescriptor raw = Os.open(path, OsConstants.O_RDONLY | OsConstants.O_NOFOLLOW, 0);
+        // O_DIRECTORY is not exposed by Android's public OsConstants API. Open without
+        // blocking or following links, then validate the pinned descriptor before use.
+        FileDescriptor raw = Os.open(path, OsConstants.O_RDONLY
+                | OsConstants.O_NOFOLLOW | OsConstants.O_NONBLOCK, 0);
         try {
             StructStat stat = Os.fstat(raw);
             if (!OsConstants.S_ISDIR(stat.st_mode)) {

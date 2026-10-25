@@ -42,11 +42,17 @@ public class SuiConfig {
 
         public final int uid;
 
-        public int flags;
+        public final int flags;
+        public final String identity;
 
         public PackageEntry(int uid, int flags) {
+            this(uid, flags, null);
+        }
+
+        public PackageEntry(int uid, int flags, String identity) {
             this.uid = uid;
             this.flags = flags;
+            this.identity = identity;
         }
 
         public boolean isAllowed() {

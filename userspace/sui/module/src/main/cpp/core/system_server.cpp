@@ -385,7 +385,7 @@ static bool ExecTransact(jboolean* res, JNIEnv* env, jobject obj, va_list args) 
 }
 
 void main(JNIEnv* env, Dex* dexFile) {
-    if (!dexFile->valid()) {
+    if (dexFile == nullptr || !dexFile->valid()) {
         LOGE("no dex");
         return;
     }

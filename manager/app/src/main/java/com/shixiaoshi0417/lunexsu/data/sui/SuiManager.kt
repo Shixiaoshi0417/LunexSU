@@ -120,7 +120,16 @@ object SuiManager {
             check(fingerprint(current) == app.identity) { "Application identity changed; refresh before granting" }
             check(session?.epoch == currentSession.epoch) { "Expired Sui connection" }
             lease.checkActive()
-            currentSession.service.updateFlagsForUid(app.uid, SuiPermission.MASK, permission.flag)
+            val data = Parcel.obtain()
+            val reply = Parcel.obtain()
+            try {
+                data.writeInterfaceToken("moe.shizuku.server.IShizukuService")
+                data.writeInt(app.uid)
+                data.writeInt(permission.flag)
+                data.writeString(app.identity)
+                check(currentSession.service.asBinder().transact(10014, data, reply, 0))
+                reply.readException()
+            } finally { data.recycle(); reply.recycle() }
         }
         loadApps()
     }
@@ -254,7 +263,9 @@ object SuiManager {
         private fun requireRoot() { check(Binder.getCallingUid() == 0) { "Only the root Sui server may call this host" } }
         override fun bindApplication(data: Bundle?) {
             requireRoot()
-            check(data?.getInt("shizuku:attach-reply-uid", -1) == 0)
+            checkNotNull(data)
+            check(data.getInt("shizuku:attach-reply-uid", -1) == 0)
+            check(data.getInt("shizuku:attach-reply-version", -1) == 13)
             synchronized(SuiManager) {
                 if (session?.epoch == generation) mutable.update { it.copy(hostAttached = true) }
             }
@@ -352,6 +363,7 @@ object SuiManager {
                 putBoolean("shizuku:request-permission-reply-allowed", effective.allowed)
                 putBoolean("shizuku:request-permission-reply-is-onetime", effective.once)
                 putBoolean("shizuku:request-permission-reply-is-shell", effective.shell)
+                putString("lunexsu:permission-identity", request.identity)
             }
             lease.checkActive()
             // Past this point the RPC may have been sent, even if it throws or times out.
@@ -382,9 +394,22 @@ object SuiManager {
     private fun packageInfo(name: String): PackageInfo =
         context.packageManager.getPackageInfo(name, PackageManager.GET_SIGNING_CERTIFICATES)
 
-    private fun uidIdentity(uid: Int, requester: String): SuiUidIdentity = SuiUidIdentity.capture(uid, requester,
-        { context.packageManager.getPackagesForUid(uid)?.toList().orEmpty() },
-        { name -> packageIdentity(packageInfo(name)) })
+    private fun uidIdentity(uid: Int, requester: String): SuiUidIdentity {
+        // The root server queries PackageManager for uid / 100000. Using this app's Context
+        // would substitute user 0's install for a work-profile/secondary-user request.
+        val current = active()
+        val data = Parcel.obtain()
+        val reply = Parcel.obtain()
+        try {
+            data.writeInterfaceToken("moe.shizuku.server.IShizukuService")
+            data.writeInt(uid)
+            check(current.service.asBinder().transact(10013, data, reply, 0)) { "Sui identity query unavailable" }
+            reply.readException()
+            val identity = SuiUidIdentity.fromServer(uid, requester, checkNotNull(reply.readString()))
+            check(session?.epoch == current.epoch) { "Expired Sui connection" }
+            return identity
+        } finally { data.recycle(); reply.recycle() }
+    }
 
     private fun packageIdentity(info: PackageInfo): SuiPackageIdentity = SuiPackageIdentity(
         info.packageName, checkNotNull(info.applicationInfo).uid, info.firstInstallTime, info.lastUpdateTime,

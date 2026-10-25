@@ -17,6 +17,7 @@ public class ClientRecord {
     public final int apiVersion;
     public volatile boolean allowed;
     public volatile boolean onetime;
+    public volatile String permissionIdentity;
     public volatile boolean supportsServerBinderHandoff;
 
     public ClientRecord(int uid, int pid, IShizukuApplication client, String packageName, int apiVersion) {

@@ -69,47 +69,47 @@ public abstract class RishService {
 
         int callingUid = Binder.getCallingUid();
         int callingPid = Binder.getCallingPid();
+        // Validate before acquiring a capability lease or detaching any descriptors.
+        if (args == null || env == null) {
+            throw new IllegalArgumentException("rish arguments and environment must not be null");
+        }
         long capabilityEpoch = beginCapabilityCreation("rish", callingUid, callingPid);
         boolean epochFinished = false;
         AtomicBoolean capabilityPublished = new AtomicBoolean();
-
-        // Termux app set PATH and LD_PRELOAD to Termux's internal path.
-        // Adb does not have sufficient permissions to access such places.
-
-        // Under adb, users need to set RISH_PRESERVE_ENV=1 to preserve env.
-        // Under root, keep env unless RISH_PRESERVE_ENV=0 is set.
-
-        boolean allowEnv = IS_ROOT;
-        for (String e : env) {
-            if ("RISH_PRESERVE_ENV=1".equals(e)) {
-                allowEnv = true;
-                break;
-            } else if ("RISH_PRESERVE_ENV=0".equals(e)) {
-                allowEnv = false;
-                break;
-            }
-        }
-        if (!allowEnv) {
-            env = null;
-        }
-
-        RishHost host = new RishHost(args, env, dir, tty, stdin, stdout, stderr);
-        IBinder clientBinder = getClientBinder(callingUid, callingPid);
-        AtomicBoolean ownerDead = new AtomicBoolean();
-        IBinder.DeathRecipient ownerDeath = () -> {
-            if (!ownerDead.compareAndSet(false, true)) {
-                return;
-            }
-            EXIT_CODES.remove(callingPid);
-            RishHost current = removeHost(callingPid);
-            if (current != null) {
-                current.destroy();
-            }
-            if (current != host) {
-                host.destroy();
-            }
-        };
+        RishHost createdHost = null;
         try {
+
+            // Termux app set PATH and LD_PRELOAD to Termux's internal path.
+            // Adb does not have sufficient permissions to access such places.
+
+            // Under adb, users need to set RISH_PRESERVE_ENV=1 to preserve env.
+            // Under root, keep env unless RISH_PRESERVE_ENV=0 is set.
+
+            boolean allowEnv = IS_ROOT;
+            for (String e : env) {
+                if ("RISH_PRESERVE_ENV=1".equals(e)) {
+                    allowEnv = true;
+                    break;
+                } else if ("RISH_PRESERVE_ENV=0".equals(e)) {
+                    allowEnv = false;
+                    break;
+                }
+            }
+            if (!allowEnv) {
+                env = null;
+            }
+
+            RishHost host = new RishHost(args, env, dir, tty, stdin, stdout, stderr);
+            createdHost = host;
+            IBinder clientBinder = getClientBinder(callingUid, callingPid);
+            AtomicBoolean ownerDead = new AtomicBoolean();
+            IBinder.DeathRecipient ownerDeath = () -> {
+                if (!ownerDead.compareAndSet(false, true)) return;
+                EXIT_CODES.remove(callingPid);
+                RishHost current = removeHost(callingPid);
+                if (current != null) current.destroy();
+                if (current != host) host.destroy();
+            };
             host.start();
             Log.d(TAG, "Forked " + host.getPid());
 
@@ -152,8 +152,8 @@ public abstract class RishService {
             if (!epochFinished) {
                 abortCapabilityCreation("rish", callingUid, callingPid, capabilityEpoch);
             }
-            if (!capabilityPublished.get()) {
-                host.destroy();
+            if (!capabilityPublished.get() && createdHost != null) {
+                createdHost.destroy();
             }
         }
     }

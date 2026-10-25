@@ -71,6 +71,7 @@ class PermissionCallbackTests(unittest.TestCase):
         production = "\n".join(method(source, signature) for signature in (
             "private static String buildPermissionRequestKey(",
             "private final class PendingPermissionConfirmation",
+            "private static String capturePermissionIdentity(",
             "private PendingPermissionConfirmation markPendingPermissionConfirmation(",
             "private PendingPermissionConfirmation consumePendingPermissionConfirmation(",
             "private boolean removePendingPermissionConfirmation(",
@@ -86,6 +87,7 @@ class PermissionCallbackTests(unittest.TestCase):
             "private void destroyDelegatedPermissionCallback(",
             "private boolean putDelegatedPermissionCallback(",
         ))
+        production = production.replace("public void showPermissionConfirmation(", "public void showInternal(")
         # Compile the actual post-validation shell transaction path, including registration
         # and its early return. Calling the registry and show methods separately misses bugs.
         delegate = source[source.index("            String key = buildPermissionRequestKey(reqUid, reqPid, requestCode);"):]
@@ -189,7 +191,22 @@ public class Check {
     final Map<String, List<PendingPermissionConfirmation>> pendingPermissionConfirmations = new HashMap<>();
     final java.util.concurrent.ConcurrentHashMap<String, DelegatedPermissionCallback>
             delegatedPermissionCallbacks = new java.util.concurrent.ConcurrentHashMap<>();
-    final Object clientManager = new Object();
+    static final class UidIdentity {
+        static String current = "install-one";
+        final String value = current;
+        static UidIdentity capture(int uid) { return new UidIdentity(); }
+        String binding() { return value; }
+        String consentFingerprint() { return value; }
+    }
+    static final class Clients {
+        final java.util.concurrent.ConcurrentHashMap<String, ClientRecord> records = new java.util.concurrent.ConcurrentHashMap<>();
+        ClientRecord findClient(int uid, int pid) { return records.get(uid + ":" + pid); }
+    }
+    final Clients clientManager = new Clients();
+    void showPermissionConfirmation(int code, ClientRecord client, int uid, int pid, int user) {
+        if (client.client != null) clientManager.records.put(uid + ":" + pid, client);
+        showInternal(code, client, uid, pid, user);
+    }
     final Handler mainHandler = new Handler();
     boolean shellMode;
     volatile IShizukuApplication systemUiApplication;
@@ -203,7 +220,7 @@ public class Check {
         reply(uid, pid, code, true);
     }
     void reply(int uid, int pid, int code, boolean allowed) {
-        finishPermissionConfirmation(uid, pid, code, allowed, true, false, true);
+        finishPermissionConfirmation(uid, pid, code, allowed, true, false, true, null);
     }
     static void check(boolean value) { if (!value) throw new AssertionError(); }
     static void await(CountDownLatch latch) {
@@ -571,6 +588,31 @@ server.removePendingPermissionConfirmationsForUid(10123);
 host.die();
 check(removed.results.isEmpty() && other.results.equals(List.of(false)));
 check(server.pendingPermissionConfirmations.isEmpty());
+''')
+
+    def test_changed_install_or_manager_consent_cannot_grant(self):
+        self.run_server(r'''
+Check server = new Check();
+server.host((uid, pid, name, code) -> {});
+ClientRecord client = new ClientRecord();
+server.showPermissionConfirmation(7, client, 10123, 1234, 0);
+UidIdentity.current = "reinstalled";
+server.reply(10123, 1234, 7);
+server.showPermissionConfirmation(8, client, 10123, 1234, 0);
+server.finishPermissionConfirmation(10123, 1234, 8, true, true, false, true, "old-prompt");
+check(client.results.equals(List.of(false, false)) && !client.allowed);
+check(server.pendingPermissionConfirmations.isEmpty());
+''')
+
+    def test_replaced_client_cannot_receive_old_consent(self):
+        self.run_server(r'''
+Check server = new Check();
+server.host((uid, pid, name, code) -> {});
+ClientRecord old = new ClientRecord(), replacement = new ClientRecord();
+server.showPermissionConfirmation(7, old, 10123, 1234, 0);
+server.clientManager.records.put("10123:1234", replacement);
+server.reply(10123, 1234, 7);
+check(old.results.equals(List.of(false)) && !replacement.allowed);
 ''')
 
 

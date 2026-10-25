@@ -127,7 +127,27 @@ public class SuiDatabase {
         try {
             database = SQLiteDataBaseRemoteCompat.openDatabase(DATABASE_PATH, null);
             checkDatabase(database);
-            database.execSQL("CREATE TABLE IF NOT EXISTS uid_configs(uid INTEGER PRIMARY KEY, flags INTEGER);");
+            database.beginTransaction();
+            try {
+                database.execSQL("CREATE TABLE IF NOT EXISTS uid_configs(uid INTEGER PRIMARY KEY, flags INTEGER, identity TEXT);");
+                boolean boundSchema = false;
+                try (Cursor columns = database.rawQuery("PRAGMA table_info(uid_configs)", null)) {
+                    while (columns.moveToNext()) {
+                        if ("identity".equals(columns.getString(columns.getColumnIndexOrThrow("name")))) boundSchema = true;
+                    }
+                }
+                if (!boundSchema) {
+                    database.execSQL("ALTER TABLE uid_configs ADD COLUMN identity TEXT;");
+                    // A legacy default-allow policy cannot silently reauthorize the unbound rows.
+                    database.execSQL("DELETE FROM uid_configs WHERE uid=-1 AND (flags & 18)!=0;");
+                }
+                // Keep denial tombstones, rather than falling through to a permissive default.
+                database.execSQL("UPDATE uid_configs SET flags=(flags & ~30) | 4 "
+                        + "WHERE uid>=0 AND (flags & 18)!=0 AND (identity IS NULL OR identity='');");
+                database.setTransactionSuccessful();
+            } finally {
+                database.endTransaction();
+            }
         } catch (Throwable e) {
             boolean corrupt = isDatabaseCorrupt(e);
             ServerConstants.LOGGER.e(e, corrupt ? "database corrupted" : "create database");
@@ -174,36 +194,37 @@ public class SuiDatabase {
             SuiConfig res = new SuiConfig();
             int cursorIndexOfUid = cursor.getColumnIndexOrThrow("uid");
             int cursorIndexOfFlags = cursor.getColumnIndexOrThrow("flags");
+            int cursorIndexOfIdentity = cursor.getColumnIndexOrThrow("identity");
             if (cursor.moveToFirst()) {
                 do {
                     res.packages.add(
-                            new PackageEntry(cursor.getInt(cursorIndexOfUid), cursor.getInt(cursorIndexOfFlags)));
+                            new PackageEntry(cursor.getInt(cursorIndexOfUid), cursor.getInt(cursorIndexOfFlags),
+                                    cursor.getString(cursorIndexOfIdentity)));
                 } while (cursor.moveToNext());
             }
             return res;
         }
     }
 
-    public static void updateUid(int uid, int flags) {
+    public static void updateUid(int uid, int flags, String identity) {
         SQLiteDatabase database = getDatabase();
         if (database == null) {
-            return;
+            throw new IllegalStateException("Sui database unavailable");
         }
 
         ContentValues values = new ContentValues();
         values.put("uid", uid);
         values.put("flags", flags);
-        String selection = "uid=?";
-        String[] selectionArgs = new String[] {String.valueOf(uid)};
-        if (database.update(UID_CONFIG_TABLE, values, selection, selectionArgs) <= 0) {
-            database.insertWithOnConflict(UID_CONFIG_TABLE, (String) null, values, SQLiteDatabase.CONFLICT_IGNORE);
+        values.put("identity", identity);
+        if (database.insertWithOnConflict(UID_CONFIG_TABLE, (String) null, values, SQLiteDatabase.CONFLICT_REPLACE) < 0) {
+            throw new IllegalStateException("Failed to persist Sui permission");
         }
     }
 
     public static void removeUid(int uid) {
         SQLiteDatabase database = getDatabase();
         if (database == null) {
-            return;
+            throw new IllegalStateException("Sui database unavailable");
         }
 
         String selection = "uid=?";

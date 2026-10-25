@@ -55,7 +55,7 @@ public class SuiConfigManager extends ConfigManager {
     private static final long SHELL_SYNC_DEBOUNCE_MS = 200;
     private static final long SHELL_SYNC_WAIT_TIMEOUT_MS = 5000;
     private static final String SHELL_TRANSITION_PREFIX = "#transition:";
-    // The shell config only holds UID:flags pairs; refuse to read anything larger as root.
+    // UID:flags:base64(identity) rows are bounded when read by root.
     private static final int MAX_SHELL_CONFIG_SIZE = 1024 * 1024;
     private static final HandlerThread SHELL_SYNC_THREAD = new HandlerThread("sui-shell-sync");
     private static final Handler SHELL_SYNC_HANDLER;
@@ -265,11 +265,14 @@ public class SuiConfigManager extends ConfigManager {
                         transitionId = Long.parseLong(line.substring(SHELL_TRANSITION_PREFIX.length()));
                         continue;
                     }
-                    String[] parts = line.split(":");
-                    if (parts.length == 2) {
+                    String[] parts = line.split(":", 3);
+                    if (parts.length >= 2) {
                         int uid = Integer.parseInt(parts[0]);
                         int flags = Integer.parseInt(parts[1]);
-                        packages.add(new SuiConfig.PackageEntry(uid, flags));
+                        String identity = parts.length == 3 && !parts[2].isEmpty()
+                                ? new String(android.util.Base64.decode(parts[2], android.util.Base64.NO_WRAP),
+                                        java.nio.charset.StandardCharsets.UTF_8) : null;
+                        packages.add(new SuiConfig.PackageEntry(uid, flags, identity));
                     }
                 }
             }
@@ -330,7 +333,10 @@ public class SuiConfigManager extends ConfigManager {
             sb.append(SHELL_TRANSITION_PREFIX).append(transitionId).append("\n");
             synchronized (this) {
                 for (SuiConfig.PackageEntry entry : config.packages) {
-                    sb.append(entry.uid).append(":").append(entry.flags).append("\n");
+                    sb.append(entry.uid).append(":").append(entry.flags).append(":");
+                    if (entry.identity != null) sb.append(android.util.Base64.encodeToString(
+                            entry.identity.getBytes(java.nio.charset.StandardCharsets.UTF_8), android.util.Base64.NO_WRAP));
+                    sb.append("\n");
                 }
             }
             // UID 2000 owns this directory: never write through a path it can redirect.
@@ -485,24 +491,30 @@ public class SuiConfigManager extends ConfigManager {
     }
 
     @Nullable public SuiConfig.PackageEntry find(int uid) {
-        synchronized (this) {
+        for (;;) {
             if (uid == 0 || uid == 1000) {
                 return new SuiConfig.PackageEntry(uid, SuiConfig.FLAG_ALLOWED);
             }
-            SuiConfig.PackageEntry entry = findLocked(uid);
-            if (uid == DEFAULT_UID) {
-                return entry;
+            SuiConfig.PackageEntry entry;
+            SuiConfig.PackageEntry defaultEntry;
+            synchronized (this) {
+                entry = findLocked(uid);
+                defaultEntry = findLocked(DEFAULT_UID);
             }
+            if (uid == DEFAULT_UID) return entry;
             if (entry != null && entry.flags != 0) {
-                LOGGER.d("SuiConfigManager: Found explicit flags for uid %d: %d", uid, entry.flags);
-                return entry;
+                boolean valid = !needsIdentity(entry) || UidIdentity.matches(uid, entry.identity);
+                synchronized (this) {
+                    if (entry != findLocked(uid)) continue;
+                    // Do not fall back to a default grant when an old installation no longer matches.
+                    return valid ? entry : new SuiConfig.PackageEntry(uid, SuiConfig.FLAG_DENIED);
+                }
             }
-            SuiConfig.PackageEntry defaultEntry = findLocked(DEFAULT_UID);
-            if (defaultEntry == null || defaultEntry.flags == 0) {
-                return null;
+            synchronized (this) {
+                if (entry != findLocked(uid) || defaultEntry != findLocked(DEFAULT_UID)) continue;
+                if (defaultEntry == null || defaultEntry.flags == 0) return null;
+                return new SuiConfig.PackageEntry(uid, defaultEntry.flags);
             }
-            LOGGER.d("SuiConfigManager: Using DEFAULT flags for uid %d. Flags: %d", uid, defaultEntry.flags);
-            return new SuiConfig.PackageEntry(uid, defaultEntry.flags);
         }
     }
 
@@ -512,67 +524,73 @@ public class SuiConfigManager extends ConfigManager {
     }
 
     public void update(int uid, int mask, int values) {
-        LOGGER.i("SuiConfigManager: update uid=" + uid + " mask=" + mask + " val=" + values);
-        boolean needRemove = false;
-        boolean needUpdate = false;
-        int finalFlags = 0;
+        update(uid, mask, values, null);
+    }
 
-        synchronized (this) {
-            SuiConfig.PackageEntry entry = findLocked(uid);
-            if (entry == null) {
-                int newValue = mask & values;
-                if (newValue == 0) {
-                    return;
-                }
-                entry = new SuiConfig.PackageEntry(uid, newValue);
-                config.packages.add(entry);
-                packageIndex.put(uid, entry);
-                invalidateUidCacheLocked();
-                needUpdate = true;
-                finalFlags = newValue;
-                LOGGER.i("SuiConfigManager: Added new entry for uid " + uid);
-            } else {
-                int newValue = (entry.flags & ~mask) | (mask & values);
-                if (newValue == entry.flags) {
-                    return;
-                }
-                if (newValue == 0) {
-                    config.packages.remove(entry);
-                    packageIndex.remove(uid);
-                    invalidateUidCacheLocked();
-                    needRemove = true;
-                    LOGGER.i("SuiConfigManager: Removed entry for uid " + uid);
-                } else {
-                    entry.flags = newValue;
-                    invalidateUidCacheLocked();
-                    needUpdate = true;
-                    finalFlags = newValue;
-                    LOGGER.i("SuiConfigManager: Updated entry for uid " + uid);
-                }
+    static boolean needsIdentity(SuiConfig.PackageEntry entry) {
+        return entry.uid >= 0 && (entry.flags & (SuiConfig.FLAG_ALLOWED | SuiConfig.FLAG_ALLOWED_SHELL)) != 0;
+    }
+
+    public List<SuiConfig.PackageEntry> staleGrants() {
+        List<SuiConfig.PackageEntry> entries;
+        synchronized (this) { entries = new ArrayList<>(config.packages); }
+        entries.removeIf(entry -> !needsIdentity(entry) || UidIdentity.matches(entry.uid, entry.identity));
+        return entries;
+    }
+
+    public synchronized boolean denyStaleGrant(SuiConfig.PackageEntry expected) {
+        if (findLocked(expected.uid) != expected) return false;
+        update(expected.uid, SuiConfig.MASK_PERMISSION, SuiConfig.FLAG_DENIED);
+        return true;
+    }
+
+    public void update(int uid, int mask, int values, String expectedConsent) {
+        LOGGER.i("SuiConfigManager: update uid=" + uid + " mask=" + mask + " val=" + values);
+        SuiConfig.PackageEntry before;
+        synchronized (this) { before = findLocked(uid); }
+        UidIdentity captured = null;
+        if (uid >= 0 && (values & mask & (SuiConfig.FLAG_ALLOWED | SuiConfig.FLAG_ALLOWED_SHELL)) != 0) {
+            captured = UidIdentity.capture(uid);
+            if (expectedConsent != null && !expectedConsent.equals(captured.consentFingerprint())) {
+                throw new SecurityException("Application identity changed before granting");
             }
         }
-        if (needRemove) {
-            if (!SuiService.isShellMode()) SuiDatabase.removeUid(uid);
-        } else if (needUpdate) {
-            if (!SuiService.isShellMode()) SuiDatabase.updateUid(uid, finalFlags);
+        synchronized (this) {
+            SuiConfig.PackageEntry entry = findLocked(uid);
+            if (captured != null && entry != before) {
+                throw new SecurityException("Permission changed while verifying application identity");
+            }
+            int newValue = ((entry == null ? 0 : entry.flags) & ~mask) | (mask & values);
+            String identity = captured != null ? captured.binding() : entry == null ? null : entry.identity;
+            if (entry != null && newValue == entry.flags && java.util.Objects.equals(identity, entry.identity)) return;
+            // Serialize durable writes with the in-memory transition. A delayed grant may never
+            // overwrite a newer denial in SQLite after the configuration lock has been released.
+            if (!SuiService.isShellMode()) {
+                if (newValue == 0) SuiDatabase.removeUid(uid);
+                else SuiDatabase.updateUid(uid, newValue, identity);
+            }
+            if (entry != null) config.packages.remove(entry);
+            if (newValue == 0) packageIndex.remove(uid);
+            else {
+                SuiConfig.PackageEntry replacement = new SuiConfig.PackageEntry(uid, newValue, identity);
+                config.packages.add(replacement);
+                packageIndex.put(uid, replacement);
+            }
+            invalidateUidCacheLocked();
         }
         scheduleSyncUidsToShellFile();
     }
 
     @Override
     public void remove(int uid) {
-        boolean needRemove = false;
         synchronized (this) {
             SuiConfig.PackageEntry entry = findLocked(uid);
             if (entry != null) {
+                if (!SuiService.isShellMode()) SuiDatabase.removeUid(uid);
                 config.packages.remove(entry);
                 packageIndex.remove(uid);
                 invalidateUidCacheLocked();
-                needRemove = true;
             }
-        }
-        if (needRemove) {
-            if (!SuiService.isShellMode()) SuiDatabase.removeUid(uid);
         }
         scheduleSyncUidsToShellFile();
     }

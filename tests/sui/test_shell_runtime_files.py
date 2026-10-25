@@ -264,6 +264,16 @@ public class Check {
             check(!s.iterator().hasNext(), "wrote into the link target");
         }
 
+        // A FIFO at the directory path must be opened nonblocking and rejected by fstat.
+        new ProcessBuilder("mkfifo", base.resolve("sui_shell_fifo").toString()).inheritIO().start().waitFor();
+        for (boolean create : new boolean[] {false, true}) {
+            boolean refused = false;
+            try { ShellRuntimeFiles.openDir(base.toString(), "sui_shell_fifo", create).close(); }
+            catch (android.system.ErrnoException e) { refused = e.errno == 20; }
+            catch (java.io.IOException e) { refused = true; }
+            check(refused, "directory FIFO create=" + create);
+        }
+
         // A missing directory is created, and entry names cannot escape it.
         try (ShellRuntimeFiles.Dir dir = ShellRuntimeFiles.openDir(base.toString(), "sui_shell_new", true)) {
             ShellRuntimeFiles.replace(dir, "sui_uids.txt", new byte[] {'x'}, 0644);

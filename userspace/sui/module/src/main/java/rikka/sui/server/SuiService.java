@@ -88,8 +88,14 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         @Override
         public void run() {
             if (shellMode) return;
-            if (!java.util.Arrays.equals(managerIdentity, LunexsuManagerGate.snapshot())) {
-                syncUidsToSystemServer();
+            try {
+                reconcileUidIdentities();
+                flushIdentityRevocations();
+                if (!java.util.Arrays.equals(managerIdentity, LunexsuManagerGate.snapshot())) {
+                    syncUidsToSystemServer();
+                }
+            } catch (RuntimeException e) {
+                LOGGER.w(e, "refresh application identities");
             }
             mainHandler.postDelayed(this, 2000);
         }
@@ -479,6 +485,8 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
     private final Object managerBinderLock = new Object();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final Map<String, List<PendingPermissionConfirmation>> pendingPermissionConfirmations = new HashMap<>();
+    private final java.util.concurrent.ConcurrentHashMap<Integer, Object> identityRevocationsPendingShellSync =
+            new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentHashMap<Integer, CapabilityEpochState> capabilityEpochStates =
             new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -623,21 +631,30 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         final ClientRecord client;
         final int requestCode;
         final DelegatedPermissionCallback delegatedCallback;
+        final String identity;
+        final String binding;
 
-        PendingPermissionConfirmation(String key, IBinder owner, ClientRecord client, int requestCode) {
+        PendingPermissionConfirmation(String key, IBinder owner, ClientRecord client, int requestCode, UidIdentity snapshot) {
             this.key = key;
             this.owner = owner;
             this.client = client;
             this.requestCode = requestCode;
             this.delegatedCallback = delegatedPermissionCallbacks.get(key);
+            this.identity = snapshot != null ? snapshot.consentFingerprint() : null;
+            this.binding = snapshot != null ? snapshot.binding() : null;
         }
     }
 
+    private static String capturePermissionIdentity(int uid) {
+        try { return UidIdentity.capture(uid).consentFingerprint(); }
+        catch (RuntimeException e) { return null; }
+    }
+
     private PendingPermissionConfirmation markPendingPermissionConfirmation(
-            int requestUid, int requestPid, int requestCode, IBinder owner, ClientRecord client) {
+            int requestUid, int requestPid, int requestCode, IBinder owner, ClientRecord client, UidIdentity snapshot) {
         synchronized (managerBinderLock) {
             String key = buildPermissionRequestKey(requestUid, requestPid, requestCode);
-            PendingPermissionConfirmation pending = new PendingPermissionConfirmation(key, owner, client, requestCode);
+            PendingPermissionConfirmation pending = new PendingPermissionConfirmation(key, owner, client, requestCode, snapshot);
             List<PendingPermissionConfirmation> requests = pendingPermissionConfirmations.get(key);
             if (requests == null) {
                 requests = new java.util.ArrayList<>();
@@ -727,7 +744,8 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
             boolean allowed,
             boolean onetime,
             boolean isShell,
-            boolean consumePending) {
+            boolean consumePending,
+            String expectedIdentity) {
         PendingPermissionConfirmation pending = consumePending
                 ? consumePendingPermissionConfirmation(requestUid, requestPid, requestCode) : null;
         if (consumePending && pending == null) {
@@ -735,6 +753,17 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                     "drop stale or forged permission result: uid=%d, pid=%d, requestCode=%d",
                     requestUid, requestPid, requestCode);
             return;
+        }
+
+        if (allowed && pending != null) {
+            String currentIdentity = capturePermissionIdentity(requestUid);
+            if (pending.identity == null || !pending.identity.equals(currentIdentity)
+                    || (expectedIdentity != null && !expectedIdentity.equals(currentIdentity))
+                    || (pending.client.client != null
+                        && clientManager.findClient(requestUid, requestPid) != pending.client)) {
+                denyPermissionConfirmation(pending);
+                return;
+            }
         }
 
         LOGGER.i(
@@ -752,7 +781,10 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
 
         if (!onetime) {
             int oldPermissionFlags = 0;
-            SuiConfig.PackageEntry oldEntry = configManager.find(requestUid);
+            // An identity-invalid grant is denied by find(), but its already-created
+            // capabilities still need the normal downgrade barrier and teardown.
+            SuiConfig.PackageEntry oldEntry = configManager.findExplicit(requestUid);
+            if (oldEntry == null) oldEntry = configManager.find(requestUid);
             if (oldEntry != null) {
                 oldPermissionFlags = oldEntry.flags & SuiConfig.MASK_PERMISSION;
             }
@@ -763,7 +795,13 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                 beginPermissionTransition(requestUid);
             }
             try {
-                configManager.update(requestUid, SuiConfig.MASK_PERMISSION, permissionFlags);
+                try {
+                    configManager.update(requestUid, SuiConfig.MASK_PERMISSION, permissionFlags,
+                            pending != null ? pending.identity : expectedIdentity);
+                } catch (RuntimeException e) {
+                    if (pending != null) denyPermissionConfirmation(pending);
+                    throw e;
+                }
 
                 if (!shellMode
                         && (oldPermissionFlags == SuiConfig.FLAG_ALLOWED_SHELL
@@ -808,6 +846,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                     // sharing the same UID.
                     record.allowed = allowed && !shellMode;
                     record.onetime = allowed && !shellMode;
+                    record.permissionIdentity = allowed && pending != null ? pending.binding : null;
                 }
             }
         }
@@ -1200,6 +1239,11 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
     @Override
     public boolean checkCallerPermission(
             String func, int callingUid, int callingPid, @Nullable ClientRecord clientRecord) {
+        // The signed Manager performs these read-only checks before attachApplication. It is
+        // deliberately not a normal privileged client and receives no general execution grant.
+        if (("getUid".equals(func) || "getVersion".equals(func)) && LunexsuManagerGate.accepts(callingUid)) {
+            return true;
+        }
         // Temporary fix for https://github.com/RikkaApps/Sui/issues/35
         if ("transactRemote".equals(func) && clientRecord == null) {
             SuiConfig.PackageEntry packageEntry = configManager.find(callingUid);
@@ -1211,7 +1255,8 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
     @Override
     protected boolean isClientAuthorized(ClientRecord clientRecord) {
         if (clientRecord.onetime) {
-            return !shellMode && clientRecord.allowed;
+            return !shellMode && clientRecord.allowed
+                    && UidIdentity.matches(clientRecord.uid, clientRecord.permissionIdentity);
         }
         SuiConfig.PackageEntry packageEntry = configManager.find(clientRecord.uid);
         return packageEntry != null && isPermissionAllowedForCurrentServer(packageEntry.flags);
@@ -1242,7 +1287,8 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                     "Request package " + requestPackageName + "does not belong to uid " + callingUid);
         }
 
-        isLunexsuManager = LunexsuManagerGate.isManagerPackage(requestPackageName);
+        isLunexsuManager = LunexsuManagerGate.accepts(callingUid)
+                && LunexsuManagerGate.isManagerPackage(requestPackageName);
         isManager = systemUiPackageName.equals(requestPackageName) || isLunexsuManager;
         isSettings = settingsPackageName.equals(requestPackageName);
 
@@ -1331,13 +1377,18 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
     @Override
     public void showPermissionConfirmation(
             int requestCode, @NonNull ClientRecord clientRecord, int callingUid, int callingPid, int userId) {
+        UidIdentity snapshot = null;
+        if (!shellMode) {
+            try { snapshot = UidIdentity.capture(callingUid); }
+            catch (RuntimeException e) { LOGGER.w(e, "Cannot capture permission request identity"); }
+        }
         IShizukuApplication permissionHost;
         PendingPermissionConfirmation pending;
         synchronized (managerBinderLock) {
             // Publish ownership before delivery, atomically with host selection and death.
             permissionHost = systemUiApplication;
             pending = permissionHost == null ? null : markPendingPermissionConfirmation(
-                    callingUid, callingPid, requestCode, permissionHost.asBinder(), clientRecord);
+                    callingUid, callingPid, requestCode, permissionHost.asBinder(), clientRecord, snapshot);
         }
         if (permissionHost != null) {
             try {
@@ -1355,7 +1406,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                     clientManager, requestCode, clientRecord.packageName, callingUid, callingPid);
         } else {
             LOGGER.e("manager is null");
-            finishPermissionConfirmation(callingUid, callingPid, requestCode, false, true, false, false);
+            finishPermissionConfirmation(callingUid, callingPid, requestCode, false, true, false, false, null);
         }
     }
 
@@ -1397,7 +1448,8 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
             allowed = false;
             isShell = false;
         }
-        finishPermissionConfirmation(requestUid, requestPid, requestCode, allowed, onetime, isShell, true);
+        finishPermissionConfirmation(requestUid, requestPid, requestCode, allowed, onetime, isShell, true,
+                data.getString("lunexsu:permission-identity"));
     }
 
     private int getFlagsForUidInternal(int uid, int mask) {
@@ -1427,10 +1479,15 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
 
     @Override
     public void updateFlagsForUid(int uid, int mask, int value) {
+        updateFlagsForUid(uid, mask, value, null);
+    }
+
+    private void updateFlagsForUid(int uid, int mask, int value, String expectedIdentity) {
         enforceManagerPermission("updateFlagsForUid");
 
         int oldEffectiveFlags = 0;
-        SuiConfig.PackageEntry oldEffectiveEntry = configManager.find(uid);
+        SuiConfig.PackageEntry oldEffectiveEntry = configManager.findExplicit(uid);
+        if (oldEffectiveEntry == null) oldEffectiveEntry = configManager.find(uid);
         if (oldEffectiveEntry != null) {
             oldEffectiveFlags = oldEffectiveEntry.flags & SuiConfig.MASK_PERMISSION;
         }
@@ -1442,7 +1499,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
             beginPermissionTransition(uid);
         }
         try {
-            configManager.update(uid, mask, value);
+            configManager.update(uid, mask, value, expectedIdentity);
 
             if (permissionMask == 0) {
                 return;
@@ -1486,6 +1543,48 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         }
     }
 
+    private void reconcileUidIdentities() {
+        for (SuiConfig.PackageEntry entry : configManager.staleGrants()) {
+            beginPermissionTransition(entry.uid);
+            try {
+                try {
+                    if (!configManager.denyStaleGrant(entry)) continue;
+                } catch (RuntimeException e) {
+                    // find() already fails closed on this identity. A disk error must not leave
+                    // materialized capabilities alive; the unchanged stale row is retried later.
+                    LOGGER.w(e, "Cannot persist stale UID denial");
+                }
+                identityRevocationsPendingShellSync.put(entry.uid, new Object());
+                updateClientAllowedStateForUid(entry.uid, SuiConfig.FLAG_DENIED);
+                // Revoke root capabilities even if the shell server is temporarily unavailable.
+                invalidatePackagesForUid(entry.uid, "Application installation identity changed");
+                syncUidsToSystemServer();
+            } finally {
+                finishPermissionTransition(entry.uid);
+            }
+        }
+        for (ClientRecord record : clientManager.getClients()) {
+            if (record.onetime && !UidIdentity.matches(record.uid, record.permissionIdentity)) {
+                beginPermissionTransition(record.uid);
+                try {
+                    record.allowed = record.onetime = false;
+                    invalidatePackagesForUid(record.uid, "One-time application identity changed");
+                } finally {
+                    finishPermissionTransition(record.uid);
+                }
+            }
+        }
+    }
+
+    private void flushIdentityRevocations() {
+        if (shellMode || identityRevocationsPendingShellSync.isEmpty()) return;
+        java.util.Map<Integer, Object> pending = new java.util.HashMap<>(identityRevocationsPendingShellSync);
+        invalidateFallbacks(flushShellRoutingState(), "Application installation identity changed");
+        for (java.util.Map.Entry<Integer, Object> entry : pending.entrySet()) {
+            identityRevocationsPendingShellSync.remove(entry.getKey(), entry.getValue());
+        }
+    }
+
     @Override
     public void dispatchPackageChanged(Intent intent) {
         int callingUid = Binder.getCallingUid();
@@ -1501,17 +1600,27 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         boolean replacing = intent.getBooleanExtra(Intent.EXTRA_REPLACING, false);
         if (Intent.ACTION_PACKAGE_REMOVED.equals(action) && uid > 0 && !replacing) {
             LOGGER.i("uid %d is removed", uid);
-            configManager.remove(uid);
-            removePendingPermissionConfirmationsForUid(uid);
-            if (!shellMode) {
-                flushShellRoutingState();
+            beginPermissionTransition(uid);
+            try {
+                // A shared-UID member was removed too: never let the remaining members inherit
+                // a default grant, or an old capability survive with a different consent identity.
+                configManager.update(uid, SuiConfig.MASK_PERMISSION, SuiConfig.FLAG_DENIED);
+                identityRevocationsPendingShellSync.put(uid, new Object());
+                updateClientAllowedStateForUid(uid, SuiConfig.FLAG_DENIED);
+                removePendingPermissionConfirmationsForUid(uid);
+                invalidatePackagesForUid(uid, "Package removed from UID");
+                syncUidsToSystemServer();
+                flushIdentityRevocations();
+            } finally {
+                finishPermissionTransition(uid);
             }
-            syncUidsToSystemServer();
+        } else if (Intent.ACTION_PACKAGE_ADDED.equals(action) && !replacing) {
+            reconcileUidIdentities();
         } else if (Intent.ACTION_PACKAGE_FULLY_REMOVED.equals(action) && !replacing) {
             Uri uri = intent.getData();
             String packageName = (uri != null) ? uri.getSchemeSpecificPart() : null;
             if (packageName != null) {
-                userServiceManager.removeUserServicesForPackage(packageName);
+                userServiceManager.removeUserServicesForPackage(packageName, uid);
             }
         }
     }
@@ -1563,6 +1672,39 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
 
     @Override
     public boolean onTransact(int code, Parcel data, Parcel reply, int flags) throws RemoteException {
+        if (code == ServerConstants.BINDER_TRANSACTION_getUidIdentity) {
+            data.enforceInterface(ShizukuApiConstants.BINDER_DESCRIPTOR);
+            enforceManagerPermission("getUidIdentity");
+            if (shellMode) throw new SecurityException("Identity queries require the root server");
+            int uid = data.readInt();
+            try {
+                String identity = UidIdentity.capture(uid).toJson();
+                reply.writeNoException();
+                reply.writeString(identity);
+            } catch (org.json.JSONException e) {
+                throw new IllegalStateException(e);
+            }
+            return true;
+        }
+        if (code == ServerConstants.BINDER_TRANSACTION_updateUidPermission) {
+            data.enforceInterface(ShizukuApiConstants.BINDER_DESCRIPTOR);
+            enforceManagerPermission("updateUidPermission");
+            if (shellMode) throw new SecurityException("Permission updates require the root server");
+            int uid = data.readInt();
+            int permission = data.readInt();
+            String identity = data.readString();
+            if (uid < 0 || identity == null || identity.length() > 128 * 1024
+                    || (permission & ~SuiConfig.MASK_PERMISSION) != 0
+                    || (permission != 0 && (permission & (permission - 1)) != 0)) {
+                throw new IllegalArgumentException("Invalid UID permission update");
+            }
+            if (!identity.equals(capturePermissionIdentity(uid))) {
+                throw new SecurityException("Application identity changed");
+            }
+            updateFlagsForUid(uid, SuiConfig.MASK_PERMISSION, permission, identity);
+            reply.writeNoException();
+            return true;
+        }
         // LOGGER.d("transact: code=%d, calling uid=%d", code, Binder.getCallingUid());
         if (code == ServerConstants.BINDER_TRANSACTION_getApplications) {
             data.enforceInterface(ShizukuApiConstants.BINDER_DESCRIPTOR);

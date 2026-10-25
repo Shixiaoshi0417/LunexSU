@@ -32,6 +32,26 @@ combination instead of treating it as Root. The original SystemUI/Settings
 management APIs are otherwise preserved; this is not an ACL merger or a claim
 that all administrative entry points were removed.
 
+Only the certificate-verified Manager receives the pre-attach `getUid` and
+`getVersion` handshake exemption. It does not receive normal client execution
+permission. Manager attachment checks both its full calling UID and package.
+
+Persistent Root/Shell ACL rows bind the full Android UID to every shared-UID
+package, first-install timestamp and current signing-certificate digest. Every
+privileged lookup revalidates that binding and fails closed on missing or changed
+identity. Same-signer in-place updates retain an ACL; reinstallations, signer or
+shared-UID membership changes require fresh consent. Legacy unbound grants become
+explicit denial tombstones, and legacy default-allow is cleared during migration.
+The shell snapshot carries the same binding. Root periodically revokes stale
+materialized capabilities and retries shell revocation synchronization if needed.
+
+Permission requests additionally bind last-update timestamps and the requesting
+client instance. The Manager obtains complete identity snapshots through a
+root-server management RPC that queries PackageManager for the requested Android
+user, rather than substituting the Manager user's package installation. Its grant
+RPC includes the displayed fingerprint. UserService cache and package-cleanup
+keys include the full owner UID, isolating identical services across users.
+
 The shell runtime directory under `/data/local/tmp` and that directory itself are
 owned by the shell user (UID 2000), who can swap any entry for a link between two
 root operations. The root starter therefore opens the directory without following

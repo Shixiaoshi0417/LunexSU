@@ -113,4 +113,27 @@ class SuiUidIdentityTest {
         assertEquals(listOf(request.copy(connection = 2)), queue.resume(server, 2))
         assertEquals(identity.packages, queue.snapshot().single().packages)
     }
+
+    private fun serverIdentity(uid: Int = 1010123, memberUid: Int = uid, duplicate: Boolean = false): String {
+        val member = """{"package":"com.example.client","uid":$memberUid,"first_install":10,"last_update":20,"signers":["${"a".repeat(64)}"]}"""
+        return """{"schema":1,"uid":$uid,"packages":[$member${if (duplicate) ",$member" else ""}]}"""
+    }
+
+    @Test fun rootServerIdentityPreservesSecondaryUserUidAndWireFingerprint() {
+        val identity = SuiUidIdentity.fromServer(1010123, requester.packageName, serverIdentity())
+        assertEquals(listOf(requester.packageName), identity.packages)
+        assertEquals("com.example.client|1010123|10|20|${"a".repeat(64)}", identity.fingerprint)
+    }
+
+    @Test fun wrongUserDuplicateMembersAndOversizedWireFailClosed() {
+        assertThrows(IllegalStateException::class.java) {
+            SuiUidIdentity.fromServer(1010123, requester.packageName, serverIdentity(memberUid = 10123))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            SuiUidIdentity.fromServer(1010123, requester.packageName, serverIdentity(duplicate = true))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            SuiUidIdentity.fromServer(1010123, requester.packageName, " ".repeat(128 * 1024 + 1))
+        }
+    }
 }

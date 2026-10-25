@@ -46,6 +46,14 @@ public abstract class UserServiceManager {
 
     public UserServiceManager() {}
 
+    private static String packageKey(int uid, String packageName) {
+        return uid + ":" + packageName;
+    }
+
+    private static String serviceKey(int uid, String packageName, String tag, String className) {
+        return packageKey(uid, packageName) + ":" + (tag != null ? tag : className);
+    }
+
     protected long beginUserServiceCapabilityCreation(int uid, int pid) {
         return 0;
     }
@@ -73,7 +81,7 @@ public abstract class UserServiceManager {
             throw new SecurityException("unable to find package " + packageName);
         }
 
-        if (UserHandleCompat.getAppId(packageInfo.applicationInfo.uid) != appId) {
+        if (packageInfo.applicationInfo.uid != userId * 100000 + appId) {
             throw new SecurityException("package " + packageName + " is not owned by " + appId);
         }
         return packageInfo;
@@ -92,7 +100,7 @@ public abstract class UserServiceManager {
 
         String className = Objects.requireNonNull(componentName.getClassName(), "class is null");
         String tag = options.getString(USER_SERVICE_ARG_TAG);
-        String key = packageName + ":" + (tag != null ? tag : className);
+        String key = serviceKey(uid, packageName, tag, className);
 
         // API < 13.1.4 will not send USER_SERVICE_ARG_REMOVE, true by default
         boolean remove = true;
@@ -103,6 +111,7 @@ public abstract class UserServiceManager {
         synchronized (this) {
             UserServiceRecord record = getUserServiceRecordLocked(key);
             if (record == null) return 1;
+            if (record.ownerUid != uid) throw new SecurityException("user service belongs to another UID");
             if (remove) {
                 removeUserServiceLocked(record);
             } else {
@@ -118,6 +127,9 @@ public abstract class UserServiceManager {
 
     private void removeUserServiceLocked(UserServiceRecord record, boolean securityRevoke) {
         if (userServiceRecords.values().remove(record)) {
+            for (List<UserServiceRecord> records : packageUserServiceRecords.values()) {
+                records.remove(record);
+            }
             if (record.capabilityPending) {
                 record.capabilityPending = false;
                 abortUserServiceCapabilityCreation(record);
@@ -155,10 +167,13 @@ public abstract class UserServiceManager {
         boolean noCreate = options.getBoolean(USER_SERVICE_ARG_NO_CREATE, false);
         boolean daemon = !onetime && options.getBoolean(USER_SERVICE_ARG_DAEMON, true);
         boolean use32Bits = options.getBoolean(USER_SERVICE_ARG_USE_32_BIT_APP_PROCESS, false);
-        String key = packageName + ":" + (tag != null ? tag : className);
+        String key = serviceKey(uid, packageName, tag, className);
 
         synchronized (this) {
             UserServiceRecord record = getUserServiceRecordLocked(key);
+            if (record != null && record.ownerUid != uid) {
+                throw new SecurityException("user service belongs to another UID");
+            }
             if (noCreate) {
                 if (record != null) {
                     record.callbacks.register(conn);
@@ -229,6 +244,9 @@ public abstract class UserServiceManager {
             int ownerPid) {
 
         if (record != null) {
+            if (record.ownerUid != ownerUid) {
+                throw new SecurityException("user service belongs to another UID");
+            }
             if (record.versionCode != versionCode) {
                 LOGGER.v(
                         "Remove service record %s (%s) because version code not matched (old=%d, new=%d)",
@@ -259,10 +277,11 @@ public abstract class UserServiceManager {
         };
 
         String packageName = packageInfo.packageName;
-        List<UserServiceRecord> list = packageUserServiceRecords.get(packageName);
+        String packageKey = packageKey(ownerUid, packageName);
+        List<UserServiceRecord> list = packageUserServiceRecords.get(packageKey);
         if (list == null) {
             list = Collections.synchronizedList(new ArrayList<>());
-            packageUserServiceRecords.put(packageName, list);
+            packageUserServiceRecords.put(packageKey, list);
         }
         list.add(record);
 
@@ -409,8 +428,8 @@ public abstract class UserServiceManager {
 
     public void onUserServiceRecordRemoved(UserServiceRecord record) {}
 
-    public void removeUserServicesForPackage(String packageName) {
-        List<UserServiceRecord> list = packageUserServiceRecords.remove(packageName);
+    public synchronized void removeUserServicesForPackage(String packageName, int uid) {
+        List<UserServiceRecord> list = packageUserServiceRecords.remove(packageKey(uid, packageName));
         if (list != null) {
             List<UserServiceRecord> snapshot;
             synchronized (list) {
@@ -425,8 +444,8 @@ public abstract class UserServiceManager {
         }
     }
 
-    public void revokeUserServicesForPackage(String packageName) {
-        List<UserServiceRecord> list = packageUserServiceRecords.remove(packageName);
+    public synchronized void revokeUserServicesForPackage(String packageName, int uid) {
+        List<UserServiceRecord> list = packageUserServiceRecords.remove(packageKey(uid, packageName));
         if (list == null) {
             return;
         }
@@ -442,8 +461,8 @@ public abstract class UserServiceManager {
         }
     }
 
-    public boolean hasUserServicesForPackage(String packageName) {
-        List<UserServiceRecord> list = packageUserServiceRecords.get(packageName);
+    public synchronized boolean hasUserServicesForPackage(String packageName, int uid) {
+        List<UserServiceRecord> list = packageUserServiceRecords.get(packageKey(uid, packageName));
         return list != null && !list.isEmpty();
     }
 
