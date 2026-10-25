@@ -1,4 +1,5 @@
 package com.shixiaoshi0417.lunexsu.ui.screen.appprofile
+
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 import androidx.compose.animation.AnimatedVisibility
@@ -59,6 +60,7 @@ import com.shixiaoshi0417.lunexsu.ui.component.profile.AppProfileConfig
 import com.shixiaoshi0417.lunexsu.ui.component.profile.AuthorizationConfig
 import com.shixiaoshi0417.lunexsu.ui.component.profile.RootProfileConfig
 import com.shixiaoshi0417.lunexsu.ui.component.profile.TemplateConfig
+import com.shixiaoshi0417.lunexsu.ui.component.profile.withRootTemplate
 import com.shixiaoshi0417.lunexsu.ui.component.statustag.StatusTag
 import com.shixiaoshi0417.lunexsu.ui.theme.LocalEnableBlur
 import com.shixiaoshi0417.lunexsu.ui.util.BlurredBar
@@ -364,26 +366,10 @@ private fun AppProfileInner(
                             val info = com.shixiaoshi0417.lunexsu.ui.viewmodel.getTemplateInfoById(selected)
                             if (info != null && setSepolicy(selected, info.rules.joinToString("\n"))) {
                                 onProfileChange(
-                                    profile.copy(
-                                        rootUseDefault = false,
-                                        rootTemplate = selected,
-                                        uid = info.uid,
-                                        gid = info.gid,
-                                        groups = info.groups,
-                                        capabilities = info.capabilities,
-                                        context = info.context,
-                                        namespace = info.namespace,
-                                    )
+                                    profile.withRootTemplate(selected, info)
                                 )
-                            } else if (profile.rootTemplate != selected || profile.rootUseDefault) {
-                                onProfileChange(
-                                    profile.copy(
-                                        rootUseDefault = false,
-                                        rootTemplate = selected
-                                    )
-                                )
+                                rootMode = Mode.Template
                             }
-                            rootMode = Mode.Template
                         }
                     }
                 }

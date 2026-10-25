@@ -99,7 +99,7 @@ fun ModulePager(
 
     val actions = ModuleActions(
         onRefresh = {
-            viewModel.fetchModuleList(checkUpdate = true)
+            viewModel.fetchModuleList(checkUpdate = true, forceUpdate = true)
         },
         onSearchStatusChange = {
             viewModel.updateSearchStatus(it)

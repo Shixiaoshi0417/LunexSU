@@ -173,7 +173,8 @@ private fun AppProfileInner(
     } else {
         Mode.Custom
     }
-    var rootMode by rememberSaveable(profile) {
+    // Authorization polling changes the countdown, not the user's pending mode selection.
+    var rootMode by rememberSaveable(profile.currentUid, profile.rootUseDefault, profile.rootTemplate) {
         mutableStateOf(initialRootMode)
     }
     val nonRootMode = if (profile.nonRootUseDefault) Mode.Default else Mode.Custom

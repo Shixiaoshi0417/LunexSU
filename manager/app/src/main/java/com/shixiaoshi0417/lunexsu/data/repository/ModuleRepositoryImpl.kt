@@ -1,6 +1,7 @@
 package com.shixiaoshi0417.lunexsu.data.repository
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 import com.shixiaoshi0417.lunexsu.data.model.Module
 import com.shixiaoshi0417.lunexsu.data.model.ModuleUpdateInfo
@@ -12,6 +13,7 @@ import com.shixiaoshi0417.lunexsu.ui.util.module.sanitizeVersionString
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.IOException
 
 class ModuleRepositoryImpl : ModuleRepository {
 
@@ -54,26 +56,21 @@ class ModuleRepositoryImpl : ModuleRepository {
 
     override suspend fun checkUpdate(module: Module): Result<ModuleUpdateInfo> = withContext(Dispatchers.IO) {
         runCatching {
-            if (!isNetworkAvailable(ksuApp)) {
-                return@runCatching ModuleUpdateInfo.Empty
-            }
             if (module.updateJson.isEmpty() || module.remove || module.update || !module.enabled) {
                 return@runCatching ModuleUpdateInfo.Empty
             }
+            if (!isNetworkAvailable(ksuApp)) throw IOException("Network unavailable")
 
             val url = module.updateJson
-            val response = ksuApp.okhttpClient.newCall(
+            val result = ksuApp.okhttpClient.newCall(
                 Request.Builder().url(url).build()
-            ).execute()
-
-            val result = if (response.isSuccessful) {
+            ).execute().use { response ->
+                if (!response.isSuccessful) throw IOException("Update check HTTP ${response.code}")
                 response.body.string()
-            } else {
-                ""
             }
 
             if (result.isEmpty()) {
-                return@runCatching ModuleUpdateInfo.Empty
+                throw IOException("Empty update response")
             }
 
             val updateJson = JSONObject(result)
@@ -88,6 +85,6 @@ class ModuleRepositoryImpl : ModuleRepository {
             } else {
                 ModuleUpdateInfo(zipUrl, version, changelog, versionCode)
             }
-        }
+        }.onFailure { if (it is CancellationException) throw it }
     }
 }

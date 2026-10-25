@@ -26,6 +26,7 @@ import com.shixiaoshi0417.lunexsu.Natives
 import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.ui.LocalUiMode
 import com.shixiaoshi0417.lunexsu.ui.UiMode
+import com.shixiaoshi0417.lunexsu.ui.component.profile.persistProfileRules
 import com.shixiaoshi0417.lunexsu.ui.navigation3.LocalNavigator
 import com.shixiaoshi0417.lunexsu.ui.navigation3.Route
 import com.shixiaoshi0417.lunexsu.ui.util.forceStopApp
@@ -158,11 +159,7 @@ fun AppProfileScreen(uid: Int) {
                                 showMessage(suNotAllowed)
                                 return@launch
                             }
-                            if (!profileToSave.rootUseDefault
-                                && profileToSave.rules.isNotEmpty()
-                                && !primaryAppInfo.special
-                                && !setSepolicy(profileToSave.name, profileToSave.rules)
-                            ) {
+                            if (!persistProfileRules(profileToSave, primaryAppInfo.special, ::setSepolicy)) {
                                 showMessage(failToUpdateSepolicy)
                                 return@launch
                             }
