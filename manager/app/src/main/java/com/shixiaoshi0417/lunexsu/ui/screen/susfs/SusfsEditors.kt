@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.data.susfs.SusfsInputs
@@ -76,10 +77,10 @@ internal fun SusfsUnameSection(config: JSONObject?, status: SusfsStatus, writabl
             editing = false
         }) {
             Text(stringResource(R.string.susfs_uname_hint))
-            OutlinedTextField(release, { release = it }, label = { Text(stringResource(R.string.susfs_release)) },
+            OutlinedTextField(release, { release = it }, label = stringResource(R.string.susfs_release),
                 modifier = Modifier.fillMaxWidth(), singleLine = true, isError = !SusfsInputs.validText(release, 65))
             TextButton(onClick = { release = "default" }) { Text(stringResource(R.string.susfs_use_real_field)) }
-            OutlinedTextField(version, { version = it }, label = { Text(stringResource(R.string.susfs_version)) },
+            OutlinedTextField(version, { version = it }, label = stringResource(R.string.susfs_version),
                 modifier = Modifier.fillMaxWidth(), singleLine = true, isError = !SusfsInputs.validText(version, 65))
             TextButton(onClick = { version = "default" }) { Text(stringResource(R.string.susfs_use_real_field)) }
             if (!valid) Text(stringResource(R.string.susfs_uname_invalid), color = MaterialTheme.colorScheme.error)
@@ -96,7 +97,12 @@ internal fun SusfsCmdlineSection(config: JSONObject?, status: SusfsStatus, writa
     SegmentedColumn(title = stringResource(R.string.susfs_cmdline)) {
         item { SegmentedListItem(enabled = writable && supported, onClick = { editing = true },
             headlineContent = { Text(stringResource(R.string.susfs_cmdline)) },
-            supportingContent = { Text(susfsDisabledReason(status, supported) ?: value.ifEmpty { stringResource(R.string.susfs_unmanaged) }) }) }
+            supportingContent = {
+                val reason = susfsDisabledReason(status, supported)
+                if (reason != null) Text(reason)
+                else Text(value.ifEmpty { stringResource(R.string.susfs_unmanaged) },
+                    maxLines = if (writable && supported) 2 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis)
+            }) }
     }
     if (editing) {
         var text by remember { mutableStateOf(value) }
@@ -106,7 +112,7 @@ internal fun SusfsCmdlineSection(config: JSONObject?, status: SusfsStatus, writa
         }) {
             Text(stringResource(R.string.susfs_cmdline_hint))
             OutlinedTextField(text, { text = it }, modifier = Modifier.fillMaxWidth(), minLines = 3,
-                label = { Text(stringResource(R.string.susfs_cmdline)) }, isError = !valid)
+                label = stringResource(R.string.susfs_cmdline), isError = !valid)
             if (!valid) Text(stringResource(R.string.susfs_text_invalid), color = MaterialTheme.colorScheme.error)
         }
     }
@@ -130,26 +136,35 @@ internal fun SusfsRuleSection(kind: String, config: JSONObject?, status: SusfsSt
         "kstat" -> R.string.susfs_kstat_hint; else -> R.string.susfs_redirect_hint }
     val rules = config?.optJSONArray("rules") ?: JSONArray()
     val entries = (0 until rules.length()).map { rules.getJSONObject(it) }.filter { it.getString("kind") == kind }
-    SegmentedColumn(title = stringResource(ruleTitle(kind))) {
-        item { SegmentedListItem(enabled = writable && supported, onClick = { original = null; editing = true },
-            headlineContent = { Text(stringResource(R.string.susfs_add_rule)) },
-            supportingContent = { Text(susfsDisabledReason(status, supported) ?: stringResource(hint)) },
-            leadingContent = { Icon(Icons.Rounded.Add, null) }) }
-        entries.forEach { rule -> item(key = rule.getString("path")) {
-            SegmentedListItem(enabled = writable && supported, onClick = { original = rule.toString(); editing = true },
-                headlineContent = { Text(rule.getString("path")) },
-                supportingContent = { Text(when (kind) {
-                    "path" -> stringResource(if (rule.optBoolean("looping")) R.string.susfs_loop else R.string.susfs_path_once)
-                    "map" -> stringResource(R.string.susfs_map_hint)
-                    "kstat" -> stringResource(if (rule.optBoolean("full_clone")) R.string.susfs_clone else R.string.susfs_kstat_normal)
-                    else -> "→ ${rule.getString("destination")}\n${susfsUidLabel(rule.optInt("uid_scheme"))}"
-                }) }, leadingContent = { Icon(when (kind) { "path" -> Icons.Rounded.FolderOff
-                    "map" -> Icons.Rounded.Memory; "kstat" -> Icons.Rounded.DataObject; else -> Icons.AutoMirrored.Rounded.AltRoute }, null) },
-                trailingContent = { TextButton(enabled = writable, onClick = { deleting = rule.toString() }) { Text(stringResource(R.string.susfs_remove)) } })
-        } }
-        if (entries.isEmpty()) item { SegmentedListItem(headlineContent = { Text(stringResource(R.string.susfs_empty)) }) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SegmentedColumn(title = stringResource(ruleTitle(kind))) {
+            item { SegmentedListItem(enabled = writable && supported, onClick = { original = null; editing = true },
+                headlineContent = { Text(stringResource(R.string.susfs_add_rule)) },
+                supportingContent = { Text(susfsDisabledReason(status, supported) ?: stringResource(hint)) },
+                leadingContent = { Icon(Icons.Rounded.Add, null) }) }
+            entries.forEach { rule -> item(key = rule.getString("path")) {
+                SegmentedListItem(enabled = writable && supported, onClick = { original = rule.toString(); editing = true },
+                    headlineContent = { Text(rule.getString("path"),
+                        maxLines = if (writable && supported) 2 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis) },
+                    supportingContent = {
+                        if (kind == "redirect") Column {
+                            Text("→ ${rule.getString("destination")}",
+                                maxLines = if (writable && supported) 1 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis)
+                            Text(susfsUidLabel(rule.optInt("uid_scheme")))
+                        } else Text(stringResource(when (kind) {
+                            "path" -> if (rule.optBoolean("looping")) R.string.susfs_loop else R.string.susfs_path_once
+                            "map" -> R.string.susfs_map_hint
+                            else -> if (rule.optBoolean("full_clone")) R.string.susfs_clone else R.string.susfs_kstat_normal
+                        }))
+                    }, leadingContent = { Icon(when (kind) { "path" -> Icons.Rounded.FolderOff
+                        "map" -> Icons.Rounded.Memory; "kstat" -> Icons.Rounded.DataObject; else -> Icons.AutoMirrored.Rounded.AltRoute }, null) },
+                    trailingContent = { SusfsRemoveButton(enabled = writable, onClick = { deleting = rule.toString() }) })
+            } }
+            if (entries.isEmpty()) item { SegmentedListItem(headlineContent = { Text(stringResource(R.string.susfs_empty)) }) }
+        }
+        if (entries.isNotEmpty()) Text(stringResource(R.string.susfs_removal_hint),
+            modifier = Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall)
     }
-    if (entries.isNotEmpty()) Text(stringResource(R.string.susfs_removal_hint), style = MaterialTheme.typography.bodySmall)
     if (editing) SusfsRuleDialog(kind, original, status, writable && supported, { editing = false }) { replacement ->
         val expected = original
         vm.change { SusfsInputs.replaceRule(it, expected, replacement) }
@@ -189,13 +204,17 @@ private fun SusfsRuleDialog(kind: String, original: String?, status: SusfsStatus
         save(result)
     }) {
         OutlinedTextField(path, { path = it }, modifier = Modifier.fillMaxWidth(), singleLine = true,
-            label = { Text(stringResource(R.string.susfs_path)) }, placeholder = { Text("/data/local/tmp/example") },
+            label = stringResource(R.string.susfs_path), placeholder = { Text("/data/local/tmp/example") },
             isError = path.isNotEmpty() && !SusfsInputs.validPath(path))
         if (!SusfsInputs.validPath(path)) Text(stringResource(R.string.susfs_path_invalid), style = MaterialTheme.typography.bodySmall)
         if (kind == "redirect") {
             OutlinedTextField(destination, { destination = it }, modifier = Modifier.fillMaxWidth(), singleLine = true,
-                label = { Text(stringResource(R.string.susfs_destination)) }, isError = destination.isNotEmpty() &&
+                label = stringResource(R.string.susfs_destination), isError = destination.isNotEmpty() &&
                     (!SusfsInputs.validPath(destination) || destination == path))
+            if (destination.isNotEmpty() && !SusfsInputs.validPath(destination)) {
+                Text(stringResource(R.string.susfs_path_invalid), color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall)
+            }
             Text(stringResource(R.string.susfs_uid_selection), style = MaterialTheme.typography.titleSmall)
             SegmentedColumn { uidSchemes.forEach { value -> item {
                 SegmentedListItem(selected = uid == value, enabled = writable, onClick = { uid = value },
@@ -247,8 +266,9 @@ private fun SusfsExtensionSection(key: String, title: Int, node: String, config:
             leadingContent = { Icon(Icons.Rounded.Add, null) }) }
         for (index in 0 until array.length()) item(key = array.getString(index)) {
             val value = array.getString(index)
-            SegmentedListItem(headlineContent = { Text(value) }, trailingContent = {
-                TextButton(enabled = writable, onClick = { deleting = value }) { Text(stringResource(R.string.susfs_remove)) }
+            SegmentedListItem(headlineContent = { Text(value,
+                maxLines = if (writable) 2 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis) }, trailingContent = {
+                SusfsRemoveButton(enabled = writable, onClick = { deleting = value })
             })
         }
         if (array.length() == 0) item { SegmentedListItem(headlineContent = { Text(stringResource(R.string.susfs_empty)) }) }
@@ -265,7 +285,7 @@ private fun SusfsExtensionSection(key: String, title: Int, node: String, config:
                 current.put(value)
             }; adding = false
         }) {
-            OutlinedTextField(value, { value = it }, label = { Text(stringResource(title)) }, singleLine = true,
+            OutlinedTextField(value, { value = it }, label = stringResource(title), singleLine = true,
                 modifier = Modifier.fillMaxWidth(), isError = value.isNotEmpty() && !valid)
             Text(stringResource(if (key == "hidden_modules") R.string.susfs_module_hint else R.string.susfs_path_invalid))
         }
@@ -284,7 +304,7 @@ private fun SusfsExtensionSection(key: String, title: Int, node: String, config:
 private fun SusfsChoiceDialog(title: String, choices: List<Int>, selected: Int, enabled: Boolean,
     dismiss: () -> Unit, choose: (Int) -> Unit) {
     AlertDialog(onDismissRequest = dismiss, title = { Text(title) }, text = {
-        SegmentedColumn { choices.forEachIndexed { index, label -> item {
+        SegmentedColumn(modifier = Modifier.verticalScroll(rememberScrollState())) { choices.forEachIndexed { index, label -> item {
             SegmentedListItem(selected = selected == index, enabled = enabled, onClick = { choose(index) },
                 headlineContent = { Text(stringResource(label)) }, trailingContent = { RadioButton(selected == index, null, enabled = enabled) })
         } } }
@@ -294,7 +314,8 @@ private fun SusfsChoiceDialog(title: String, choices: List<Int>, selected: Int, 
 @Composable
 private fun SusfsDeleteDialog(value: String, enabled: Boolean, dismiss: () -> Unit, delete: () -> Unit) {
     AlertDialog(onDismissRequest = dismiss, title = { Text(stringResource(R.string.susfs_remove)) },
-        text = { Text("$value\n\n${stringResource(R.string.susfs_removal_hint)}") },
+        text = { Text("$value\n\n${stringResource(R.string.susfs_removal_hint)}",
+            modifier = Modifier.verticalScroll(rememberScrollState())) },
         confirmButton = { TextButton(enabled = enabled, onClick = delete) { Text(stringResource(R.string.susfs_remove)) } },
         dismissButton = { TextButton(onClick = dismiss) { Text(stringResource(R.string.susfs_cancel)) } })
 }

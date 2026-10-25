@@ -52,9 +52,12 @@ fun SuiScreen() {
     }
     editing?.takeIf { ui.requests.isEmpty() }?.let { app ->
         var selected by remember(app) { mutableStateOf(app.permission) }
-        AlertDialog(onDismissRequest = { editing = null }, title = { Text(app.label) },
+        AlertDialog(onDismissRequest = { editing = null }, title = { Text(stringResource(R.string.sui_apps)) },
             text = { Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text(stringResource(R.string.sui_shared_uid))
+                // List previews are bounded; keep the complete shared-UID identity scrollable here.
+                Text(app.label)
+                Text("UID ${app.uid}\n${app.packages}", Modifier.padding(top = 4.dp))
+                Text(stringResource(R.string.sui_shared_uid), Modifier.padding(top = 8.dp, bottom = 4.dp))
                 SuiPermission.entries.forEach { mode ->
                     Row(Modifier.fillMaxWidth().selectable(selected = selected == mode, role = Role.RadioButton,
                         onClick = { selected = mode }).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {

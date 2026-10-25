@@ -41,6 +41,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.shixiaoshi0417.lunexsu.Natives
 import com.shixiaoshi0417.lunexsu.R
+import com.shixiaoshi0417.lunexsu.ui.LocalUiMode
+import com.shixiaoshi0417.lunexsu.ui.UiMode
 import com.shixiaoshi0417.lunexsu.data.susfs.SusfsInputs
 import com.shixiaoshi0417.lunexsu.data.susfs.SusfsStatus
 import com.shixiaoshi0417.lunexsu.ui.component.material.*
@@ -51,6 +53,7 @@ import com.shixiaoshi0417.lunexsu.ui.viewmodel.SusfsUiState
 import com.shixiaoshi0417.lunexsu.ui.viewmodel.SusfsViewModel
 import org.json.JSONArray
 import org.json.JSONObject
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun susfsManagementLabel(status: String): String = stringResource(when (status) {
@@ -143,7 +146,7 @@ fun SusfsScreen() {
     draft?.let { text ->
         val preview = remember(text) { SusfsInputs.preview(text) }
         AlertDialog(onDismissRequest = { draft = null }, title = { Text(stringResource(R.string.susfs_import_preview)) },
-            text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(stringResource(R.string.susfs_import_counts, preview.getJSONArray("rules").length(),
                     preview.getJSONObject("lkm").getJSONArray("hidden_modules").length(),
                     preview.getJSONObject("lkm").getJSONArray("mount_prefixes").length()))
@@ -175,8 +178,9 @@ private fun SusfsNavigation(selected: Int, onSelect: (Int) -> Unit) {
                 .selectable(active, interactionSource = source, indication = null, role = Role.Tab) {
                     haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
                     onSelect(index)
-                }.heightIn(min = 48.dp).padding(horizontal = 20.dp), contentAlignment = Alignment.Center) {
-                Text(stringResource(title), style = MaterialTheme.typography.labelLarge,
+                }.heightIn(min = 48.dp).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                Text(stringResource(title), style = if (LocalUiMode.current == UiMode.Miuix)
+                    MiuixTheme.textStyles.body2 else MaterialTheme.typography.labelLarge,
                     color = if (active) MaterialTheme.colorScheme.onSecondaryContainer
                         else MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -186,8 +190,10 @@ private fun SusfsNavigation(selected: Int, onSelect: (Int) -> Unit) {
 
 @Composable
 private fun SusfsPage(scroll: ScrollState, content: @Composable ColumnScope.() -> Unit) {
+    val native = LocalUiMode.current == UiMode.Miuix
     Column(Modifier.fillMaxSize().verticalScroll(scroll).wrapContentWidth(Alignment.CenterHorizontally)
-        .widthIn(max = 840.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(20.dp), content = content)
+        .widthIn(max = 840.dp).padding(horizontal = if (native) 12.dp else 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(if (native) 12.dp else 13.dp), content = content)
 }
 
 @Composable

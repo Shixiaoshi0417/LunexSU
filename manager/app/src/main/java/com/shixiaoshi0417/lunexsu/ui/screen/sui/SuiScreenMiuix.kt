@@ -1,6 +1,9 @@
 package com.shixiaoshi0417.lunexsu.ui.screen.sui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -13,6 +16,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
@@ -28,8 +32,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.shixiaoshi0417.lunexsu.BuildConfig
 import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.data.sui.SuiApp
@@ -48,9 +55,10 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.icon.extended.Back
-import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
+import top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
@@ -114,20 +122,30 @@ internal fun SuiScreenMiuix(
                 item(key = "status") {
                     Card(modifier = Modifier.padding(top = 12.dp).fillMaxWidth()) {
                         BasicComponent(
-                            title = stringResource(R.string.sui_payload_version, ui.status.version.ifEmpty { "Sui" }),
-                            summary = suiStatusText(ui),
+                            insideMargin = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                             startAction = {
                                 Icon(Icons.Rounded.Api, null, Modifier.padding(end = 6.dp), tint = colorScheme.onBackground)
                             },
-                        )
-                        ui.error?.let {
-                            Text(it, Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp), color = colorScheme.error)
+                        ) {
+                            Text(
+                                stringResource(R.string.sui_payload_version, ui.status.version.ifEmpty { "Sui" }),
+                                style = textStyles.headline1,
+                                fontWeight = FontWeight.Medium,
+                                color = colorScheme.onSurface,
+                            )
+                            Column(
+                                modifier = Modifier.padding(top = 4.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Text(suiStatusText(ui), style = textStyles.body2, color = colorScheme.onSurfaceVariantSummary)
+                                ui.error?.let { Text(it, style = textStyles.body2, color = colorScheme.error) }
+                                listOfNotNull(
+                                    ui.status.reason.takeIf { it.isNotBlank() },
+                                    stringResource(R.string.sui_host_required).takeIf { !ui.hostAttached },
+                                    stringResource(R.string.sui_demo).takeIf { BuildConfig.NO_ROOT_DEMO },
+                                ).forEach { Text(it, style = textStyles.body2, color = colorScheme.onSurfaceVariantSummary) }
+                            }
                         }
-                        listOfNotNull(
-                            ui.status.reason.takeIf { it.isNotBlank() },
-                            stringResource(R.string.sui_host_required).takeIf { !ui.hostAttached },
-                            stringResource(R.string.sui_demo).takeIf { BuildConfig.NO_ROOT_DEMO },
-                        ).forEach { BasicComponent(summary = it) }
                     }
                 }
                 item(key = "search") { search(Modifier.padding(top = 12.dp)) }
@@ -136,12 +154,38 @@ internal fun SuiScreenMiuix(
                 }
                 items(apps, key = { it.uid }) { app ->
                     Card(modifier = Modifier.padding(bottom = 12.dp).fillMaxWidth()) {
-                        ArrowPreference(
-                            title = app.label,
-                            summary = "${stringResource(app.permission.label())} · UID ${app.uid}\n${app.packages}",
+                        BasicComponent(
+                            insideMargin = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                             enabled = editable,
                             onClick = { onEdit(app) },
-                        )
+                            endActions = {
+                                val layoutDirection = LocalLayoutDirection.current
+                                Icon(
+                                    imageVector = MiuixIcons.Basic.ArrowRight,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(width = 10.dp, height = 16.dp).graphicsLayer {
+                                        if (layoutDirection == LayoutDirection.Rtl) scaleX = -1f
+                                    },
+                                    tint = if (editable) colorScheme.onSurfaceVariantActions else colorScheme.disabledOnSecondaryVariant,
+                                )
+                            },
+                        ) {
+                            Text(
+                                app.label,
+                                style = textStyles.headline1,
+                                fontWeight = FontWeight.Medium,
+                                color = if (editable) colorScheme.onSurface else colorScheme.disabledOnSecondaryVariant,
+                                maxLines = if (editable) 1 else Int.MAX_VALUE,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                "${stringResource(app.permission.label())} · UID ${app.uid} · ${app.packages}",
+                                fontSize = 12.sp,
+                                color = if (editable) colorScheme.onSurfaceVariantSummary else colorScheme.disabledOnSecondaryVariant,
+                                maxLines = if (editable) 1 else Int.MAX_VALUE,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
                 }
                 item(key = "bottom") {

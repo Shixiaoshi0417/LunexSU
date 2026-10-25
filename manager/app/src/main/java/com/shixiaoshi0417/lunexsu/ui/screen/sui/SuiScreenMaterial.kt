@@ -1,6 +1,7 @@
 package com.shixiaoshi0417.lunexsu.ui.screen.sui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -24,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.shixiaoshi0417.lunexsu.BuildConfig
 import com.shixiaoshi0417.lunexsu.R
@@ -86,18 +88,18 @@ internal fun SuiScreenMaterial(
                     item {
                         SegmentedListItem(
                             headlineContent = { Text(stringResource(R.string.sui_payload_version, ui.status.version.ifEmpty { "Sui" })) },
-                            supportingContent = { Text(suiStatusText(ui)) },
+                            supportingContent = {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(suiStatusText(ui))
+                                    ui.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                                    if (ui.status.reason.isNotBlank()) Text(ui.status.reason)
+                                    if (!ui.hostAttached) Text(stringResource(R.string.sui_host_required))
+                                    if (BuildConfig.NO_ROOT_DEMO) Text(stringResource(R.string.sui_demo))
+                                }
+                            },
                             leadingContent = { Icon(Icons.Filled.Api, null) },
                         )
                     }
-                    item(visible = ui.error != null) {
-                        SegmentedListItem(headlineContent = {
-                            Text(ui.error.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-                        })
-                    }
-                    item(visible = ui.status.reason.isNotBlank()) { SuiNote(ui.status.reason) }
-                    item(visible = !ui.hostAttached) { SuiNote(stringResource(R.string.sui_host_required)) }
-                    item(visible = BuildConfig.NO_ROOT_DEMO) { SuiNote(stringResource(R.string.sui_demo)) }
                 }
             }
             item(key = "search") { search(Modifier.padding(bottom = 11.dp)) }
@@ -110,8 +112,12 @@ internal fun SuiScreenMaterial(
                     SegmentedListItem(
                         onClick = { onEdit(app) },
                         enabled = editable,
-                        headlineContent = { Text(app.label) },
-                        supportingContent = { Text("UID ${app.uid} · ${app.packages}") },
+                        headlineContent = { Text(app.label,
+                            maxLines = if (editable) 1 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis) },
+                        supportingContent = {
+                            Text("UID ${app.uid} · ${app.packages}",
+                                maxLines = if (editable) 1 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis)
+                        },
                         trailingContent = {
                             Text(stringResource(app.permission.label()), style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary)
@@ -121,11 +127,4 @@ internal fun SuiScreenMaterial(
             }
         }
     }
-}
-
-@Composable
-private fun SuiNote(text: String) {
-    SegmentedListItem(headlineContent = {
-        Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    })
 }
