@@ -333,6 +333,10 @@
     <string name="home_zygisk_observation_hint">Module flags and process observations do not prove successful injection. A missing ptrace monitor does not establish whether NeoZygisk or ZNN is running.</string>
     <string name="home_zygisk_query_hint">A working Core authorization and Root shell are required. If already authorized, try again later. Query failure is not an off state.</string>
     <string name="settings_zygisk_summary">Off by default. Turning it on uses ReZygisk. Every change takes effect after a reboot.</string>
+    <string name="settings_zygisk_enable_title">Enable built-in Zygisk?</string>
+    <string name="settings_zygisk_enable_confirm">Enable for next boot</string>
+    <string name="settings_zygisk_enable_warning">After a full reboot, LunexSU will disable conflicting standalone injectors with the known module IDs rezygisk and zygisksu (Re/Vex, Neo/Zygisk Next) before module startup. LSPosed, Sui and ordinary Zygisk plugins are not disabled.\n\nAn external module occupying the selected built-in ID will not be overwritten: uninstall it and reboot first. Unrecognized providers and global hooks are not covered; remove those conflicts manually. No running injector is stopped now.\n\nExternal disable marks persist even after built-in Zygisk is turned off. Re-enable them manually only after disabling the built-in and rebooting. A full reboot is required; compatibility and recovery are not guaranteed.</string>
+    <string name="settings_zygisk_external_boot">External injector "%s" will be disabled at boot if built-in Zygisk is enabled</string>
     <string name="settings_zygisk_running">%s is running</string>
     <string name="settings_zygisk_not_running">%s is enabled but not running</string>
     <string name="settings_zygisk_pending_enable">Pending reboot: %s will start</string>
@@ -365,11 +369,6 @@
     <string name="allow_shell_summary">Always allow adb shell to call SU command. Do not enable this unless absolutely necessary.</string>
     <string name="enable_adb">Force enable adb on boot</string>
     <string name="enable_adb_summary">Force enable USB debugging and disable adb authentication. Do not enable this unless absolutely necessary.</string>
-    <string name="install_block_modules">Block kernel modules (risky)</string>
-    <string name="install_block_modules_warning">Stop the listed kernel modules from loading at boot. Blocking a module the system depends on can make the device hang on the boot logo or bootloop (e.g. MediaTek mkp on some devices). Only enable this if you know the modules are safe to block on your device. To recover, flash the stock boot / init_boot image with fastboot.</string>
-    <string name="install_block_modules_list">Modules to block</string>
-    <string name="install_block_modules_summary">Comma-separated module names to stop from loading at boot, e.g. oplus_secure_guard. Leave empty to block nothing.</string>
-    <string name="install_block_modules_invalid">Module names may contain only letters, digits and underscores, each at most 64 characters.</string>
     <string name="advanced_options">Advanced Options</string>
     <string name="expand">Expand</string>
     <string name="download_channel_name">Module Downloads</string>

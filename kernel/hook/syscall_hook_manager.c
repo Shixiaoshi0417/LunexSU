@@ -172,12 +172,7 @@ void __exit ksu_syscall_hook_manager_exit(void)
     destroy_kretprobe(&syscall_unregfunc_rp);
 #endif
 
-    ksu_unregister_syscall_hook(__NR_setresuid);
-    ksu_unregister_syscall_hook(__NR_execve);
-    ksu_unregister_syscall_hook(__NR_execveat);
-    ksu_unregister_syscall_hook(__NR_newfstatat);
-    ksu_unregister_syscall_hook(__NR_faccessat);
-
+    /* Keep routes and their state valid until sleeping dispatchers drain. */
     ksu_syscall_hook_exit();
 
     ksu_sucompat_exit();

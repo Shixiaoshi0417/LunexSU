@@ -1,0 +1,17 @@
+[package]
+name = "ksud-sui-safety-tests"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+# Isolated payload/publication checks: no ksud build.rs, Android or root commands.
+[workspace]
+
+[dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha256 = "1"
+libc = "0.2"
+log = "0.4"
+tempfile = "3"

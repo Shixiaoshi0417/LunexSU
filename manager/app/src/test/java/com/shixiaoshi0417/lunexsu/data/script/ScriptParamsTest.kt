@@ -125,6 +125,18 @@ class ScriptParamsTest {
         assertEquals(20, int.max)
         assertInvalid("""{"key":"A","type":"int","label":"x","min":1.5}""")
         assertInvalid("""{"key":"A","type":"int","label":"x","min":1e10}""")
+        // An integral default is accepted however it is spelled (Codex review on #13).
+        fun intDefault(raw: String) = (parse("""{"key":"A","type":"int","label":"x","default":$raw}""").params[0] as ScriptParam.Integer).default
+        assertEquals(5, intDefault("5"))
+        assertEquals(5, intDefault("5.0"))
+        assertEquals(5, intDefault("5e0"))
+        assertEquals(-50, intDefault("-5E+1"))
+        assertEquals(Int.MAX_VALUE, intDefault("2147483647"))
+        assertEquals(Int.MIN_VALUE, intDefault("-2147483648.0"))
+        assertInvalid("""{"key":"A","type":"int","label":"x","default":5.5}""")
+        assertInvalid("""{"key":"A","type":"int","label":"x","default":"5"}""")
+        assertInvalid("""{"key":"A","type":"int","label":"x","default":2147483648}""")
+        assertInvalid("""{"key":"A","type":"int","label":"x","default":-2147483649}""")
     }
 
     @Test

@@ -43,6 +43,8 @@ static int ksu_wrapper_open(struct inode *ino, struct file *fp)
     fp->private_data = wrapper;
     const struct file_operations *new_fops = fops_get(&wrapper->ops);
     replace_fops(fp, new_fops);
+    /* ksu_create_file_wrapper() owns its own reference. */
+    fput(orig_file);
     return 0;
 }
 
@@ -419,6 +421,7 @@ static void ksu_wrapper_d_release(struct dentry *dentry)
     struct path *orig_path = dentry->d_fsdata;
     path_put(orig_path);
     kfree(orig_path);
+    module_put(THIS_MODULE);
 }
 
 static const struct dentry_operations ksu_file_wrapper_d_ops = { .d_dname = ksu_wrapper_d_dname,
@@ -548,6 +551,14 @@ int ksu_install_file_wrapper(int fd)
     struct path *orig_path = kmalloc(sizeof(struct path), GFP_KERNEL);
     if (!orig_path) {
         ret = -ENOMEM;
+        goto out_put_wrapper_file;
+    }
+    /* O_PATH uses empty_fops, so an inode fops owner cannot protect d_op.
+     * Pin the module for the dentry itself, until its last path is dropped.
+     */
+    if (!try_module_get(THIS_MODULE)) {
+        kfree(orig_path);
+        ret = -ENODEV;
         goto out_put_wrapper_file;
     }
     *orig_path = orig_file->f_path;

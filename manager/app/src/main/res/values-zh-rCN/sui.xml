@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sui_title">Sui 管理</string>
+    <string name="sui_switch_title">Sui（Shizuku API）</string>
+    <string name="sui_switch_summary">默认关闭。需要启用一个内置或外置 ReZygisk、NeoZygisk 或 Zygisk Next，每次更改都需完整重启后生效</string>
+    <string name="sui_zygisk_required">请先启用 Zygisk</string>
+    <string name="sui_zygisk_missing">未检测到已启用的 Zygisk，无法开启 Sui。</string>
+    <string name="sui_zygisk_pending">Zygisk 配置有待生效的更改，请完整重启后再开启 Sui。</string>
+    <string name="sui_zygisk_conflict">检测到多个已启用或待安装的 Zygisk，请仅保留一个并完整重启。</string>
+    <string name="sui_zygisk_unavailable">无法核实 Zygisk 前置条件，禁止开启 Sui。请使用配套更新的 ksud 后刷新。</string>
+    <string name="sui_zygisk_instructions">请在设置中启用内置 Zygisk，或安装并启用外置 ReZygisk、NeoZygisk、Zygisk Next 模块，然后完整重启并刷新。外置模块无需由 LunexSU 安装。此弹窗不会自动开启 Zygisk 或 Sui；检测通过仅代表满足前置条件，不保证注入成功。</string>
+    <string name="sui_refresh">刷新</string>
+    <string name="sui_payload_missing">内置 Sui 组件不可用</string>
+    <string name="sui_apps">应用授权</string>
+    <string name="sui_status">Sui 服务</string>
+    <string name="sui_separate_permissions">Sui 权限与内核 Root 权限相互独立。</string>
+    <string name="sui_enable">启用 Sui</string>
+    <string name="sui_disable">停用 Sui</string>
+    <string name="sui_payload_version">内置 Sui：%1$s</string>
+    <string name="sui_disable_warning">停用会请求停止服务。彻底移除注入、结束已有权限或正在运行的用户服务仍需完整重启。更新管理器不会自动替换已安装的 Sui 模块。</string>
+    <string name="sui_enable_warning">需要启用一个内置或外置 ReZygisk、NeoZygisk 或 Zygisk Next，并完整重启。SystemUI 和设置不能被排除注入。不会自动启用 ZNN 或 ADB Root。请保留可用的恢复方式；Sui 使用独立的高权限授权数据库。</string>
+    <string name="sui_pending_reboot">需要完整重启</string>
+    <string name="sui_ready">Root、Shell 服务已连接</string>
+    <string name="sui_unavailable">已启用，但 Sui 服务不可用</string>
+    <string name="sui_disabled">已停用</string>
+    <string name="sui_demo">仅模拟界面。刷新模拟重启完成，不会运行真实 Sui 服务。</string>
+    <string name="sui_request_dialog">应用通过 SystemUI 中 Sui 自带的弹窗请求授权，无需打开管理器。SystemUI 被排除注入时请求会被拒绝；启用 Sui 不会自动授权应用。</string>
+    <string name="sui_search">搜索 Sui 应用</string>
+    <string name="sui_shared_uid">修改将影响共享此 UID 的所有应用。撤销 Sui 权限不会改变内核 Root 授权。</string>
+    <string name="sui_ask">询问</string>
+    <string name="sui_root">允许 Root</string>
+    <string name="sui_shell">允许 Shell</string>
+    <string name="sui_deny">拒绝</string>
+    <string name="sui_hidden">隐藏 Sui</string>
+    <string name="sui_apply">确认</string>
+    <string name="sui_cancel">取消</string>
+    <string name="sui_outcome_pending">Sui 命令结果尚未确认，仍可能完成。请勿重启，等待状态核实；核实期间禁止新的更改。</string>
+    <string name="sui_ipc_timeout">Sui IPC 已超时并重置连接。请刷新核对权限变更结果，再决定是否重试。</string>
+</resources>

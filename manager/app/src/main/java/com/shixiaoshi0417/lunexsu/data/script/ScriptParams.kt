@@ -239,7 +239,6 @@ object ScriptParamsParser {
     private fun JsonObject.string(name: String): String? =
         (this[name] as? JsonPrimitive)?.takeIf { it.isString }?.content
 
-    /** A plain JSON integer (no fraction or exponent) within int32. */
     /**
      * A JSON number that is a 32-bit integer *as a double*, like JSON.parse + zod `.int()` in
      * the registry validator: `5`, `5.0` and `5e0` are all 5.

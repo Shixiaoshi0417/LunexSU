@@ -5,11 +5,11 @@
 
 // Define the root_profile structure with padding for 64-bit alignment.
 struct root_profile {
-    uint32 uid;
-    uint32 gid;
+    int32 uid;
+    int32 gid;
 
     uint32 groups_count;
-    uint32 groups[KSU_MAX_GROUPS];
+    int32 groups[KSU_MAX_GROUPS];
     char padding1[4]; // Padding for 64-bit alignment.
 
     struct {
@@ -20,14 +20,14 @@ struct root_profile {
 
     char selinux_domain[KSU_SELINUX_DOMAIN];
     
-    uint32 namespaces;
+    int32 namespaces;
     char padding2[4]; // Padding for 64-bit alignment.
+    uint64 flags;
 };
 
-// Define the non_root_profile structure with padding for 64-bit alignment.
+// The C non-root profile is one byte; its containing union supplies the padding.
 struct non_root_profile {
     byte umount_modules;
-    char padding[7]; // Padding to make the total size a multiple of 8.
 };
 
 // Define the rp_config structure with padding for 64-bit alignment.
@@ -43,10 +43,8 @@ struct rp_config_t {
 // Define the nrp_config structure with padding for 64-bit alignment.
 struct nrp_config_t {
     byte use_default;
-    char padding1[7]; // Padding to make the total size a multiple of 8.
-
     struct non_root_profile profile;
-    char padding2[488]; // Padding to align the union
+    char padding[510]; // The root branch makes the union 512 bytes.
 };
 
 // Define the main app_profile structure
@@ -54,13 +52,19 @@ typedef struct {
     uint32 version;
     char key[KSU_MAX_PACKAGE_NAME];
     int32 current_uid;
-    int64 allow_su;
+    byte allow_su;
+    char padding[7]; // The union is aligned to 8 bytes, not allow_su itself.
 
     // Based on allow_su, decide which profile to use
     if (allow_su != 0) {
         rp_config_t rp_config;
     } else {
         nrp_config_t nrp_config;
+    }
+
+    if (version != 4) {
+        Printf("Unsupported app_profile version: %u.\n", version);
+        Exit(-1);
     }
 
 } app_profile;
@@ -79,6 +83,17 @@ if (header.magic != 0x7f4b5355) {
     return;
 }
 
+// Current writers emit v4. Earlier v2/v3 layouts and the read-only v5
+// authorization records have different strides and must not be guessed.
+if (header.version != 4) {
+    Printf("Unsupported allowlist file version: %u.\n", header.version);
+    return;
+}
+if ((FileSize() - 8) % 784 != 0) {
+    Printf("Truncated v4 allowlist record.\n");
+    return;
+}
+
 FSeek(8); // Skip the header
 
 
@@ -86,4 +101,3 @@ FSeek(8); // Skip the header
 while (!FEof()) {
     app_profile profile;
 }
-

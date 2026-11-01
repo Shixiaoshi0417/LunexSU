@@ -31,7 +31,11 @@ class AuthorizationTestActivity : ComponentActivity() {
             authorizationMode = preferences.getInt("mode", 0),
             authorizationDurationSeconds = preferences.getLong("seconds", 300),
             authorizationGeneration = preferences.getLong("generation", 7),
-        ) else permanent
+        ) else permanent.copy(allowSu = !intent.getBooleanExtra("denied", false),
+            authorizationState = if (intent.getBooleanExtra("denied", false)) 0 else 1)
+        preferences.edit().putInt("mode", initial.authorizationMode)
+            .putLong("seconds", initial.authorizationDurationSeconds).putBoolean("allowed", initial.allowSu)
+            .putInt("error", 0).putLong("generation", initial.authorizationGeneration).putInt("writes", 0).commit()
         val packageInfo = PackageInfo().apply {
             packageName = initial.name
             versionName = "test fixture"
@@ -44,6 +48,7 @@ class AuthorizationTestActivity : ComponentActivity() {
             var stored by remember { mutableStateOf(initial) }
             val repository = remember {
                 AuthorizationRepository({ stored }, { candidate ->
+                    preferences.edit().putInt("writes", preferences.getInt("writes", 0) + 1).commit()
                     delay(100)
                     if (reject) -5 else {
                         stored = candidate.copy(authorizationOperation = 0,

@@ -28,6 +28,9 @@ use crate::{
 
 const WAITSYS_FD_ENV: &str = "KSU_WAITSYS_FD";
 
+#[path = "restart_guard.rs"]
+mod restart_guard;
+
 struct Waitsys {
     child: Child,
     read_fd: OwnedFd,
@@ -203,12 +206,12 @@ pub fn soft_reboot() -> Result<()> {
     terminate_waitsys(&mut waitsys);
 
     info!("post-fs-data");
-    on_post_fs_data()?;
-    info!("start");
-    let status = Command::new("start").status().context("start failed")?;
-    if !status.success() {
-        warn!("start exited with status: {status}");
-    }
+    restart_guard::run(on_post_fs_data, || {
+        info!("start");
+        let status = Command::new("start").status().context("start failed")?;
+        ensure!(status.success(), "start exited with status: {status}");
+        Ok(())
+    })?;
     info!("services");
     on_services();
     if let Err(e) = wait_for_boot_completed() {

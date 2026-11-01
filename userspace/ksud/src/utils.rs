@@ -289,6 +289,12 @@ fn uninstall_after_restore(package_name: &str) -> Result<()> {
         module::prune_modules()?;
     }
     println!("- Removing directories..");
+    // Pending installs are outside WORKING_DIR and must not survive a reinstall.
+    match std::fs::remove_dir_all(defs::MODULE_UPDATE_DIR) {
+        std::result::Result::Ok(()) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => return Err(e).context("Failed to remove pending modules"),
+    }
     std::fs::remove_dir_all(defs::WORKING_DIR).ok();
     std::fs::remove_file(defs::DAEMON_PATH).ok();
     std::fs::remove_dir_all(defs::MODULE_DIR).ok();

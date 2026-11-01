@@ -71,6 +71,17 @@ pub fn on_post_fs_data() -> Result<()> {
         warn!("prune modules failed: {e}");
     }
 
+    // Fail closed before loading policy or running any module's Zygisk startup scripts.
+    crate::sui::reconcile_boot()?;
+
+    if let Err(e) = crate::zygisk::reconcile(
+        Path::new(defs::MODULE_DIR),
+        Path::new(defs::MODULE_UPDATE_DIR),
+    ) {
+        // The per-module gate still suppresses conflicting injector scripts on errors.
+        warn!("reconcile built-in Zygisk providers failed: {e}");
+    }
+
     // Refresh /metadata/watchdog/ksu/{modules.rc,preinit/} so the next boot's kernel hook sees the
     // current module set. Acts as a safety net when state was changed outside
     // of ksud's normal mutation commands.
@@ -179,6 +190,7 @@ pub fn on_services() {
 
     info!("on_services triggered!");
     run_stage("service", ScriptWait::NoWait);
+    crate::sui::boot_services();
 }
 
 pub fn on_boot_completed() {

@@ -105,11 +105,8 @@ fun RootProfileConfigMaterial(
             enabled = enabled,
             context = profile.context,
             rules = profile.rules,
-            onContextChange = { domain ->
-                onProfileChange(profile.copy(context = domain, rootUseDefault = false))
-            },
-            onRulesChange = { rules ->
-                onProfileChange(profile.copy(rules = rules, rootUseDefault = false))
+            onSELinuxChange = { domain, rules ->
+                onProfileChange(profile.withSELinux(domain, rules))
             }
         )
     }
@@ -374,8 +371,7 @@ private fun SELinuxPanel(
     enabled: Boolean,
     context: String,
     rules: String,
-    onContextChange: (String) -> Unit,
-    onRulesChange: (String) -> Unit
+    onSELinuxChange: (String, String) -> Unit
 ) {
     val showDialog = remember { mutableStateOf(false) }
 
@@ -384,8 +380,7 @@ private fun SELinuxPanel(
             domain = context,
             rules = rules,
             onConfirm = { domain, r ->
-                onContextChange(domain)
-                onRulesChange(r)
+                onSELinuxChange(domain, r)
                 showDialog.value = false
             },
             onDismiss = { showDialog.value = false }

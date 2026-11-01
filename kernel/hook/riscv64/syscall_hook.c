@@ -2,6 +2,8 @@
 #if defined(__riscv)
 
 #include "../syscall_hook.h"
+#include "../syscall_lifecycle.h"
+#include "../lsm_hook.h"
 
 #include <linux/kallsyms.h>
 #include <linux/mutex.h>
@@ -82,9 +84,12 @@ void ksu_syscall_table_hook(int nr, syscall_fn_t fn, syscall_fn_t *old)
             hooked_count++;
         } else {
             pr_warn("hooked_entries full, cannot track syscall %d for restoration\n", nr);
+            mutex_unlock(&hooked_entries_lock);
+            return;
         }
     }
 
+    smp_wmb();
     patch_syscall_table(nr, fn);
 
     mutex_unlock(&hooked_entries_lock);
@@ -104,7 +109,7 @@ void ksu_syscall_table_unhook(int nr)
 
     for (i = 0; i < hooked_count; i++) {
         if (hooked_entries[i].nr == nr) {
-            patch_syscall_table(nr, hooked_entries[i].orig);
+            ksu_hook_restore_slot((void **)&ksu_syscall_table[nr], (void *)hooked_entries[i].orig, "syscall");
             // Remove entry by swapping with last
             hooked_entries[i] = hooked_entries[--hooked_count];
             mutex_unlock(&hooked_entries_lock);
@@ -147,21 +152,32 @@ static int __init ksu_find_ni_syscall_slots(int *out_slots, int max_slots)
  */
 static long __nocfi ksu_syscall_dispatcher(const struct pt_regs *regs)
 {
+    struct ksu_syscall_guard guard;
+    long ret;
+
+    ksu_syscall_enter(&guard);
     /* Restore the trap state before the real handler (and signal restart)
      * sees it. Do not use a user argument register as scratch storage.
      */
     int orig_nr = ksu_riscv_restore_syscall((struct pt_regs *)regs, ksu_dispatcher_nr, __NR_syscalls);
-    if (orig_nr < 0)
-        return orig_nr;
+    if (orig_nr < 0) {
+        ret = orig_nr;
+        goto out;
+    }
 
     if (likely(orig_nr >= 0 && orig_nr < __NR_syscalls)) {
         ksu_syscall_hook_fn fn = READ_ONCE(syscall_hooks[orig_nr]);
-        if (likely(fn))
-            return fn(orig_nr, regs);
+        if (likely(fn)) {
+            ret = fn(orig_nr, regs);
+            goto out;
+        }
     }
 
     /* A hook may have been removed after sys_enter selected this dispatcher. */
-    return ksu_syscall_table[orig_nr](regs);
+    ret = ksu_syscall_table[orig_nr](regs);
+out:
+    ksu_syscall_leave(&guard);
+    return ret;
 }
 
 // Register a handler into the dispatcher's routing table.
@@ -234,18 +250,16 @@ void __exit ksu_syscall_hook_exit(void)
         syscall_fn_t orig = hooked_entries[i].orig;
 
         pr_info("restore syscall %d to 0x%lx\n", nr, (unsigned long)orig);
-        if (ksu_patch_text(&ksu_syscall_table[nr], &orig, sizeof(orig), KSU_PATCH_TEXT_FLUSH_DCACHE)) {
-            pr_err("restore syscall %d failed\n", nr);
-        }
+        ksu_hook_restore_slot((void **)&ksu_syscall_table[nr], (void *)orig, "syscall");
     }
     hooked_count = 0;
     mutex_unlock(&hooked_entries_lock);
 
 clear_state:
-    // Now that the syscall table is restored, clear internal state.
-    // At this point the tracepoint is already unregistered and synchronized
-    // (done by ksu_syscall_hook_manager_exit before calling us), so no new
-    // dispatches will occur.
+    /* Close fetched-pointer entry windows, drain sleeping handlers, then close
+     * their return windows before clearing metadata or freeing hook state.
+     */
+    ksu_syscall_synchronize();
     memset(syscall_hooks, 0, sizeof(syscall_hooks));
     ksu_dispatcher_nr = -1;
 

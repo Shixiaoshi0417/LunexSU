@@ -23,6 +23,7 @@
 #include "infra/file_wrapper.h"
 #include "selinux/selinux.h"
 #include "hook/syscall_hook.h"
+#include "hook/syscall_lifecycle.h"
 #include "feature/adb_root.h"
 #include "feature/selinux_hide.h"
 #include "feature/module_blacklist.h"
@@ -93,6 +94,7 @@ module_param_named(bundled, ksu_bundled, bool, 0);
 
 int __init kernelsu_init(void)
 {
+    int ret;
     pr_info("welcome to LunexSU version " __stringify(KERNEL_SU_VERSION) ", package name " KSU_PACKAGE_NAME "\n");
 #if defined(__x86_64__) && !defined(CONFIG_KSU_X86_PATCH_SYSCALL_DISPATCHER)
     // If the kernel has the hardening patch, X86_FEATURE_INDIRECT_SAFE must be set
@@ -136,6 +138,12 @@ int __init kernelsu_init(void)
     }
 
     ksu_init_symbol_resolver();
+    ret = ksu_syscall_lifecycle_init();
+    if (ret) {
+        pr_err("syscall lifecycle unavailable: %d\n", ret);
+        put_cred(ksu_cred);
+        return ret;
+    }
     ksu_syscall_hook_init();
 
     // Block modules early, before vendor modules are loaded in second stage.
@@ -235,6 +243,7 @@ void __exit kernelsu_exit(void)
     ksu_module_blacklist_exit();
 
     put_cred(ksu_cred);
+    ksu_syscall_lifecycle_exit();
 }
 
 #if NEED_OWN_STACKPROTECTOR

@@ -37,7 +37,10 @@ fn is_forced(id: u32) -> bool {
 }
 
 pub fn load_binary_config() -> Result<HashMap<u32, u64>> {
-    let path = Path::new(FEATURE_CONFIG_PATH);
+    load_binary_config_at(Path::new(FEATURE_CONFIG_PATH))
+}
+
+fn load_binary_config_at(path: &Path) -> Result<HashMap<u32, u64>> {
     if !path.exists() {
         log::info!("Feature config not found, using defaults");
         return Ok(HashMap::new());
@@ -93,9 +96,16 @@ pub fn load_binary_config() -> Result<HashMap<u32, u64>> {
 
 pub fn save_binary_config(features: &HashMap<u32, u64>) -> Result<()> {
     crate::utils::ensure_dir_exists(Path::new(defs::WORKING_DIR))?;
+    save_binary_config_at(features, Path::new(FEATURE_CONFIG_PATH))
+}
 
-    let path = Path::new(FEATURE_CONFIG_PATH);
-    let mut file = File::create(path).with_context(|| "Failed to create feature config")?;
+fn save_binary_config_at(features: &HashMap<u32, u64>, path: &Path) -> Result<()> {
+    let parent = path
+        .parent()
+        .context("Feature config has no parent directory")?;
+    let mut staged = tempfile::NamedTempFile::new_in(parent)
+        .context("Failed to create temporary feature config")?;
+    let file = staged.as_file_mut();
 
     file.write_all(&FEATURE_MAGIC.to_le_bytes())
         .with_context(|| "Failed to write magic")?;
@@ -116,6 +126,12 @@ pub fn save_binary_config(features: &HashMap<u32, u64>) -> Result<()> {
 
     file.sync_all()
         .with_context(|| "Failed to sync feature config")?;
+    staged
+        .persist(path)
+        .context("Failed to publish feature config")?;
+    File::open(parent)?
+        .sync_all()
+        .context("Failed to sync feature config directory")?;
 
     log::info!("Saved {} features to config", features.len());
     Ok(())
@@ -336,7 +352,7 @@ pub fn load_config_and_apply() -> Result<()> {
 pub fn save_config() -> Result<()> {
     // Keep persisted values of forced features, they are in effect again once
     // the boot config no longer forces them.
-    let mut features = load_binary_config().unwrap_or_default();
+    let mut features = load_binary_config()?;
 
     for feature_id in &FeatureId::ALL {
         let id = *feature_id as u32;
@@ -462,9 +478,43 @@ pub fn init_features() -> Result<()> {
 
     apply_config(&features);
 
-    // Save the configuration (excluding managed features)
-    save_binary_config(&features)?;
-    log::info!("Saved feature configuration to file");
+    // Module management is a runtime filter. Keep the user's saved values so
+    // disabling a managing module restores them without rewriting on each boot.
 
     Ok(())
+}
+
+#[cfg(test)]
+mod persistence_tests {
+    use super::*;
+
+    #[test]
+    fn replacement_keeps_previous_inode_intact_and_loads_complete_config() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("config");
+        save_binary_config_at(&HashMap::from([(1, 42)]), &path).unwrap();
+        let mut previous = File::open(&path).unwrap();
+        let before = std::fs::read(&path).unwrap();
+        let values = HashMap::from([(2, 123), (4, 456)]);
+        save_binary_config_at(&values, &path).unwrap();
+        assert_eq!(load_binary_config_at(&path).unwrap(), values);
+        let mut retained = Vec::new();
+        previous.read_to_end(&mut retained).unwrap();
+        assert_eq!(retained, before);
+        assert_eq!(std::fs::read_dir(root.path()).unwrap().count(), 1);
+    }
+
+    #[test]
+    fn failed_publication_preserves_destination_and_removes_temporary() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("config");
+        std::fs::create_dir(&path).unwrap();
+        std::fs::write(path.join("old"), "retained").unwrap();
+        assert!(save_binary_config_at(&HashMap::from([(1, 2)]), &path).is_err());
+        assert_eq!(
+            std::fs::read_to_string(path.join("old")).unwrap(),
+            "retained"
+        );
+        assert_eq!(std::fs::read_dir(root.path()).unwrap().count(), 1);
+    }
 }

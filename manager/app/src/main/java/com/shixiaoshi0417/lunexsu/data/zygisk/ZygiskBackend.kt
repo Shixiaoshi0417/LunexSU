@@ -32,8 +32,9 @@ internal data class ZygiskModuleFlags(
     val remove: Boolean = false,
     val disabled: Boolean = false,
     val legacyVex: Boolean = false,
+    val unownedCopy: Boolean = false,
 ) {
-    val isOwned: Boolean get() = present && owned
+    val isOwned: Boolean get() = present && owned && !unownedCopy
     val configured: Boolean get() = isOwned && !remove && !disabled
     // Removals run until reboot; staged installs only start on the next boot.
     val active: Boolean get() = isOwned && !update && !disabled
@@ -48,8 +49,17 @@ data class ZygiskStatus(
     val nextNextConfigured: Boolean = false,
     val nextNextActive: Boolean = false,
     val legacyVex: Boolean = false,
+    val occupiedIds: Set<String> = emptySet(),
 ) {
     val pendingReboot: Boolean get() = configured != active || nextNextConfigured != nextNextActive
+
+    /** Different-ID injectors are disabled at boot, never overwritten by an install. */
+    fun conflictFor(target: ZygiskBackend?, nextNext: Boolean = false): String? {
+        if (target == null) return null
+        val ids = occupiedIds.ifEmpty { setOfNotNull(conflictId) }
+        return listOfNotNull(target.moduleId, ZygiskModule.NextNext.moduleId.takeIf { nextNext })
+            .firstOrNull { it in ids }
+    }
 }
 
 internal fun zygiskStatusOf(flags: Map<ZygiskModule, ZygiskModuleFlags>, monitorRunning: Boolean): ZygiskStatus =
@@ -57,13 +67,15 @@ internal fun zygiskStatusOf(flags: Map<ZygiskModule, ZygiskModuleFlags>, monitor
         configured = ZygiskBackend.entries.firstOrNull { flags[it.module]?.configured == true },
         active = ZygiskBackend.entries.firstOrNull { flags[it.module]?.active == true },
         monitorRunning = monitorRunning,
-        conflictId = ZygiskModule.entries.firstOrNull { flags[it]?.let { f -> f.present && !f.owned } == true }?.moduleId,
+        conflictId = ZygiskModule.entries.firstOrNull { flags[it]?.let { f -> f.present && !f.isOwned } == true }?.moduleId,
         nextNextConfigured = flags[ZygiskModule.NextNext]?.configured == true,
         nextNextActive = flags[ZygiskModule.NextNext]?.active == true,
         legacyVex = flags[ZygiskModule.Re]?.let { it.isOwned && it.legacyVex } == true,
+        occupiedIds = ZygiskModule.entries.filter { flags[it]?.let { f -> f.present && !f.isOwned } == true }
+            .mapTo(mutableSetOf()) { it.moduleId },
     )
 
-/** Lines: module id present owned update remove disabled legacyVex; monitor 0|1. */
+/** Lines: module id present owned update remove disabled legacyVex [unownedCopy]; monitor 0|1. */
 internal fun parseZygiskFlags(lines: List<String>): Pair<Map<ZygiskModule, ZygiskModuleFlags>, Boolean> {
     val flags = mutableMapOf<ZygiskModule, ZygiskModuleFlags>()
     var monitor = false
@@ -71,9 +83,9 @@ internal fun parseZygiskFlags(lines: List<String>): Pair<Map<ZygiskModule, Zygis
         when (fields.firstOrNull()) {
             "module" -> {
                 val module = ZygiskModule.entries.firstOrNull { it.moduleId == fields.getOrNull(1) }
-                if (module != null && fields.size == 8) {
+                if (module != null && fields.size in 8..9 && fields.drop(2).all { it == "0" || it == "1" }) {
                     val bits = fields.drop(2).map { it == "1" }
-                    flags[module] = ZygiskModuleFlags(bits[0], bits[1], bits[2], bits[3], bits[4], bits[5])
+                    flags[module] = ZygiskModuleFlags(bits[0], bits[1], bits[2], bits[3], bits[4], bits[5], bits.getOrElse(6) { false })
                 }
             }
             "monitor" -> monitor = fields.getOrNull(1) == "1"
@@ -85,9 +97,10 @@ internal fun parseZygiskFlags(lines: List<String>): Pair<Map<ZygiskModule, Zygis
 internal fun zygiskStatusScript(): String = buildString {
     ZygiskModule.entries.forEach { module ->
         val id = module.moduleId
-        appendLine("m=/data/adb/modules/$id; u=/data/adb/modules_update/$id; p=0; o=0; up=0; rm=0; d=0; v=0")
-        appendLine("if [ -d \"\$m\" ] || [ -d \"\$u\" ]; then p=1; fi")
+        appendLine("m=/data/adb/modules/$id; u=/data/adb/modules_update/$id; p=0; o=0; up=0; rm=0; d=0; v=0; x=0")
+        appendLine("if [ -e \"\$m\" ] || [ -L \"\$m\" ] || [ -e \"\$u\" ] || [ -L \"\$u\" ]; then p=1; fi")
         appendLine("if [ -f \"\$m/$ZYGISK_OWNER_MARKER\" ] || [ -f \"\$u/$ZYGISK_OWNER_MARKER\" ]; then o=1; fi")
+        appendLine("for dir in \"\$m\" \"\$u\"; do if { [ -e \"\$dir\" ] || [ -L \"\$dir\" ]; } && { [ ! -d \"\$dir\" ] || [ -L \"\$dir\" ] || [ ! -f \"\$dir/$ZYGISK_OWNER_MARKER\" ] || [ -L \"\$dir/$ZYGISK_OWNER_MARKER\" ]; }; then x=1; fi; done")
         appendLine("if [ -e \"\$m/update\" ] || [ -d \"\$u\" ]; then up=1; fi")
         appendLine("if [ -e \"\$m/remove\" ] || [ -e \"\$u/remove\" ]; then rm=1; fi")
         appendLine("if [ -e \"\$m/disable\" ] || [ -e \"\$u/disable\" ]; then d=1; fi")
@@ -95,7 +108,7 @@ internal fun zygiskStatusScript(): String = buildString {
             appendLine("prop=\"\$m/module.prop\"; [ -f \"\$u/module.prop\" ] && prop=\"\$u/module.prop\"")
             appendLine("grep -q '^name=VexZygisk' \"\$prop\" 2>/dev/null && v=1")
         }
-        appendLine("echo \"module $id \$p \$o \$up \$rm \$d \$v\"")
+        appendLine("echo \"module $id \$p \$o \$up \$rm \$d \$v \$x\"")
     }
     appendLine("if pidof zygisk-ptrace64 >/dev/null 2>&1 || pidof zygisk-ptrace32 >/dev/null 2>&1; then echo 'monitor 1'; else echo 'monitor 0'; fi")
 }
@@ -118,6 +131,7 @@ internal fun planZygiskChange(
 ): List<ZygiskStep> = buildList {
     require(!nextNext || target != null) { "ZygiskNextNext requires a backend" }
     require(!requiresVexRemoval(flags, target)) { "Disable Vex and reboot before installing ReZygisk" }
+    require(zygiskStatusOf(flags, false).conflictFor(target, nextNext) == null) { "External module occupies the requested built-in ID" }
     fun enable(module: ZygiskModule) {
         val current = flags[module]
         when {

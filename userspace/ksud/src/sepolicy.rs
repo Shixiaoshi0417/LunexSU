@@ -19,6 +19,11 @@ fn parse_single_word(input: &str) -> IResult<&str, &str> {
     take_while1(is_sepolicy_char).parse(input)
 }
 
+// Paths and SELinux contexts include '/', ':', '.', and MLS category lists.
+fn parse_genfs_token(input: &str) -> IResult<&str, &str> {
+    take_while1(|c: char| !c.is_whitespace() && c != ';' && c != '\0').parse(input)
+}
+
 fn parse_bracket_objs(input: &str) -> IResult<&str, SeObject<'_>> {
     let (input, (_, words, _)) = (
         tag("{"),
@@ -322,9 +327,9 @@ impl<'a> SeObjectParser<'a> for GenFsCon<'a> {
         let (input, _) = space1(input)?;
         let (input, fs) = parse_single_word(input)?;
         let (input, _) = space1(input)?;
-        let (input, path) = parse_single_word(input)?;
+        let (input, path) = parse_genfs_token(input)?;
         let (input, _) = space1(input)?;
-        let (input, context) = parse_single_word(input)?;
+        let (input, context) = parse_genfs_token(input)?;
         Ok((input, GenFsCon::new(fs, path, context)))
     }
 }
@@ -776,4 +781,34 @@ pub fn check_rule(policy: &str) -> Result<()> {
     };
     parse_sepolicy(policy.trim(), true)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod genfs_tests {
+    use super::*;
+
+    #[test]
+    fn genfs_paths_and_mls_contexts_reach_atomic_payload() {
+        for strict in [false, true] {
+            for path in ["/", "/devices/platform/soc/1.0:bus/@node"] {
+                let rule = format!("genfscon sysfs {path} u:object_r:sysfs:s0:c0,c2.c5");
+                let statements = parse_sepolicy(&rule, strict).unwrap();
+                assert_eq!(statements.len(), 1);
+                let PolicyStatement::GenFsCon(parsed) = &statements[0] else {
+                    panic!("genfscon missing")
+                };
+                assert_eq!(parsed.partial_path, path);
+                assert_eq!(parsed.fs_context, "u:object_r:sysfs:s0:c0,c2.c5");
+                let atomic = flatten_atomic_statements(&statements).unwrap();
+                let payload = serialize_atomic_statements(&atomic).unwrap();
+                assert!(payload.windows(path.len()).any(|s| s == path.as_bytes()));
+                assert!(
+                    payload
+                        .windows(parsed.fs_context.len())
+                        .any(|s| s == parsed.fs_context.as_bytes())
+                );
+            }
+        }
+        assert!(parse_sepolicy("genfscon sysfs /", true).is_err());
+    }
 }

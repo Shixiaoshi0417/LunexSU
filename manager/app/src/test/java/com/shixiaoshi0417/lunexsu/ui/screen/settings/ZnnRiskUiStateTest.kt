@@ -53,8 +53,16 @@ class ZnnRiskUiStateTest {
     }
 
     @Test
-    fun externalModuleConflictCannotConfirm() {
-        assertFalse(ready.copy(zygiskStatus = ready.zygiskStatus!!.copy(conflictId = "external")).canConfirmZnnRisk)
+    fun occupiedCompanionCannotConfirm() {
+        assertFalse(ready.copy(zygiskStatus = ready.zygiskStatus!!.copy(conflictId = "zygisknextsu")).canConfirmZnnRisk)
+    }
+
+    @Test
+    fun differentIdInjectorDoesNotBypassTheExistingRiskRequirements() {
+        val state = ready.copy(zygiskStatus = ready.zygiskStatus!!.copy(conflictId = "zygisksu"))
+        assertTrue(state.canConfirmZnnRisk)
+        assertFalse(state.copy(znnRecoveryConfirmed = false).canConfirmZnnRisk)
+        assertFalse(state.copy(znnRiskSecondsRemaining = 1).canConfirmZnnRisk)
     }
 
     @Test

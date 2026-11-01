@@ -42,6 +42,8 @@ struct ksu_lsm_hook {
 extern struct srcu_struct ksu_hook_srcu;
 int ksu_hook_lifecycle_ready(void);
 void ksu_hook_synchronize(void);
+/* Same entry/return grace periods, but drain the caller's sleepable domain. */
+void ksu_hook_synchronize_srcu(struct srcu_struct *srcu);
 void ksu_hook_restore_slot(void **slot, void *original, const char *name);
 
 static inline int ksu_hook_read_lock(void)

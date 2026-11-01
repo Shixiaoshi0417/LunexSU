@@ -33,3 +33,6 @@ jobs:
 
       - name: Check input layout ownership and keyboard guards
         run: python3 tests/ime/test_input_layouts.py
+
+      - name: Test Sui source provenance, packaging and public identity boundaries
+        run: python3 -m unittest discover -s tests/sui -v

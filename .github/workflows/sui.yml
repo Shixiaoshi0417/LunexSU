@@ -1,0 +1,64 @@
+name: Build managed Sui payload
+
+on:
+  workflow_call:
+    inputs:
+      expected_size:
+        required: true
+        type: string
+      expected_hash:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 13114758
+          packages: platform-tools
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Validate packaging, source provenance and Manager trust without devices
+        run: python3 -m unittest discover -s tests/sui -v
+      - name: Install isolated Sui toolchain
+        run: |
+          ndk=$(sed -n 's/^android.ndkVersion=//p' userspace/sui/gradle.properties)
+          build_tools=$(sed -n 's/^android.buildToolsVersion=//p' userspace/sui/gradle.properties)
+          compile_sdk=$(sed -n 's/^android.compileSdk=//p' userspace/sui/gradle.properties)
+          test -n "$ndk" && test -n "$build_tools" && test -n "$compile_sdk"
+          sdkmanager "ndk;$ndk" "build-tools;$build_tools" "platforms;android-$compile_sdk.0" "cmake;4.1.0"
+      - name: Compile Sui without device tasks
+        working-directory: userspace/sui
+        env:
+          EXPECTED_SIZE: ${{ inputs.expected_size }}
+          EXPECTED_HASH: ${{ inputs.expected_hash }}
+        run: |
+          package=com.shixiaoshi0417.lunexsu
+          if [ '${{ github.event_name }}' = pull_request ]; then package="$package.pr"; fi
+          bash gradlew zipRelease --no-daemon --console=plain \
+            -Plunexsu.managerPackage="$package" \
+            -Plunexsu.managerCertSize="$EXPECTED_SIZE" \
+            -Plunexsu.managerCertSha256="$EXPECTED_HASH"
+      - name: Verify and collect per-ABI build outputs
+        env:
+          EXPECTED_SIZE: ${{ inputs.expected_size }}
+          EXPECTED_HASH: ${{ inputs.expected_hash }}
+        run: |
+          package=com.shixiaoshi0417.lunexsu
+          if [ '${{ github.event_name }}' = pull_request ]; then package="$package.pr"; fi
+          python3 scripts/prepare_sui_artifact.py --source userspace/sui --output "$RUNNER_TEMP/sui-payload" \
+            --manager-package "$package" --manager-size "$EXPECTED_SIZE" --manager-hash "$EXPECTED_HASH"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sui-payload
+          path: ${{ runner.temp }}/sui-payload/*
+          if-no-files-found: error

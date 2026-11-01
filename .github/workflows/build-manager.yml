@@ -10,6 +10,12 @@ on:
       - '.github/workflows/ksud.yml'
       - '.github/workflows/ksud-extra.yml'
       - '.github/workflows/ksuinit.yml'
+      - '.github/workflows/sui.yml'
+      - 'scripts/prepare_sui_artifact.py'
+      - 'scripts/stage_sui_payload.py'
+      - 'scripts/sui_source_inputs.py'
+      - 'scripts/sui_build_provenance.py'
+      - 'scripts/sui_manager_binding.py'
       - '.github/scripts/setup-rust-build.sh'
       - '.github/scripts/check-bundled-assets.py'
       - '.github/scripts/check-pr-unsigned-apk.py'
@@ -31,6 +37,12 @@ on:
       - '.github/workflows/ksud.yml'
       - '.github/workflows/ksud-extra.yml'
       - '.github/workflows/ksuinit.yml'
+      - '.github/workflows/sui.yml'
+      - 'scripts/prepare_sui_artifact.py'
+      - 'scripts/stage_sui_payload.py'
+      - 'scripts/sui_source_inputs.py'
+      - 'scripts/sui_build_provenance.py'
+      - 'scripts/sui_manager_binding.py'
       - '.github/scripts/setup-rust-build.sh'
       - '.github/scripts/check-bundled-assets.py'
       - '.github/scripts/check-pr-unsigned-apk.py'
@@ -156,8 +168,16 @@ jobs:
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.no_root_demo == true) }}
     uses: ./.github/workflows/ksuinit.yml
 
+  build-sui:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.no_root_demo == true) }}
+    needs: generate-key
+    uses: ./.github/workflows/sui.yml
+    with:
+      expected_size: ${{ needs.generate-key.outputs.expected_size }}
+      expected_hash: ${{ needs.generate-key.outputs.expected_hash }}
+
   build-ksud:
-    needs: [build-lkm, build-ksuinit]
+    needs: [generate-key, build-lkm, build-ksuinit, build-sui]
     strategy:
       matrix:
         include:
@@ -169,9 +189,12 @@ jobs:
       target: ${{ matrix.target }}
       pack_lkm: true
       pack_ksuinit: true
+      pack_sui: true
+      expected_size: ${{ needs.generate-key.outputs.expected_size }}
+      expected_hash: ${{ needs.generate-key.outputs.expected_hash }}
   
   build-ksud-extra:
-    needs: [build-lkm, build-ksuinit]
+    needs: [generate-key, build-lkm, build-ksuinit, build-sui]
     strategy:
       matrix:
         include:
@@ -191,6 +214,9 @@ jobs:
       os: ${{ matrix.os }}
       pack_lkm: true
       pack_ksuinit: true
+      pack_sui: true
+      expected_size: ${{ needs.generate-key.outputs.expected_size }}
+      expected_hash: ${{ needs.generate-key.outputs.expected_hash }}
 
   build-manager:
     needs: [generate-key, build-ksud]
@@ -218,12 +244,6 @@ jobs:
           test -n "$PROD_KEYSTORE_PASSWORD"
           test -n "$PROD_KEY_ALIAS"
           test -n "$PROD_KEY_PASSWORD"
-          {
-            printf 'KEYSTORE_PASSWORD=%s\n' "$PROD_KEYSTORE_PASSWORD"
-            printf 'KEY_ALIAS=%s\n' "$PROD_KEY_ALIAS"
-            printf 'KEY_PASSWORD=%s\n' "$PROD_KEY_PASSWORD"
-            printf 'KEYSTORE_FILE=key.jks\n'
-          } >> gradle.properties
           printf '%s' "$PROD_KEYSTORE" | base64 -d > key.jks
 
       - name: Setup Java
@@ -253,6 +273,13 @@ jobs:
           done
 
       - name: Build with Gradle
+        env:
+          # Environment project properties preserve literal backslashes and spaces;
+          # writing these values into Java Properties would reinterpret escapes.
+          ORG_GRADLE_PROJECT_KEYSTORE_FILE: key.jks
+          ORG_GRADLE_PROJECT_KEYSTORE_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.KEYSTORE_PASSWORD || '' }}
+          ORG_GRADLE_PROJECT_KEY_ALIAS: ${{ github.event_name != 'pull_request' && secrets.KEY_ALIAS || '' }}
+          ORG_GRADLE_PROJECT_KEY_PASSWORD: ${{ github.event_name != 'pull_request' && secrets.KEY_PASSWORD || '' }}
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             ./gradlew clean assembleRelease :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin -PIS_PR_BUILD=true

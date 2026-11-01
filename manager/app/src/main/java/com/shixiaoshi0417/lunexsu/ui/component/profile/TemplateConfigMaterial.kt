@@ -60,16 +60,7 @@ fun TemplateConfigMaterial(
                 val templateInfo = getTemplateInfoById(tid)
                 if (templateInfo != null && setSepolicy(tid, templateInfo.rules.joinToString("\n"))) {
                     onProfileChange(
-                        profile.copy(
-                            rootTemplate = tid,
-                            rootUseDefault = false,
-                            uid = templateInfo.uid,
-                            gid = templateInfo.gid,
-                            groups = templateInfo.groups,
-                            capabilities = templateInfo.capabilities,
-                            context = templateInfo.context,
-                            namespace = templateInfo.namespace,
-                        )
+                        profile.withRootTemplate(tid, templateInfo)
                     )
                 }
                 showDialog.value = false

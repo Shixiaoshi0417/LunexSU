@@ -36,9 +36,11 @@ object BuiltinZygisk {
     val defaultBackend: ZygiskBackend?
         get() = ZygiskBackend.Default.takeIf { it in supportedBackends } ?: supportedBackends.firstOrNull()
 
-    suspend fun status(): ZygiskStatus = withContext(Dispatchers.IO) {
-        val (flags, monitor) = readFlags()
-        zygiskStatusOf(flags, monitor)
+    suspend fun status(): ZygiskStatus? = withContext(Dispatchers.IO) {
+        runCatching {
+            val (flags, monitor) = readFlags()
+            zygiskStatusOf(flags, monitor)
+        }.getOrNull()
     }
 
     /** Homepage diagnostics only: no module commands, installs or configuration writes. */
@@ -52,13 +54,16 @@ object BuiltinZygisk {
 
     /** Ids of the modules this switch installed, which the module list leaves to the settings card. */
     suspend fun ownedModuleIds(): Set<String> = withContext(Dispatchers.IO) {
-        readFlags().first.filterValues { it.isOwned }.keys.mapTo(mutableSetOf()) { it.moduleId }
+        runCatching { readFlags().first.filterValues { it.isOwned }.keys.mapTo(mutableSetOf()) { it.moduleId } }
+            .getOrDefault(emptySet())
     }
 
     suspend fun apply(target: ZygiskBackend?, nextNext: Boolean = false): ZygiskApplyResult = withContext(Dispatchers.IO) {
         mutex.withLock {
-            val (flags, monitor) = readFlags()
-            val conflict = zygiskStatusOf(flags, monitor).conflictId
+            val (flags, monitor) = runCatching { readFlags() }.getOrElse {
+                return@withLock ZygiskApplyResult.Failed(it.message ?: "Cannot read Zygisk ownership")
+            }
+            val conflict = zygiskStatusOf(flags, monitor).conflictFor(target, nextNext)
             if (target != null && conflict != null) return@withLock ZygiskApplyResult.Conflict(conflict)
             if (target != null && target !in supportedBackends) {
                 return@withLock ZygiskApplyResult.Failed("${target.displayName}: ${Build.SUPPORTED_ABIS.firstOrNull()}")
@@ -84,12 +89,30 @@ object BuiltinZygisk {
                             is ZygiskRollback.DiscardInstall -> discardInstall(action.module)
                         }
                     }
-                    val message = (listOf(error) + rollbackErrors.map { "rollback: $it" }).joinToString("\n")
+                    val refreshError = ksud("initrc refresh")
+                    val message = (listOf(error) + (rollbackErrors + listOfNotNull(refreshError))
+                        .map { "rollback: $it" }).joinToString("\n")
                     return@withLock ZygiskApplyResult.Failed(message)
                 }
                 done += step
             }
-            val status = zygiskStatusOf(readFlags().first, monitor)
+            // Installation generates preinit before the ownership markers are written. Refresh
+            // after the whole change, so foreign injector hooks are excluded from the next boot.
+            ksud("initrc refresh")?.let { error ->
+                val rollbackErrors = zygiskRollback(flags, done.dropLast(1), done.last()).mapNotNull { action ->
+                    when (action) {
+                        is ZygiskRollback.Ksud -> ksud(action.args)
+                        is ZygiskRollback.DiscardInstall -> discardInstall(action.module)
+                    }
+                } + listOfNotNull(ksud("initrc refresh"))
+                return@withLock ZygiskApplyResult.Failed(
+                    (listOf(error) + rollbackErrors.map { "rollback: $it" }).joinToString("\n"),
+                )
+            }
+            val after = runCatching { readFlags().first }.getOrElse {
+                return@withLock ZygiskApplyResult.Failed(it.message ?: "Cannot verify Zygisk ownership")
+            }
+            val status = zygiskStatusOf(after, monitor)
             if (status.configured != target || status.nextNextConfigured != nextNext) {
                 ZygiskApplyResult.Failed("expected ${target?.displayName ?: "off"}, got ${status.configured?.displayName ?: "off"}")
             } else {
@@ -99,8 +122,11 @@ object BuiltinZygisk {
     }
 
     private fun readFlags(): Pair<Map<ZygiskModule, ZygiskModuleFlags>, Boolean> {
-        val out = withRootShell { newJob().add(zygiskStatusScript()).to(ArrayList(), null).exec().out }
-        return parseZygiskFlags(out)
+        val result = withRootShell { newJob().add(zygiskStatusScript()).to(ArrayList(), null).exec() }
+        check(result.isSuccess) { "Cannot read Zygisk module ownership" }
+        val flags = parseZygiskFlags(result.out)
+        check(flags.first.size == ZygiskModule.entries.size) { "Incomplete Zygisk module ownership" }
+        return flags
     }
 
     private fun discardInstall(module: ZygiskModule): String? = try {
@@ -113,12 +139,15 @@ object BuiltinZygisk {
     }
 
     /** Runs a ksud command and returns null on success or the tail of its output on failure. */
-    private fun ksud(args: String): String? {
+    private fun ksud(args: String): String? = try {
         val out = ArrayList<String>()
         // Module installers run arbitrary scripts, so they get a fresh shell like flashModule does.
         val result = withNewRootShell { newJob().add("${getKsuDaemonPath()} $args").to(out, out).exec() }
         Log.i(TAG, "ksud $args: ${result.code}")
-        return if (result.isSuccess) null else out.failureSummary(result.code)
+        if (result.isSuccess) null else out.failureSummary(result.code)
+    } catch (e: Exception) {
+        Log.w(TAG, "ksud $args failed", e)
+        e.message ?: e.javaClass.simpleName
     }
 
     private fun install(module: ZygiskModule): String? {

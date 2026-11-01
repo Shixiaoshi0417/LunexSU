@@ -7,10 +7,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,10 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import com.shixiaoshi0417.lunexsu.data.registry.UpdateVerification
 import com.shixiaoshi0417.lunexsu.data.repository.ModuleRepoRepository
 import com.shixiaoshi0417.lunexsu.data.repository.ModuleRepoRepositoryImpl
@@ -44,7 +38,6 @@ import com.shixiaoshi0417.lunexsu.ui.util.hasMagisk
 import okhttp3.Request
 import java.text.Collator
 import java.util.Locale
-import kotlin.time.Duration.Companion.milliseconds
 import com.shixiaoshi0417.lunexsu.ui.util.toggleModule as toggleModuleUtil
 import com.shixiaoshi0417.lunexsu.ui.util.undoUninstallModule as undoUninstallModuleUtil
 import com.shixiaoshi0417.lunexsu.ui.util.uninstallModule as uninstallModuleUtil
@@ -59,19 +52,6 @@ class ModuleViewModel(
         private const val TAG = "ModuleViewModel"
     }
 
-    private data class ModuleUpdateSignature(
-        val updateJson: String,
-        val versionCode: Int,
-        val enabled: Boolean,
-        val update: Boolean,
-        val remove: Boolean
-    )
-
-    private data class ModuleUpdateCache(
-        val signature: ModuleUpdateSignature,
-        val info: ModuleUpdateInfo
-    )
-
     private val _uiState = MutableStateFlow(ModuleUiState())
     val uiState: StateFlow<ModuleUiState> = _uiState.asStateFlow()
 
@@ -79,12 +59,11 @@ class ModuleViewModel(
     private val _moduleEvent = Channel<ModuleEffect>(Channel.BUFFERED)
     val moduleEvent: Flow<ModuleEffect> = _moduleEvent.receiveAsFlow()
 
-    private val updateInfoMutex = Mutex()
-    private var updateInfoCache: MutableMap<String, ModuleUpdateCache> = mutableMapOf()
-    private val updateInfoInFlight = mutableSetOf<String>()
+    private val updateChecks = ModuleUpdateChecks(SystemClock::elapsedRealtime)
     private val searchQuery = MutableStateFlow("")
 
     private var fetchJob: Job? = null
+    private var fetchOwner: Any? = null
     private var environmentJob: Job? = null
 
     var isNeedRefresh = false
@@ -267,7 +246,9 @@ class ModuleViewModel(
         }
     }
 
-    fun fetchModuleList(checkUpdate: Boolean = false, resort: Boolean = true) {
+    fun fetchModuleList(checkUpdate: Boolean = false, resort: Boolean = true, forceUpdate: Boolean = false) {
+        val owner = Any()
+        fetchOwner = owner
         fetchJob?.cancel()
         _uiState.update { it.copy(isRefreshing = true) }
         fetchJob = viewModelScope.launch {
@@ -276,84 +257,22 @@ class ModuleViewModel(
 
                 loadModuleList(resort)
 
-                if (checkUpdate) syncModuleUpdateInfo(_uiState.value.modules)
+                if (checkUpdate) syncModuleUpdateInfo(_uiState.value.modules, forceUpdate)
 
                 Log.i(TAG, "load cost: ${SystemClock.elapsedRealtime() - start}, modules: ${_uiState.value.modules}")
             } finally {
-                _uiState.update { it.copy(isRefreshing = false, hasLoaded = true) }
+                if (fetchOwner === owner) {
+                    _uiState.update { it.copy(isRefreshing = false, hasLoaded = true) }
+                }
             }
         }
     }
 
-    private fun Module.toSignature(): ModuleUpdateSignature {
-        return ModuleUpdateSignature(
-            updateJson = updateJson,
-            versionCode = versionCode,
-            enabled = enabled,
-            update = update,
-            remove = remove
-        )
-    }
-
-    suspend fun syncModuleUpdateInfo(modules: List<Module>) {
+    suspend fun syncModuleUpdateInfo(modules: List<Module>, force: Boolean = false) {
         if (!_uiState.value.checkModuleUpdate) return
-
-        val modulesToFetch = mutableListOf<Triple<String, Module, ModuleUpdateSignature>>()
-        val removedIds = mutableSetOf<String>()
-
-        updateInfoMutex.withLock {
-            val ids = modules.map { it.id }.toSet()
-            updateInfoCache.keys.filter { it !in ids }.forEach { removedId ->
-                removedIds += removedId
-                updateInfoCache.remove(removedId)
-                updateInfoInFlight.remove(removedId)
-            }
-
-            modules.forEach { module ->
-                val signature = module.toSignature()
-                val cached = updateInfoCache[module.id]
-                if ((cached == null || cached.signature != signature) && updateInfoInFlight.add(module.id)) {
-                    modulesToFetch += Triple(module.id, module, signature)
-                }
-            }
-        }
-
-        val fetchedEntries = coroutineScope {
-            modulesToFetch.map { (id, module, signature) ->
-                async {
-                    val info = withTimeoutOrNull(5_000L.milliseconds) {
-                        withContext(Dispatchers.IO) { checkUpdate(module) }
-                    } ?: ModuleUpdateInfo.Empty
-                    id to ModuleUpdateCache(signature, info)
-                }
-            }.awaitAll()
-        }
-
-        val changedEntries = mutableListOf<Pair<String, ModuleUpdateInfo>>()
-        updateInfoMutex.withLock {
-            fetchedEntries.forEach { (id, entry) ->
-                val existing = updateInfoCache[id]
-                if (existing == null || existing.signature != entry.signature || existing.info != entry.info) {
-                    updateInfoCache[id] = entry
-                    changedEntries += id to entry.info
-                }
-                updateInfoInFlight.remove(id)
-            }
-        }
-
-        if (removedIds.isEmpty() && changedEntries.isEmpty()) {
-            return
-        }
-
+        val updates = updateChecks.sync(modules, force, repo::checkUpdate)
         withContext(Dispatchers.Main) {
-            _uiState.update { state ->
-                val newMap = state.updateInfo.toMutableMap()
-                removedIds.forEach { newMap.remove(it) }
-                changedEntries.forEach { (id, info) ->
-                    newMap[id] = info
-                }
-                state.copy(updateInfo = newMap)
-            }
+            _uiState.update { it.copy(updateInfo = updates) }
         }
     }
 
@@ -525,9 +444,5 @@ class ModuleViewModel(
             restricted = changelog.isNotBlank() && restricted,
             confirm = res.getString(R.string.module_update),
         )
-    }
-
-    private suspend fun checkUpdate(m: Module): ModuleUpdateInfo {
-        return repo.checkUpdate(m).getOrDefault(ModuleUpdateInfo.Empty)
     }
 }

@@ -301,6 +301,10 @@
     <string name="home_zygisk_observation_hint">模組標記及程序檢測不代表注入成功。未發現 ptrace 監視程序，亦不能判定 NeoZygisk 或 ZNN 是否運行。</string>
     <string name="home_zygisk_query_hint">需要可用的 Core 授權與 Root Shell；已授權時可稍後重試。查詢失敗不代表已關閉。</string>
     <string name="settings_zygisk_summary">預設關閉，開啟後使用 ReZygisk。每次變更都需重新啟動後生效</string>
+    <string name="settings_zygisk_enable_title">開啟內置 Zygisk？</string>
+    <string name="settings_zygisk_enable_confirm">下次開機啟用</string>
+    <string name="settings_zygisk_enable_warning">完整重新啟動後，LunexSU 會在模組啟動前停用已知模組 ID 為 rezygisk 及 zygisksu 的衝突注入器（Re/Vex、Neo/Zygisk Next），不會停用 LSPosed、Sui 或一般 Zygisk 外掛。\n\n外部模組若佔用了所選內置後端的相同 ID，不會被覆蓋，請先手動解除安裝並重新啟動。未知注入器及模組目錄外的全域啟動掛鈎不在自動處理範圍內，請手動排除衝突。現在不會停止正在執行的注入器。\n\n外部模組的停用標記會保留，關閉內置後亦不會自動恢復。請在關閉內置並重新啟動後再自行恢復外部模組。必須完整重新啟動，不保證相容性或故障恢復。</string>
+    <string name="settings_zygisk_external_boot">開啟內置後，外部注入器「%s」將在開機時停用</string>
     <string name="settings_zygisk_running">%s 運行中</string>
     <string name="settings_zygisk_not_running">%s 已啟用，但目前未運行</string>
     <string name="settings_zygisk_pending_enable">待重新啟動生效：重新啟動後啟用 %s</string>

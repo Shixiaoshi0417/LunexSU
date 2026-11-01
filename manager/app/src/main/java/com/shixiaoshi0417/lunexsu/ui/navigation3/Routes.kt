@@ -49,6 +49,10 @@ sealed interface Route : NavKey, Parcelable {
 
     @Parcelize
     @Serializable
+    data object Sui : Route
+
+    @Parcelize
+    @Serializable
     data object Sulog : Route
 
     @Parcelize

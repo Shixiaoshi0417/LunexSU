@@ -4,6 +4,9 @@
 
 - Built-in Zygisk is off by default. Enabling selects **ReZygisk**; the backend selector also
   offers **NeoZygisk**. VexZygisk is no longer bundled.
+- Every off-to-on request first opens a confirmation in Material, native MIUIX or Fina. It
+  explains the boot-time external-provider policy, persistent disable marks and full reboot.
+  Cancelling, leaving Settings or backgrounding the app discards this confirmation.
 - Directly below the selector, **Use ZygiskNextNext** adds Zygisk Next API support. This is an
   independent companion loader, not a third standard Zygisk backend. It defaults to off and is
   greyed out until built-in Zygisk is enabled. Switching Re/Neo preserves the companion selection;
@@ -35,8 +38,28 @@ warnings take precedence over optimistic status labels.
 
 ## Installation and recovery
 
-The payloads are bundled APK assets installed through ksud's normal module flow. This feature
-does not change ksud, the kernel, or the supercall interface.
+The payloads are bundled APK assets installed through ksud's normal module flow. ksud also
+enforces the coexistence policy below; the kernel and supercall interface are unchanged.
+
+### External standalone injectors
+
+Only the exact known provider IDs `rezygisk` (Re/Vex) and `zygisksu` (Neo/Zygisk Next) are
+recognized. A `zygisk/` plugin directory or a matching display name is **not** a provider signal.
+LSPosed, Sui, ordinary Zygisk plugins and the optional `zygisknextsu` companion are not external
+injectors to auto-disable. Unknown providers and global hooks outside module directories still
+require manual removal. In particular, disable marks cannot remove Vex's global hooks.
+
+When an enabled owned backend is configured, next-boot init.rc/preinit snapshots omit the other
+provider. After module promotion at post-fs-data, ksud creates `disable` markers for the other
+known provider before module policy and startup scripts. The per-module gate also applies to later
+stages, and fails closed for injectors on unsafe filesystem entries without blocking unrelated
+modules. No running process is killed or hot-switched. Safe mode retains its disable-all behavior.
+Staging the setting does not write external disable marks in the current boot. These guards require
+the matching updated ksud; they cannot undo hooks already executed earlier in an existing boot.
+
+Disable marks persist. Turning the built-in off never automatically re-enables an external
+provider. Disable the built-in and fully reboot before manually restoring an external injector.
+No automatic backup, adoption, migration or uninstall of external providers is performed.
 
 | Action | Next-boot configuration |
 |---|---|
@@ -60,7 +83,11 @@ own private state; this is not a promise to preserve all backend-specific settin
 All three owned modules carry `.lunexsu_builtin_zygisk` in `modules_update/<id>` and `modules/<id>`.
 They are hidden from the regular module list and managed through Settings. A matching module id
 in either directory without that marker is external or a failed install: it is neither adopted
-nor restored, and enabling is blocked until it is removed.
+nor restored. Only an external copy occupying the **requested backend or requested companion ID**
+blocks installation, even if disabled or pending removal. The user must uninstall it and reboot
+first. A different-ID known injector can remain installed and will be disabled on boot. Ownership
+must be consistent across live and staged copies; an owned live copy never authorizes overwriting
+an unowned staged copy (or vice versa).
 
 When switching, the new backend is staged before the old one is marked for removal. If the
 install fails, the old backend is not marked for removal. Rollback checks both directories even
@@ -135,8 +162,12 @@ is an open-source API loader, **not** the closed-source ZygiskNext distribution.
   after any change. NextNext can also affect namespaces and mounts, so metamodule compatibility
   and per-app umount behavior require device testing.
 - Neo warns but still installs when the kernel version code is at least 30000.
-- Local JVM tests cover planning, dependency/disabled-state rules, reboot state, rollback and Vex
-  migration. Python tests cover the ZIP conversion; no backend/device compatibility is implied.
+- Local JVM tests cover planning, explicit enable consent, same-ID ownership conflicts,
+  dependency/disabled-state rules, reboot state, rollback and Vex migration. Rust host tests use
+  temporary module trees to exercise boot reconciliation, next-boot filtering, persistent marks
+  and unsafe filesystem entries. Python fixtures execute the actual read-only ownership script
+  and check lifecycle wiring, rollback and ZIP conversion. These are not Android boot or injection
+  tests; no backend/device compatibility is implied.
 - Before release, test Re/Neo with the companion both off/on; every enable/disable/switch followed
   by reboot; failed installs/rollback; safe mode; external conflicts; Vex removal and late-load-hook
   cleanup; 32/64-bit apps, LSPosed and actual Zygisk Next API modules on stock and HyperOS devices.

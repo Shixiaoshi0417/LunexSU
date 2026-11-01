@@ -1,144 +1,99 @@
 import asyncio
-import os
-import sys
-from telethon import TelegramClient
 import json
+import os
+from pathlib import Path
+import sys
 
 API_ID = 611335
 API_HASH = "d524b414d21f4d37f08684c1df41ac9c"
 
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
-CHAT_ID = os.environ.get("CHAT_ID")
-MESSAGE_THREAD_ID = os.environ.get("MESSAGE_THREAD_ID")
-TITLE = os.environ.get("TITLE")
-VERSION = os.environ.get("VERSION")
-BRANCH = os.environ.get("BRANCH")
-RUN_URL = os.environ.get("RUN_URL")
-
-GITHUB_EVENT = json.loads(os.environ.get("GITHUB_EVENT"))
-
-if 'commits' in GITHUB_EVENT:
-    commits = GITHUB_EVENT['commits']
-    commit_message = ''
-    i = len(commits)
-    for commit in commits[::-1]:
-        msg_line = commit['message'].split('\n')
-        msg = msg_line[0].strip()
-        if len(msg_line) > 1:
-            msg += ' [..]'
-        if len(msg) > 100:
-            msg = msg[:97] + '...'
-        msg += ' by ' + commit['author']['username']
-        if len(msg) + 1 + len(commit_message) > 600:
-            commit_message = f'(other {i} commits)\n{commit_message}'
+def get_caption(event, title, version, branch, run_url):
+    commits = event.get("commits")
+    if commits is None:
+        head = event.get("head_commit")
+        commits = [head] if head else []
+    lines = []
+    for commit in reversed(commits):
+        message_lines = commit.get("message", "").splitlines() or [""]
+        message = message_lines[0].strip()
+        if len(message_lines) > 1:
+            message += " [..]"
+        if len(message) > 100:
+            message = message[:97] + "..."
+        author = commit.get("author") or {}
+        name = author.get("username") or author.get("name") or "unknown author"
+        line = f"{message} by {name}"
+        if sum(len(item) + 1 for item in lines) + len(line) > 600:
+            lines.insert(0, f"(other {len(commits) - len(lines)} commits)")
             break
-        else:
-            commit_message = f'{msg}\n{commit_message}'
-        i -= 1
-    commit_message = f'```\n{commit_message.strip()}\n```'
-elif 'head_commit' in GITHUB_EVENT:
-    msg = GITHUB_EVENT["head_commt"]["msg"]
-    if len(msg) > 256:
-        msg = msg[:253] + '...'
-    commit_message = f'```\n{msg.strip()}\n```\n'
-else:
-    commit_message = ''
-
-if 'compare' in GITHUB_EVENT:
-    commit_url = GITHUB_EVENT['compare']
-    commit_line = '[Compare](' + commit_url + ')\n'
-elif 'head_commit' in GITHUB_EVENT:
-    commit_url = GITHUB_EVENT['head_commit']['url']
-    commit_line = '[Commit](' + commit_url + ')\n'
-else:
-    commit_line = ''
+        lines.insert(0, line)
+    commit_message = "```\n" + "\n".join(lines) + "\n```\n" if lines else ""
+    head = event.get("head_commit") or {}
+    compare = event.get("compare")
+    commit_url = compare or head.get("url")
+    commit_link = f"[{'Compare' if compare else 'Commit'}]({commit_url})\n" if commit_url else ""
+    warning = ""
+    if branch == "dev":
+        warning = "\n⚠️⚠️**DEV VERSION, PLEASE BACKUP BEFORE INSTALLATION**⚠️⚠️"
+        warning += "\n⚠️⚠️**测试版，安装前请备份**⚠️⚠️"
+    message = (f"**{title}**\nBranch: {branch}\n#ci_{version}\n"
+               f"{commit_message}{commit_link}[Workflow run]({run_url}){warning}")
+    # Telegram counts UTF-16 code units. Include the DEV warning in the limit.
+    if len(message.encode("utf-16-le")) // 2 > 1024:
+        message = f"[Workflow run]({run_url}){warning}"
+    if len(message.encode("utf-16-le")) // 2 > 1024:
+        raise ValueError("Workflow URL exceeds the caption limit")
+    return message
 
 
-MSG_TEMPLATE = """
-**{title}**
-Branch: {branch}
-#ci_{version}
-{commit_message}{commit_url}[Workflow run]({run_url})
-""".strip()
-
-
-def get_caption():
-    msg = MSG_TEMPLATE.format(
-        title=TITLE,
-        branch=BRANCH,
-        version=VERSION,
-        commit_message=commit_message,
-        commit_url=commit_line,
-        run_url=RUN_URL,
-    )
-    if len(msg) > 1024:
-        msg = COMMIT_URL
-    if BRANCH == "dev":
-        msg += "\n⚠️⚠️**DEV VERSION, PLEASE BACKUP BEFORE INSTALLATION**⚠️⚠️"
-        msg += "\n⚠️⚠️**测试版，安装前请备份**⚠️⚠️"
-    return msg
-
-
-def check_environ():
-    global CHAT_ID, MESSAGE_THREAD_ID
-    if BOT_TOKEN is None:
-        print("[-] Invalid BOT_TOKEN")
-        exit(1)
-    if CHAT_ID is None:
-        print("[-] Invalid CHAT_ID")
-        exit(1)
-    else:
-        try:
-            CHAT_ID = int(CHAT_ID)
-        except:
-            pass
-    if RUN_URL is None:
-        print("[-] Invalid RUN_URL")
-        exit(1)
-    if TITLE is None:
-        print("[-] Invalid TITLE")
-        exit(1)
-    if VERSION is None:
-        print("[-] Invalid VERSION")
-        exit(1)
-    if BRANCH is None:
-        print("[-] Invalid BRANCH")
-        exit(1)
-    if MESSAGE_THREAD_ID is not None and MESSAGE_THREAD_ID != "":
-        try:
-            MESSAGE_THREAD_ID = int(MESSAGE_THREAD_ID)
-        except:
-            print("[-] Invaild MESSAGE_THREAD_ID")
-            exit(1)
-    else:
-        MESSAGE_THREAD_ID = None
+def required_environment(name):
+    value = os.environ.get(name)
+    if not value:
+        raise ValueError(f"Missing {name}")
+    return value
 
 
 async def main():
-    print("[+] Uploading to telegram")
-    check_environ()
+    # Read credentials only for the real upload, never during import or tests of
+    # event formatting. None of the credentials are included in diagnostics.
+    token = required_environment("BOT_TOKEN")
+    chat = required_environment("CHAT_ID")
+    try:
+        chat = int(chat)
+    except ValueError:
+        pass
+    thread = os.environ.get("MESSAGE_THREAD_ID")
+    thread = int(thread) if thread else None
+    caption = get_caption(
+        json.loads(os.environ.get("GITHUB_EVENT", "{}")),
+        required_environment("TITLE"), required_environment("VERSION"),
+        required_environment("BRANCH"), required_environment("RUN_URL"),
+    )
     files = sys.argv[1:]
-    print("[+] Files:", files)
-    if len(files) <= 0:
-        print("[-] No files to upload")
-        exit(1)
-    print("[+] Logging in Telegram with bot")
-    script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-    session_dir = os.path.join(script_dir, "ksubot")
-    async with await TelegramClient(session=session_dir, api_id=API_ID, api_hash=API_HASH).start(bot_token=BOT_TOKEN) as bot:
-        caption = [""] * len(files)
-        caption[-1] = get_caption()
-        print("[+] Caption: ")
-        print("---")
-        print(caption)
-        print("---")
-        print("[+] Sending")
-        await bot.send_file(entity=CHAT_ID, file=files, caption=caption, reply_to=MESSAGE_THREAD_ID, parse_mode="markdown")
-        print("[+] Done!")
+    if not files:
+        raise ValueError("No files to upload")
 
-if __name__ == "__main__":
+    from telethon import TelegramClient
+
+    session = str(Path(__file__).resolve().parent / "ksubot")
+    print("[+] Uploading to telegram")
+    async with await TelegramClient(session=session, api_id=API_ID, api_hash=API_HASH).start(bot_token=token) as bot:
+        captions = [""] * (len(files) - 1) + [caption]
+        await bot.send_file(entity=chat, file=files, caption=captions,
+                            reply_to=thread, parse_mode="markdown")
+    print("[+] Done!")
+
+
+def run():
     try:
         asyncio.run(main())
-    except Exception as e:
-        print(f"[-] An error occurred: {e}")
+    except Exception as error:
+        # Exception text from a client can contain credentials or request URLs.
+        print(f"[-] Telegram upload failed ({type(error).__name__})", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(run())

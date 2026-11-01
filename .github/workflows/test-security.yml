@@ -55,3 +55,5 @@ jobs:
         run: python3 userspace/ksud/tests/module_safety/test_installer.py -v
       - name: Test module publication and cross-process config transactions
         run: cargo test --locked --manifest-path userspace/ksud/tests/module_safety/Cargo.toml --target-dir "$RUNNER_TEMP/module-tests" -- --nocapture
+      - name: Test managed Sui manifest and payload boundaries without Android
+        run: cargo test --locked --manifest-path userspace/ksud/tests/sui_safety/Cargo.toml --target-dir "$RUNNER_TEMP/sui-tests"

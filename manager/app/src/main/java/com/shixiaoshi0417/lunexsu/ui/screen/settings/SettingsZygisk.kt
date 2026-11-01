@@ -10,13 +10,15 @@ import com.shixiaoshi0417.lunexsu.ui.component.dialog.rememberLoadingDialog
 @Composable
 internal fun zygiskSummary(state: SettingsUiState): String {
     val status = state.zygiskStatus
-    val conflict = status?.conflictId
+    val conflict = status?.conflictFor(state.zygiskSelected)
     return when {
         state.isLateLoadMode -> stringResource(R.string.settings_zygisk_late_load)
         state.zygiskBackends.isEmpty() -> stringResource(R.string.settings_zygisk_unsupported)
         status == null -> stringResource(R.string.settings_zygisk_summary)
         status.legacyVex -> stringResource(R.string.settings_zygisk_legacy_vex)
         conflict != null && !state.zygiskEnabled -> stringResource(R.string.settings_zygisk_conflict, conflict)
+        status.conflictId in setOf("rezygisk", "zygisksu") && !state.zygiskEnabled ->
+            stringResource(R.string.settings_zygisk_external_boot, status.conflictId!!)
         else -> {
             val configured = status.configured
             val active = status.active
@@ -38,7 +40,7 @@ internal fun zygiskSummary(state: SettingsUiState): String {
 internal fun zygiskNextNextSummary(state: SettingsUiState): String {
     val status = state.zygiskStatus
     val summary = when {
-        status?.conflictId != null -> stringResource(R.string.settings_zygisk_conflict, status.conflictId)
+        status?.occupiedIds?.contains("zygisknextsu") == true -> stringResource(R.string.settings_zygisk_conflict, "zygisknextsu")
         status?.legacyVex == true -> stringResource(R.string.settings_zygisk_legacy_vex)
         status?.nextNextConfigured != status?.nextNextActive -> stringResource(R.string.settings_zygisk_nextnext_pending)
         !state.zygiskEnabled -> stringResource(R.string.settings_zygisk_nextnext_enable_first)

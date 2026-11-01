@@ -13,8 +13,24 @@ on:
         required: false
         type: boolean
         default: false
+      pack_sui:
+        required: false
+        type: boolean
+        default: false
+      expected_size:
+        required: false
+        type: string
+        default: ''
+      expected_hash:
+        required: false
+        type: string
+        default: ''
 jobs:
   build:
+    env:
+      KSU_EXPECTED_SIZE: ${{ inputs.expected_size }}
+      KSU_EXPECTED_HASH: ${{ inputs.expected_hash }}
+      KSU_PACKAGE_NAME: ${{ github.event_name == 'pull_request' && 'com.shixiaoshi0417.lunexsu.pr' || 'com.shixiaoshi0417.lunexsu' }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v7
@@ -45,6 +61,14 @@ jobs:
         mv ksuinit-x86_64/ksuinit ./userspace/ksud/bin/x86_64/
         mv ksuinit-riscv64/ksuinit ./userspace/ksud/bin/riscv64/
         
+    - name: Prepare managed Sui assets
+      if: ${{ inputs.pack_sui }}
+      run: |
+        package=com.shixiaoshi0417.lunexsu
+        if [ '${{ github.event_name }}' = pull_request ]; then package="$package.pr"; fi
+        python3 scripts/stage_sui_payload.py --artifact sui-payload --source userspace/sui --assets userspace/ksud/bin \
+          --manager-package "$package" --manager-size "$KSU_EXPECTED_SIZE" --manager-hash "$KSU_EXPECTED_HASH"
+
     - name: Verify bundled boot assets
       if: ${{ inputs.pack_lkm && inputs.pack_ksuinit }}
       run: |

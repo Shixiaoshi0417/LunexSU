@@ -21,6 +21,62 @@ class AuthorizationRepositoryTest {
         assertEquals(0L, once.authorizationDurationSeconds)
     }
 
+    @Test fun preGrantSelectionsNeverWriteOrImplicitlyAuthorize() {
+        val denied = permanent.copy(allowSu = false)
+        for (mode in 0..2) {
+            assertNull(authorizationSelectionUpdate(denied, mode, "15"))
+            val enabled = requireNotNull(authorizationGrant(denied, mode, "15"))
+            assertTrue(enabled.allowSu)
+            assertEquals(mode, enabled.authorizationMode)
+            assertEquals(7L, enabled.authorizationGeneration)
+            assertEquals(1, enabled.authorizationOperation)
+        }
+    }
+
+    @Test fun activeModeSelectionsApplyExplicitlyWithTheCurrentGeneration() {
+        for (mode in 1..2) {
+            val updated = requireNotNull(authorizationSelectionUpdate(permanent, mode, "15"))
+            assertTrue(updated.allowSu)
+            assertEquals(mode, updated.authorizationMode)
+            assertEquals(7L, updated.authorizationGeneration)
+            assertEquals(1, updated.authorizationOperation)
+        }
+        val once = permanent.copy(authorizationMode = 1)
+        assertEquals(0, authorizationSelectionUpdate(once, 0, "invalid")?.authorizationMode)
+    }
+
+    @Test fun reselectingCurrentPolicyDoesNotRenewOrRearm() {
+        for (mode in 0..2) {
+            val inactive = permanent.copy(authorizationMode = mode, authorizationState = 0,
+                authorizationDurationSeconds = if (mode == 2) 900 else 0)
+            assertNull(authorizationSelectionUpdate(inactive, mode, "15"))
+        }
+        val timed = permanent.copy(authorizationMode = 2, authorizationDurationSeconds = 300)
+        assertEquals(900L, authorizationSelectionUpdate(timed, 2, "15")?.authorizationDurationSeconds)
+    }
+
+    @Test fun invalidUnsupportedBusyAndUnreadableSelectionsAreNotWritten() {
+        assertNull(authorizationSelectionUpdate(permanent, 2, "0"))
+        assertNull(authorizationSelectionUpdate(permanent, -1, "5"))
+        assertNull(authorizationSelectionUpdate(permanent.copy(authorizationSupported = false), 1, "5"))
+        assertNull(authorizationSelectionUpdate(permanent.copy(currentUid = 1000), 2, "5"))
+        assertNull(authorizationSelectionUpdate(permanent.copy(authorizationState = 2), 1, "5"))
+        assertNull(authorizationSelectionUpdate(permanent.copy(authorizationReadError = -5), 0, "5"))
+    }
+
+    @Test fun activeSelectionChangesRetainSaveReadbackAndRejectionSemantics() = runBlocking {
+        val candidate = requireNotNull(authorizationSelectionUpdate(permanent, 2, "15"))
+        var writes = 0
+        val rejected = AuthorizationRepository({ permanent }, { writes++; -11 }).save(candidate)
+        assertEquals(-11, rejected.error)
+        assertEquals(permanent, rejected.profile)
+        assertEquals(1, writes)
+        val fresh = candidate.copy(authorizationGeneration = 8, authorizationOperation = 0)
+        val saved = AuthorizationRepository({ fresh }, { 0 }).save(candidate)
+        assertEquals(0, saved.error)
+        assertEquals(fresh, saved.profile)
+    }
+
     @Test fun timedPresetsCustomBoundsAndMultiUser() {
         for (minutes in listOf("5", "15", "60", "123", "525600")) {
             val timed = requireNotNull(authorizationGrant(permanent.copy(currentUid = 110387), 2, minutes))

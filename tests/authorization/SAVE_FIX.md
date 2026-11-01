@@ -1,5 +1,18 @@
 # Root 授权有效期保存修复 / Temporary authorization save repair
 
+## 当前紧凑布局 / Current compact controls
+
+有效期位于“超级用户”开关正下方，只保留选项和限时所需的分钟输入；不再显示
+独立状态、说明、授权或撤销按钮。关闭授权时选择仅保留为当前页面草稿，开启
+超级用户才提交授权；已授权时切换选项立即保存，自定义分钟数通过键盘“完成”
+提交。重复选择同一策略和时长不会续期。串行保存、generation 校验及保存后
+重新读取保持不变，不会在失败时降级为永久授权。
+
+Duration now sits directly below Superuser. Off-state choices are local drafts, never implicit
+grants; turning on Superuser applies the draft. Active selections save immediately; custom
+minutes use keyboard Done. Selecting an unchanged policy does not renew it. The sections below
+record the earlier save-path repair and historical device evidence, not new device validation.
+
 ## 中文说明
 
 保存调用链为 Material / MIUIX App Profile → 共用保存仓库 → Kotlin

@@ -1,0 +1,1832 @@
+{
+  "archive_sha256": "f87c512b1ac5e521136239ac25a0cbbb452330e78f897fc0c85ee2bb0a42899c",
+  "commit": "40c97e24d155f23364d8ebfe4b247034dc6547ef",
+  "files": {
+    ".clang-format": {
+      "git_blob": "412fefd53fd5ae5063d8937f83eafbc488714b8e",
+      "mode": "100644",
+      "sha256": "35c1bad2a7a488a2ac7c4913307f2a9d89628fd4cdca0b3b534243702fd7bf37"
+    },
+    ".gitattributes": {
+      "git_blob": "27fc7c2960688da71cf9ed71a369f692ee42c7f2",
+      "mode": "100644",
+      "sha256": "3405b61726b6d0fa8bfe6e3c6bb9586b58d275461309e3cd5cf9833ee3c39731"
+    },
+    ".github/dependabot.yml": {
+      "git_blob": "b00c3bd2aa4e5224bea218a37d764048b8bf15f6",
+      "mode": "100644",
+      "sha256": "d09330f05af02d698ab71b22c291b7782fc89ac76f850013d9837e0a99ab12a4"
+    },
+    ".github/workflows/build.yml": {
+      "git_blob": "61a492f39cdf96b8653ad308566077f49e0a2a42",
+      "mode": "100644",
+      "sha256": "4b591bad8c0edad6ab9711043fcfc9f476cbfd97ec9727a5a217afe84342e450"
+    },
+    ".github/workflows/ksu-release.yml": {
+      "git_blob": "cfffc8929437c58d357ee953d914ec24c9e631ac",
+      "mode": "100644",
+      "sha256": "721c73beb5a21a60d89d085e8a0fddf03775213cdcb7903cbf43243648f33627"
+    },
+    ".github/workflows/module.yml": {
+      "git_blob": "ae2a01bfb2031d136045be3a9aa68083b8bd8e3c",
+      "mode": "100644",
+      "sha256": "4d241354bfe8dc69769b787841d95316fb8cd3a0c10d7ecbd684547c274c687e"
+    },
+    ".github/workflows/pages.yml": {
+      "git_blob": "ff6e5e5838214a7da68f2ee929eb60be5a56d9e3",
+      "mode": "100644",
+      "sha256": "fe4db3a9726b827d9d8d05a7c7718aeed5c1c1c8e0e5eca1aedb854556d678ad"
+    },
+    ".github/workflows/readme-sync.yml": {
+      "git_blob": "cbbf0bbf7a2351315b196c281a24c942a5ac00b3",
+      "mode": "100644",
+      "sha256": "4516fc34c48a0858fe5ddfa5eea3509d0799e532866cf419d55b66c59954bc30"
+    },
+    ".github/workflows/release.yml": {
+      "git_blob": "56d99291dcdebe1dcf93182a5c3537fab6beaa6d",
+      "mode": "100644",
+      "sha256": "37f04ed400bd4178a7f8cd173917d41279456c758694fb06952fc8f9c9ca57fe"
+    },
+    ".gitignore": {
+      "git_blob": "f7d5fd60e36c2e64a7f6899b12caf15b12c9f8ab",
+      "mode": "100644",
+      "sha256": "57da0eefa081f02166ec4925d6206ddadfa1daf5ad898b6bfe3647e0e7e78583"
+    },
+    "LICENSE": {
+      "git_blob": "e72bfddabc15be5718a7cc061ac10e47741d8219",
+      "mode": "100644",
+      "sha256": "8b1ba204bb69a0ade2bfcf65ef294a920f6bb361b317dba43c7ef29d96332b9b"
+    },
+    "UPSTREAM.md": {
+      "git_blob": "62751a7889b446fd706967c30a22b89dd35fa536",
+      "mode": "100644",
+      "sha256": "5914bf03553e0f73d1eb0ae7a8ac7a941ad7fb3c8c8fbf1c8155c39485d2a59c"
+    },
+    "api/.gitattributes": {
+      "git_blob": "411c07777552a74b61b3523fa0b6b82a1bc03a6b",
+      "mode": "100644",
+      "sha256": "4d005edee8c9ae9ddd567a1c1f6eb64481676dd500326601859273e339aae55e"
+    },
+    "api/.github/dependabot.yml": {
+      "git_blob": "1fdb1fb9dcdf80395d931931886c936696ff4bb6",
+      "mode": "100644",
+      "sha256": "50e276e09b5b67567e1534f9b70d8b2f070be7bd958247d663791be668455723"
+    },
+    "api/.gitignore": {
+      "git_blob": "03a5ecb7e3a1608a44cdf7eed142f63cba2f993c",
+      "mode": "100644",
+      "sha256": "d0bae49d638e8c2c0a05f0b7c47233568778e0e1ddb7d050762a35c7d6224225"
+    },
+    "api/LICENSE": {
+      "git_blob": "2a0584412ec48f8f6aae5cb6a5a6b2a604cfb789",
+      "mode": "100644",
+      "sha256": "64870037f294b6f2b75c8ebe77cc0702acb3b64f86b4b0e58bf8558525303686"
+    },
+    "api/README.md": {
+      "git_blob": "3ebe9fee660873cb4ac31f5b3e54a99d625ffa23",
+      "mode": "100644",
+      "sha256": "8f497bef0915abacdc48b4ba46b38b40db08aafc754b1c9e5439ec0d13ec741f"
+    },
+    "api/aidl/.gitignore": {
+      "git_blob": "42afabfd2abebf31384ca7797186a27a4b7dbee8",
+      "mode": "100644",
+      "sha256": "5c3174b74edc6f2b9e0743594b8bd3c7f31e4f4405758cc9872b3fe1de1d28b4"
+    },
+    "api/aidl/build.gradle.kts": {
+      "git_blob": "aae1ae4416e9264cc610c370d8889a2ca36b9d62",
+      "mode": "100644",
+      "sha256": "47e18abbf2b3af4ef770b13d6be86858e2010ceebd96b5293b18e88344c65d82"
+    },
+    "api/aidl/src/main/AndroidManifest.xml": {
+      "git_blob": "8072ee00dbf16d9161b7464ef3d2194a7d659bcc",
+      "mode": "100644",
+      "sha256": "daa0fb1f32ba7ea85a07ef6302ab3d58c3407d7fd2aa03ec132cb9e38e8d9849"
+    },
+    "api/aidl/src/main/aidl/moe/shizuku/server/IRemoteProcess.aidl": {
+      "git_blob": "1b43f418a7cfb91464ec2770d62c57ff87a523d4",
+      "mode": "100644",
+      "sha256": "d4f05943f6f988ef5228a9248c5513c5fad99fdf7c632a44f463759000e8328a"
+    },
+    "api/aidl/src/main/aidl/moe/shizuku/server/IShizukuApplication.aidl": {
+      "git_blob": "c5b1d95773843a600b71abac027e47536a3e099d",
+      "mode": "100644",
+      "sha256": "b3bd726995435dd6e527ba86c0b7977ed86312e01cf2eba664ccf57f960cf6a9"
+    },
+    "api/aidl/src/main/aidl/moe/shizuku/server/IShizukuService.aidl": {
+      "git_blob": "03c48104cadf438531a69e3bf145089a5f8bd92d",
+      "mode": "100644",
+      "sha256": "4ebec782f66835611b8e10d22cc487993555b6cffe13a971a24ca3990861db34"
+    },
+    "api/aidl/src/main/aidl/moe/shizuku/server/IShizukuServiceConnection.aidl": {
+      "git_blob": "9b5ffb448f564dea310e7204db9673efe2f8b881",
+      "mode": "100644",
+      "sha256": "99b76f53ac25abeb5d4e7e1aa9acace81e0e3c86c88d14192a3e5acf0bf6758e"
+    },
+    "api/api/.gitignore": {
+      "git_blob": "42afabfd2abebf31384ca7797186a27a4b7dbee8",
+      "mode": "100644",
+      "sha256": "5c3174b74edc6f2b9e0743594b8bd3c7f31e4f4405758cc9872b3fe1de1d28b4"
+    },
+    "api/api/build.gradle.kts": {
+      "git_blob": "2eda01040f28c78877b40fefbf211fbca5ecf13c",
+      "mode": "100644",
+      "sha256": "5a98135459a4063e45105333c9ae4b3084ad588e33129943c80b21268a475d30"
+    },
+    "api/api/src/main/AndroidManifest.xml": {
+      "git_blob": "8072ee00dbf16d9161b7464ef3d2194a7d659bcc",
+      "mode": "100644",
+      "sha256": "daa0fb1f32ba7ea85a07ef6302ab3d58c3407d7fd2aa03ec132cb9e38e8d9849"
+    },
+    "api/api/src/main/java/rikka/shizuku/Shizuku.java": {
+      "git_blob": "a1d672ef49ff21b329f1726720c27711b7556777",
+      "mode": "100644",
+      "sha256": "72271b38f656499f50e6c1da73ca4516ab32149a6bc4ac55698701435e4b7097"
+    },
+    "api/api/src/main/java/rikka/shizuku/ShizukuBinderWrapper.java": {
+      "git_blob": "7c1c6af072bc661578b1396ee1c0e155e757f354",
+      "mode": "100644",
+      "sha256": "3e9e58c288dd85b7842c10a0977a25f5b9deece763f7dcb36cf15543623c22fa"
+    },
+    "api/api/src/main/java/rikka/shizuku/ShizukuRemoteProcess.java": {
+      "git_blob": "9a4e56ca78e589d825547e944db27302e3525d04",
+      "mode": "100644",
+      "sha256": "f44374f9c9d44dd8b26f81236661c7b34f92545f11a33b28fc32b78f3aafeeb8"
+    },
+    "api/api/src/main/java/rikka/shizuku/ShizukuServiceConnection.java": {
+      "git_blob": "a15d2051ab563516b2b1bcb8633c39fb4b36f054",
+      "mode": "100644",
+      "sha256": "dd7ea5675071fb2fd58a609000bcdb5b4099967ce998e3c5c1566abaecdb134b"
+    },
+    "api/api/src/main/java/rikka/shizuku/ShizukuServiceConnections.java": {
+      "git_blob": "5af181e7f06a669c75ff2d0c6e4b23cfe3fa81ef",
+      "mode": "100644",
+      "sha256": "b97bd6dc88247119e47eb40729ad564dd6d9572893ebc21def50932343402fb0"
+    },
+    "api/api/src/main/java/rikka/shizuku/ShizukuSystemProperties.java": {
+      "git_blob": "9be4dd7a1fe56801302cceaf0017ef9f83b3cad4",
+      "mode": "100644",
+      "sha256": "2263939719d422ead03562db5856d74dcd63cdc0dc1b42670f5faf2c4dc79b46"
+    },
+    "api/api/src/main/java/rikka/shizuku/SystemServiceHelper.java": {
+      "git_blob": "af4b249f808b95ed22219699cb9ec69c7d243d16",
+      "mode": "100644",
+      "sha256": "636893b645bbcde7f788e286b4e2f2c94ea0bc0de9758bb4fbea0977182a5570"
+    },
+    "api/api/src/main/java/rikka/sui/Sui.java": {
+      "git_blob": "23657a841c853d8eea5cb59f102f6ba68299c763",
+      "mode": "100644",
+      "sha256": "4046fda1bf92f4814fe6b468d2ba6e752167f71c1ea96203c11c6261bc193a29"
+    },
+    "api/build.gradle.kts": {
+      "git_blob": "c288ccc903b5d1a4c385d78d3bf92f49c3a29c13",
+      "mode": "100644",
+      "sha256": "1e412ac4de4d0a6d3bbac83adc29ea483e7adea815608e80bb12fa36776cf54a"
+    },
+    "api/demo-hidden-api-stub/.gitignore": {
+      "git_blob": "796b96d1c402326528b4ba3c12ee9d92d0e212e9",
+      "mode": "100644",
+      "sha256": "5b46eb48d96e8571e8c93e4ef4f6ffbe6807b6d7350664a36a064e1167a32718"
+    },
+    "api/demo-hidden-api-stub/build.gradle.kts": {
+      "git_blob": "0de0654a989927ec277258f4b68420770d40a75c",
+      "mode": "100644",
+      "sha256": "546251d275b31eea6cb0744f086c86084ec7a1523c1740c45b58760fccf0b09e"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/annotation/NonNull.java": {
+      "git_blob": "7cf75eeab4a9eb12a621728274c269764a019cd2",
+      "mode": "100644",
+      "sha256": "84ff2980e7bfbfe55b51111129aec88248df87233ef65995cdd4fca187037831"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/annotation/Nullable.java": {
+      "git_blob": "6064599ec3e24e9c2950f69ea7379346ce98bd30",
+      "mode": "100644",
+      "sha256": "54699f78a512a3cdfe506d2c1b985bfc6229620b29178b10148c367ff7a90ec2"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/content/IIntentReceiver.java": {
+      "git_blob": "20cbddb76956212216903ed4cb7c342c3ff1f96f",
+      "mode": "100644",
+      "sha256": "effc0dd9fc87f2156698e546a0f48efb1ebf71e6a02fafafa64a91ed94873d23"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/content/IIntentSender.java": {
+      "git_blob": "af90f8d36c4f3087c86e20d2e2a1fae0d92f1e66",
+      "mode": "100644",
+      "sha256": "1b2b66f11e942f45e2c0375157ba94f74ddda2401cb5440efd0059fae1086254"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/content/Intent.java": {
+      "git_blob": "e5375119d85b30f494ba6579b9cf48e0bb9f631e",
+      "mode": "100644",
+      "sha256": "fb21e011667b16d559615ffd315922fb8f777f5002bf0f1d69c1b1dc980c96d7"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/content/IntentSender.java": {
+      "git_blob": "eb9368c65f624dd4e1ee84fc49b08668c4538f42",
+      "mode": "100644",
+      "sha256": "c8c5c106b9c435cc79775d614efcb3cac83cf2e9e4d95f20f9cafb9598d4bc01"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/content/pm/BaseParceledListSlice.java": {
+      "git_blob": "d9af8b5282f4cbb91a3a787455f271058b385e69",
+      "mode": "100644",
+      "sha256": "93683030a7ae38e602e6d4ef075112b59aa358c149ba54fb56394c1b3286df50"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/content/pm/IPackageInstaller.java": {
+      "git_blob": "2644bfc896ff5e5d69b7b054f19b0e884d3ee4d4",
+      "mode": "100644",
+      "sha256": "9d2b4f156dc3db9dc2a43ed767568b748207d280319917190d8d489ac2270b6b"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/content/pm/IPackageInstallerSession.java": {
+      "git_blob": "8c934586cb0db75641d02b5dafcb73df94dd9b89",
+      "mode": "100644",
+      "sha256": "cf5cc56bce1f297ea6e961cd2fb8504375b7e0346d9cf33f29ae6d5625b6c8df"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/content/pm/IPackageManager.java": {
+      "git_blob": "27adb74d4446befa3196c1fbed1accc15efe9ead",
+      "mode": "100644",
+      "sha256": "c6eecd1eadabb3bf1dbec3e9f5f5dbcc9dfb751fc7cf0d70635dd42ab2bdb61d"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/content/pm/PackageInstaller.java": {
+      "git_blob": "aad6ef96ab6796bf3cbfe2484c7299c40ea2829a",
+      "mode": "100644",
+      "sha256": "f5322836af3a74a8350502b076de1a33f282bd36725bb14d85b48a913255a0ed"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/content/pm/ParceledListSlice.java": {
+      "git_blob": "9f62ee20294b010ee0cc2004f9dd8e6c27f5da01",
+      "mode": "100644",
+      "sha256": "90866dd77cf4131d6e0d714997a0d5b580b66a7551bff8b98d91920955745984"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/content/pm/UserInfo.java": {
+      "git_blob": "fbe2162cef837997b8d20c5bee328e06f9d15b14",
+      "mode": "100644",
+      "sha256": "b51397d9f0f5930e5af35e484cdeadd9954aaaac69d8bb50b7888d1417d2a7e0"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/os/Binder.java": {
+      "git_blob": "64fdcb359e987b0e5356aaee3d511186a7ba404a",
+      "mode": "100644",
+      "sha256": "4b6d4a510a49f0fa100bc298e0444eda55d7b4d7b2048e3763c164c2bfdea004"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/os/Bundle.java": {
+      "git_blob": "97c426d7731a7dca25faf1947d827a3d783b4d89",
+      "mode": "100644",
+      "sha256": "e4867ac36bdebbc6f8a227337120852f71ca7c8b4393dc2aa5809ed9262c8015"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/os/IBinder.java": {
+      "git_blob": "cef862cc2a1a490aecff73bd27c329b1a700ede6",
+      "mode": "100644",
+      "sha256": "3cf420ff75057010fcc65070cb558ace1c981cc7a14e4266c0e655c1f8506306"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/os/IInterface.java": {
+      "git_blob": "997e330faa6c7426bf70bb199a986c47307f355a",
+      "mode": "100644",
+      "sha256": "748d16d9d03ffb617149f115421a2f42255d2930e92d134ade69d31fd9ec8934"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/os/IUserManager.java": {
+      "git_blob": "0578e1be03e4bc704ff887b998cfd78b7a33990d",
+      "mode": "100644",
+      "sha256": "4af1ccfa35a8ff7e697d6114582edc98e096f5ac718c0f5e99dc99f83684323f"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/os/Parcel.java": {
+      "git_blob": "f220dd8828907e66384619b185000643db3a2aed",
+      "mode": "100644",
+      "sha256": "8f01802a5c0cb84e54c40b75ab4a48cd548114634b0e1c75d7eedd535d2f7131"
+    },
+    "api/demo-hidden-api-stub/src/main/java/android/os/RemoteException.java": {
+      "git_blob": "9b24d72b195620db1d9591d0068cc301e642d5fe",
+      "mode": "100644",
+      "sha256": "bab84fe47685e7ba83c495c6f85189e44c909b8e5457d92daee1cf9d31e914f3"
+    },
+    "api/demo-hidden-api-stub/src/main/java/androidx/annotation/IntRange.java": {
+      "git_blob": "7e9c3a51d0325c3ce26772b577e493fe1e1b398d",
+      "mode": "100644",
+      "sha256": "f84c17650e2ae7c26d48abaf8469fcb64fd4e5b72159cc4327d77c963d4a0d8a"
+    },
+    "api/demo-hidden-api-stub/src/main/java/androidx/annotation/RequiresApi.java": {
+      "git_blob": "f3a6ea0c97c74044e37eabc1fb30a4f7d73a0643",
+      "mode": "100644",
+      "sha256": "95821a955c0d53784d13339e0ad9d899005618476f05616d2638fe5dbbc42a53"
+    },
+    "api/demo/.gitignore": {
+      "git_blob": "7607bd2c3b6cca9134072192baf3aa538c94fe64",
+      "mode": "100644",
+      "sha256": "7f8289c4e27c7537ccf578d70318b27f00726833563b4da0aba4add529cb6948"
+    },
+    "api/demo/build.gradle.kts": {
+      "git_blob": "b9d24d84298788fe1042b841d7ffda1e8d2617cd",
+      "mode": "100644",
+      "sha256": "644916f63cb2a96cb09e0a628e5899e66e016b8ccbda4f7d3a0c9ca613b1cfaa"
+    },
+    "api/demo/proguard-rules.pro": {
+      "git_blob": "6d7b8477a6098eac26bdcdb68ea21e2f24b08245",
+      "mode": "100644",
+      "sha256": "f4e1014d074dcc1367f98a0f716acb08c4553228686571cd3e7ef4ae9c478bee"
+    },
+    "api/demo/src/main/AndroidManifest.xml": {
+      "git_blob": "a65e81b6416c22041a4f173635bc12f0ed0ec3cf",
+      "mode": "100644",
+      "sha256": "4fc73ea6a41c26e24077b48a460ca85be041ce25a2e59a2e5ffba245582a5c5d"
+    },
+    "api/demo/src/main/aidl/rikka/shizuku/demo/IUserService.aidl": {
+      "git_blob": "ae80395ba96bd8f465ddbbfe001c024bcb135d00",
+      "mode": "100644",
+      "sha256": "32a57a31a97d2cf82bfaf4bce535268ff8da2fbf1c5d834a2e0ae0d0383feca0"
+    },
+    "api/demo/src/main/cpp/CMakeLists.txt": {
+      "git_blob": "ded9cea9dac7998568106ae3d79c03833f822cb6",
+      "mode": "100644",
+      "sha256": "b96e7cb45294ba3b46617ba2dbf3c41c25d36a78d565316340e1186fd4fd327d"
+    },
+    "api/demo/src/main/cpp/hello-jni.c": {
+      "git_blob": "75b9e129658d3739b6ff88cd671242cf3d42c321",
+      "mode": "100644",
+      "sha256": "b0a2c6eeb2e23fcce1273dc6b24ad362eae536c60e865f4f236971d551e18e9e"
+    },
+    "api/demo/src/main/java/rikka/shizuku/demo/DemoActivity.java": {
+      "git_blob": "192fdfd92fc4f574385f3fb3334d06e5cec92950",
+      "mode": "100644",
+      "sha256": "d38bc8d02e8ba1bbdfe105cfaedb356f9b4f275f6feacb3df7b12eae7675a878"
+    },
+    "api/demo/src/main/java/rikka/shizuku/demo/DemoApplication.java": {
+      "git_blob": "1c4c3941d3399b6a060dfce5539a62d653f60e03",
+      "mode": "100644",
+      "sha256": "79428238bc971307886b7f55c7c73799d9ee6c0b89931aa6f6990ed13d580228"
+    },
+    "api/demo/src/main/java/rikka/shizuku/demo/service/UserService.java": {
+      "git_blob": "0d3a9df78d909e58776e34f80250285d9f6c82ba",
+      "mode": "100644",
+      "sha256": "c8b231104b85d38d812e8a4eb57f7dd3fa5ea03ecfbb1184f52532588c16139e"
+    },
+    "api/demo/src/main/java/rikka/shizuku/demo/util/ApplicationUtils.java": {
+      "git_blob": "149bc5ab202bab560bd50214d4081f7dbba8b6fb",
+      "mode": "100644",
+      "sha256": "1c67257bc2083715ebcc1fc3890883f217935507119d6fe5ce9f9b6473ffe7cf"
+    },
+    "api/demo/src/main/java/rikka/shizuku/demo/util/IIntentSenderAdaptor.java": {
+      "git_blob": "9544f50f324ebe88b379109f91f3fa2c4e56a7f1",
+      "mode": "100644",
+      "sha256": "2f5f9f8401117eea24562473ad10b06d1c5785b0b57269c5fa3650e0d36a7954"
+    },
+    "api/demo/src/main/java/rikka/shizuku/demo/util/IntentSenderUtils.java": {
+      "git_blob": "30b3e2f8642946c6fd52ed75d032c413b62fac4f",
+      "mode": "100644",
+      "sha256": "c7b468b799d2986f98159343639f90011998b602dedfd1bdd4c58570ac5c64d1"
+    },
+    "api/demo/src/main/java/rikka/shizuku/demo/util/PackageInstallerUtils.java": {
+      "git_blob": "79410a6b4b2ada1ef1cf3a03f1b986dd6b2bbee3",
+      "mode": "100644",
+      "sha256": "674d35d9470a1c08b75123df1ad378246af8a0f32fcac633ee9d26a6da5a0c9d"
+    },
+    "api/demo/src/main/java/rikka/shizuku/demo/util/ShizukuSystemServerApi.java": {
+      "git_blob": "654d1aa732081b8074e6a4f032b4874d935da4a2",
+      "mode": "100644",
+      "sha256": "321fce3e3fa245967e5e0f6769f167e8b8695b463c098be2833b9e375889978a"
+    },
+    "api/demo/src/main/java/rikka/shizuku/demo/util/Singleton.java": {
+      "git_blob": "19188263249d2f44d0a5c42627a3200d05a360c4",
+      "mode": "100644",
+      "sha256": "9661fe4fa5e96db455478f7dce961a5df83530be9aa324deb7fc9791b8d6b483"
+    },
+    "api/demo/src/main/res/layout/main_activity.xml": {
+      "git_blob": "1cdaf9413b28168a62025463c69744896d5534f0",
+      "mode": "100644",
+      "sha256": "a517f7515986f08ba77c33d66a38161d51223f9b98ffd038c398d7f57e377a7e"
+    },
+    "api/gradle.properties": {
+      "git_blob": "b7f529cc5f68da4d543839f187c2f2375e2d978f",
+      "mode": "100644",
+      "sha256": "5bbabb135dd7d699df189838aad39f54ec0ed29ab817cecc6f111491193956f3"
+    },
+    "api/gradle/libs.versions.toml": {
+      "git_blob": "78ba8a26b084b640d24e7f989cf2c2ecdb16a0bd",
+      "mode": "100644",
+      "sha256": "6586e1279a8c6367decafbce06b4d572be1ca528344699f91229b0406087796a"
+    },
+    "api/gradle/wrapper/gradle-wrapper.jar": {
+      "git_blob": "9fa7f288283f81eec4952784c271abd7e0938dee",
+      "mode": "100644",
+      "sha256": "3b8a25775a69158b5ad2b1d17a80a88dc7b40a352a73eb27d06c612a7ce68e98"
+    },
+    "api/gradle/wrapper/gradle-wrapper.properties": {
+      "git_blob": "2e7bb9fd6ab07c0350540fe458e1865de3ed5185",
+      "mode": "100644",
+      "sha256": "3cbe35d0020d8393c73f4cc2572838d1db338dd27885dd4d88c46b4d28f762e0"
+    },
+    "api/gradlew": {
+      "git_blob": "249efbb032ce46a80c687c0723eb172e85f6a136",
+      "mode": "100755",
+      "sha256": "a5a5c199ba02189ae8c46a334223371a20599d9c298ef65e7540ede4a3f72d59"
+    },
+    "api/gradlew.bat": {
+      "git_blob": "3185a43f78fabec15ca99b0ca6bf1e666218d5ca",
+      "mode": "100644",
+      "sha256": "31ec098bd961c460b62875950c3eff5c8213bcb0bbde38d769b88512877fd21f"
+    },
+    "api/manifest.gradle.kts": {
+      "git_blob": "22d41856cd08c7275d9cb0b05ae7e1d3df85879a",
+      "mode": "100644",
+      "sha256": "afa2bbe18548c5e279ff110408700e404b244d4824390fd4a7ff7de961ef83ce"
+    },
+    "api/provider/.gitignore": {
+      "git_blob": "42afabfd2abebf31384ca7797186a27a4b7dbee8",
+      "mode": "100644",
+      "sha256": "5c3174b74edc6f2b9e0743594b8bd3c7f31e4f4405758cc9872b3fe1de1d28b4"
+    },
+    "api/provider/build.gradle.kts": {
+      "git_blob": "94b315dbaa0e28972772d574abfe8f1cb511201b",
+      "mode": "100644",
+      "sha256": "258a59a0a985d7dcc138cdc6e629c3784c655bc15ae0bade2190c508f4832109"
+    },
+    "api/provider/consumer-rules.pro": {
+      "git_blob": "8d7cd8075318121bca3c58f5a5594c2394ddc380",
+      "mode": "100644",
+      "sha256": "61b9246c36eb9ba65dfc8ad3e22ba20998a7eda59253a81695447beec7e2e6f1"
+    },
+    "api/provider/src/main/AndroidManifest.xml": {
+      "git_blob": "6342c5b50bb1c53675b18adbca43e9f0df8ab4e0",
+      "mode": "100644",
+      "sha256": "2f987ef537ef007a0e4ce24ecf3f5f02664cc06b9985b7e5dbd687b195dd3ac4"
+    },
+    "api/provider/src/main/java/moe/shizuku/api/BinderContainer.java": {
+      "git_blob": "2aca71fe8872b16ab1556c4eb4ff44eb3bd0db7b",
+      "mode": "100644",
+      "sha256": "006c555ae0703f891bf540d12db1b90f87ea1b0cebb74ccfac3163ff6ec56a88"
+    },
+    "api/provider/src/main/java/rikka/shizuku/ShizukuProvider.java": {
+      "git_blob": "04efe682a7dbb28c0fb77f2bfa984df42027fd5e",
+      "mode": "100644",
+      "sha256": "358f40168f4ba8aa2707a25e04aecf19f15b9ee9a99818e0ed33c7c4e61c5726"
+    },
+    "api/rish/.gitignore": {
+      "git_blob": "42afabfd2abebf31384ca7797186a27a4b7dbee8",
+      "mode": "100644",
+      "sha256": "5c3174b74edc6f2b9e0743594b8bd3c7f31e4f4405758cc9872b3fe1de1d28b4"
+    },
+    "api/rish/README.md": {
+      "git_blob": "d790b0392c06955cf063f5fc3ee990b3a389442d",
+      "mode": "100644",
+      "sha256": "c42c8b2fb21f63124314d6d4a17122c1533bf68eca8d9022f777f05dad25fd3d"
+    },
+    "api/rish/build.gradle.kts": {
+      "git_blob": "e2e7f5e5e7265a2c69beec2a934661ca0ad0328c",
+      "mode": "100644",
+      "sha256": "fa1b834b6f1268eaf72d5d27e98e6761314c7e7ee16fd4bf0326402832661645"
+    },
+    "api/rish/src/main/AndroidManifest.xml": {
+      "git_blob": "8072ee00dbf16d9161b7464ef3d2194a7d659bcc",
+      "mode": "100644",
+      "sha256": "daa0fb1f32ba7ea85a07ef6302ab3d58c3407d7fd2aa03ec132cb9e38e8d9849"
+    },
+    "api/rish/src/main/cpp/CMakeLists.txt": {
+      "git_blob": "90fae7b6e40aadc40b2c4390417850f882f15b2f",
+      "mode": "100644",
+      "sha256": "6173a3e03f3e97173736e20fb7f51a4c7b3ef4835b3c62cf84320939b5fd9c7b"
+    },
+    "api/rish/src/main/cpp/logging.h": {
+      "git_blob": "491699fc3d5c552a9e01d9991f3f934f7f124411",
+      "mode": "100644",
+      "sha256": "c730d79fead013e20ed47a83c4454169cfab8deccc9debad62f7fdd488e1e4e8"
+    },
+    "api/rish/src/main/cpp/main.cpp": {
+      "git_blob": "ca861c758c0579ef84e87cf9634d6afb6973f303",
+      "mode": "100644",
+      "sha256": "2a047414fdbb1a5d5ed492c4323755725b6742b1980e44e11c2f6687a1e07560"
+    },
+    "api/rish/src/main/cpp/pts.cpp": {
+      "git_blob": "92dac5a4b3967bfc903a1a3227dfd2cb8a0268bd",
+      "mode": "100644",
+      "sha256": "2da5e2c299e41f9de9f77ecb3d1068e19ebf63d3e8a61420640223c966d77d5b"
+    },
+    "api/rish/src/main/cpp/pts.h": {
+      "git_blob": "756894cdd0de4ce6d3a731d1780d1b0d26dc45cb",
+      "mode": "100644",
+      "sha256": "62e81fbcada2621a23e14459e50a325ce21e3187d455d9d699fd2af8632beb7c"
+    },
+    "api/rish/src/main/cpp/rikka_rish_RishHost.cpp": {
+      "git_blob": "b4f69457cedf2cbb3ccb699e7f1a26b8e7780756",
+      "mode": "100644",
+      "sha256": "6f6fe685cabe0efe87ae0efc1b34f7d5b51ff76b62dc0ae0b00938954feca436"
+    },
+    "api/rish/src/main/cpp/rikka_rish_RishHost.h": {
+      "git_blob": "1a8574b9f7b1cc660e0a52480349de81258a360f",
+      "mode": "100644",
+      "sha256": "8eac1cfecdc178e43d91146b298d47c3bd4cb78c0ed64c8438cd7db1159ceff6"
+    },
+    "api/rish/src/main/cpp/rikka_rish_RishTerminal.cpp": {
+      "git_blob": "5daf6be4654a348ce32eac52eb179026adf4bf6c",
+      "mode": "100644",
+      "sha256": "d05d70af6c07f191af25437b8ceb2621228cdbd484148fcf4d6eb92a4f965907"
+    },
+    "api/rish/src/main/cpp/rikka_rish_RishTerminal.h": {
+      "git_blob": "e9e396d9681f9700c83ff4fbfb2da5f2c786022c",
+      "mode": "100644",
+      "sha256": "28198f1f97a1d59ce1a85fc5eed3c975e76d8684d70050e7bdf118a7d5f961af"
+    },
+    "api/rish/src/main/java/rikka/rish/FileDescriptors.java": {
+      "git_blob": "a3f23d63ffb2fd1d58df30c65a0d1149ca65b463",
+      "mode": "100644",
+      "sha256": "d03c2bc4487e2660d493a9eadf19c16d2c3910cbfc2729d92249b74645f7a087"
+    },
+    "api/rish/src/main/java/rikka/rish/Rish.java": {
+      "git_blob": "1a75c45d0bca9378fb87cd6079356524a9cecf3c",
+      "mode": "100644",
+      "sha256": "2350e3ced95b0368c6d2b3dfcd611cff5b74924f3c773d7b1f932814a67c6ee2"
+    },
+    "api/rish/src/main/java/rikka/rish/RishConfig.java": {
+      "git_blob": "91d90ce0e197735daa380b7691bccd70ae86de5c",
+      "mode": "100644",
+      "sha256": "17bd95722c33f2992a71e4efacf7d56491fefd0071be4121d299a17383102b49"
+    },
+    "api/rish/src/main/java/rikka/rish/RishConstants.java": {
+      "git_blob": "5c1657be089778cd9f949e20fdeb542b81893d8c",
+      "mode": "100644",
+      "sha256": "79f13bac39395a78ea3c828639e74e336f40833ab73393373db917c4ee949395"
+    },
+    "api/rish/src/main/java/rikka/rish/RishHost.java": {
+      "git_blob": "1ee12724b49ac7219c26cfbcf284337ba0952bc6",
+      "mode": "100644",
+      "sha256": "bcd31ebc7b4e43b242a706972aec252f82c1b6fe6986fa21f6981bd564ececba"
+    },
+    "api/rish/src/main/java/rikka/rish/RishService.java": {
+      "git_blob": "8416e4b511bf538bb68a1547dfc12a56014e62bd",
+      "mode": "100644",
+      "sha256": "ea844bfbb6de819630665ac7982547ed26d83776bd1b94b88c84d33e328c32c8"
+    },
+    "api/rish/src/main/java/rikka/rish/RishTerminal.java": {
+      "git_blob": "d73453a1ed4047ee2d9c0aedc55676bdacef12ee",
+      "mode": "100644",
+      "sha256": "3f0d8ac28ddfe2c93ed41fb58013810016563588a54a5c15fb0ff07f4d031c15"
+    },
+    "api/server-shared/.gitignore": {
+      "git_blob": "42afabfd2abebf31384ca7797186a27a4b7dbee8",
+      "mode": "100644",
+      "sha256": "5c3174b74edc6f2b9e0743594b8bd3c7f31e4f4405758cc9872b3fe1de1d28b4"
+    },
+    "api/server-shared/build.gradle.kts": {
+      "git_blob": "9a9b390cb25494a3b8f222fb41c2ed2aacb5ce3e",
+      "mode": "100644",
+      "sha256": "0584213c0ef2fc873a1800740e1ecaa37c21edcdaf2865a86eb80e09b27c7f65"
+    },
+    "api/server-shared/src/main/AndroidManifest.xml": {
+      "git_blob": "8072ee00dbf16d9161b7464ef3d2194a7d659bcc",
+      "mode": "100644",
+      "sha256": "daa0fb1f32ba7ea85a07ef6302ab3d58c3407d7fd2aa03ec132cb9e38e8d9849"
+    },
+    "api/server-shared/src/main/java/rikka/shizuku/server/ClientManager.java": {
+      "git_blob": "e21de5f824ae82dbf7f11838f9ca87360975b041",
+      "mode": "100644",
+      "sha256": "93d1321bd93c7ed4a9c5f5a39c0edc8837cdf2d370e197aa7030572f5ce2650b"
+    },
+    "api/server-shared/src/main/java/rikka/shizuku/server/ClientRecord.java": {
+      "git_blob": "c3c93e118b40348108a1303a791c6d094e8503c5",
+      "mode": "100644",
+      "sha256": "634b95aae9237125b71f94ec83a76e8b64a28871972a4b4794146ed8da5dbcf1"
+    },
+    "api/server-shared/src/main/java/rikka/shizuku/server/ConfigManager.java": {
+      "git_blob": "d24337cf8e39dd334838ba06193db809be81b87b",
+      "mode": "100644",
+      "sha256": "8525162afb43b3a52ede59ba28d398bde9cfb2cae0ec18a34901a9463abcc993"
+    },
+    "api/server-shared/src/main/java/rikka/shizuku/server/ConfigPackageEntry.java": {
+      "git_blob": "89fb9f26335bc7b28ec865a702521cd6ab21f630",
+      "mode": "100644",
+      "sha256": "0c424f2ea56e55181d043438f7e1ae524cf99822e8ba9e2b5ef772a2809931c5"
+    },
+    "api/server-shared/src/main/java/rikka/shizuku/server/Service.java": {
+      "git_blob": "5bcb4a7079cc71c6fd40fa0436f179eef848b826",
+      "mode": "100644",
+      "sha256": "d18ac5a85baa12e75d18394572fb645de1d315eeac174add78e92b70787c9365"
+    },
+    "api/server-shared/src/main/java/rikka/shizuku/server/UserService.java": {
+      "git_blob": "fbc61eb1b484e4874def087a8b5739267f6d2162",
+      "mode": "100644",
+      "sha256": "615e48f3cde9271f4fd4e6d0766d22b7a53b82a979b180902ac17087a26a3945"
+    },
+    "api/server-shared/src/main/java/rikka/shizuku/server/UserServiceManager.java": {
+      "git_blob": "5810f150ba7367a6f934a9914aefd0813b0e3229",
+      "mode": "100644",
+      "sha256": "f53a6553bb5e64ba168d8eafab72dc91c78984d0d1e4ce003805a0078a247fa1"
+    },
+    "api/server-shared/src/main/java/rikka/shizuku/server/UserServiceRecord.java": {
+      "git_blob": "5085adbac0309553217b26604b46cb28254dc9d2",
+      "mode": "100644",
+      "sha256": "c72c9ab9a8aa8aa0344c568f85fa2bad87503feab4e73f7ada8734047a17bb62"
+    },
+    "api/server-shared/src/main/java/rikka/shizuku/server/api/RemoteProcessHolder.java": {
+      "git_blob": "1891a7a159e5eb7ba5771fbc9ce191b3fcd3d636",
+      "mode": "100644",
+      "sha256": "3cad4ed714f25cf36668aa4fade6c618c2ab6aafbdc2babd32af4a8daab75b48"
+    },
+    "api/server-shared/src/main/java/rikka/shizuku/server/util/AbiUtil.java": {
+      "git_blob": "044fa9f438b9ec7a06fa0322211fe3c076c779d7",
+      "mode": "100644",
+      "sha256": "b11d0f1be69f51b4a2887dc71d2e1df92789e16f9ead4b0e240b6a78016ce0af"
+    },
+    "api/server-shared/src/main/java/rikka/shizuku/server/util/HandlerUtil.java": {
+      "git_blob": "a9e64830b02e1dc89beabd4627aedf6fcd9ca688",
+      "mode": "100644",
+      "sha256": "d461d4e129d2dc428bd47d68413cb8374b3f54d58bad74187443559c00097866"
+    },
+    "api/server-shared/src/main/java/rikka/shizuku/server/util/Logger.java": {
+      "git_blob": "2a198d8d11fb62e66c3388d9e8e1049d05f77427",
+      "mode": "100644",
+      "sha256": "810202a3b2b9743c0d6065cf81e1bc2305db0c0c85dae105d053d5af1d1278d2"
+    },
+    "api/server-shared/src/main/java/rikka/shizuku/server/util/OsUtils.java": {
+      "git_blob": "e286b517a20436eaca5401d9c7609ed0b47b9c70",
+      "mode": "100644",
+      "sha256": "5e820a0fba35704f336ca32b4be817bb5c175a7de7876a877a7ce72f2cc344cc"
+    },
+    "api/server-shared/src/main/java/rikka/shizuku/server/util/ParcelFileDescriptorUtil.java": {
+      "git_blob": "f99358dc051cf561ee7f2b0ab18c477bd75a7ab7",
+      "mode": "100644",
+      "sha256": "b127a3c68e12b9e92e4ea871a5bb9757e3d5b068c71a3dd697217411e1eabc26"
+    },
+    "api/server-shared/src/main/java/rikka/shizuku/server/util/UserHandleCompat.java": {
+      "git_blob": "04d455cc8fc2f7efe64fe81de7bee2fa1c81c05f",
+      "mode": "100644",
+      "sha256": "0b15cdc4f633c29ccff4abdfb185c1dc223a6343afa4b3ec5f981a70f3f82862"
+    },
+    "api/settings.gradle.kts": {
+      "git_blob": "6fa855d0d0a28c85919329debe1492bcc83c9d2f",
+      "mode": "100644",
+      "sha256": "32b92e895ae9130a720e571ca2406de4d0611396215267a0e6f9494cd0637b2a"
+    },
+    "api/shared/.gitignore": {
+      "git_blob": "42afabfd2abebf31384ca7797186a27a4b7dbee8",
+      "mode": "100644",
+      "sha256": "5c3174b74edc6f2b9e0743594b8bd3c7f31e4f4405758cc9872b3fe1de1d28b4"
+    },
+    "api/shared/build.gradle.kts": {
+      "git_blob": "58f8f9d07aba17506b24993bcd29dcc9fe172052",
+      "mode": "100644",
+      "sha256": "84c5dd163adef345eab86653064e1bb22a7000b2fb64c572e84b223086f61a7a"
+    },
+    "api/shared/src/main/AndroidManifest.xml": {
+      "git_blob": "8072ee00dbf16d9161b7464ef3d2194a7d659bcc",
+      "mode": "100644",
+      "sha256": "daa0fb1f32ba7ea85a07ef6302ab3d58c3407d7fd2aa03ec132cb9e38e8d9849"
+    },
+    "api/shared/src/main/java/rikka/shizuku/ShizukuApiConstants.java": {
+      "git_blob": "20c764c875b59f3ac10b7543ac02ff3ff5b931e2",
+      "mode": "100644",
+      "sha256": "54d642df056b4883712bf6e0f8451a4b54608f0cf4c588bf1f4a89b102a18983"
+    },
+    "api/shared/src/main/java/rikka/sui/util/AppNameComparator.java": {
+      "git_blob": "81657ea04cafe3666c57fa663a8fa5121daa5cd3",
+      "mode": "100644",
+      "sha256": "070e6373188951efd94fc47ce68d71227c50d084e04f858a64323d712802c591"
+    },
+    "api/shared/src/main/java/rikka/sui/util/BridgeConstants.java": {
+      "git_blob": "5abc388d32f6a3b4a8ec777e40161cd626791144",
+      "mode": "100644",
+      "sha256": "d0af770bc5e960723439c39105b8e98267f6c0a4257257ea5f3276aa8fb1c51a"
+    },
+    "api/shared/src/main/java/rikka/sui/util/LabelComparator.java": {
+      "git_blob": "f4710d326e47e3110fa8679d590bc2e7737f5a5e",
+      "mode": "100644",
+      "sha256": "ac225043aaaf1f18a2f17e932454de6c80d54b8b9208bc7b7bcb8ef7a570419b"
+    },
+    "api/shared/src/main/java/rikka/sui/util/Preconditions.java": {
+      "git_blob": "a45cb65ddedf01f41d7aa00da430a1e846e162c5",
+      "mode": "100644",
+      "sha256": "d2b35abcf66a1bb37fb91c721db61cf93229d3c98432270621180150fd605d76"
+    },
+    "api/shared/src/main/java/rikka/sui/util/Unsafe.java": {
+      "git_blob": "19bfb599455f81139e3f8d664c9b4d7758620875",
+      "mode": "100644",
+      "sha256": "a5d62cae054cb143fe377676bc50ec298413747d5239eb16bb883e688e6d93c0"
+    },
+    "api/shared/src/main/java/rikka/sui/util/UserHandleCompat.java": {
+      "git_blob": "ea47e1cb320ca822fd07a5b35553a2b71060dddd",
+      "mode": "100644",
+      "sha256": "4ea08997cfa2698e3740334a41d577d4e0e00e42d0c2d2b5afe9948f49745075"
+    },
+    "build.gradle.kts": {
+      "git_blob": "6e7335aecd896a30d99ccf9d4685212115259747",
+      "mode": "100644",
+      "sha256": "026c4e85e5b0f5f08cfcbbae41aa0985b3b79eb175a6bfa354d63aca3a540a3f"
+    },
+    "buildSrc/.gitignore": {
+      "git_blob": "796b96d1c402326528b4ba3c12ee9d92d0e212e9",
+      "mode": "100644",
+      "sha256": "5b46eb48d96e8571e8c93e4ef4f6ffbe6807b6d7350664a36a064e1167a32718"
+    },
+    "buildSrc/build.gradle.kts": {
+      "git_blob": "cc02e636bda295fbe1213dfb488782c3441333f7",
+      "mode": "100644",
+      "sha256": "202dac5511284cac5e3a4d8df2ff8297e401c4a4861f5e0bb11969cc34902d28"
+    },
+    "buildSrc/src/main/kotlin/rikka/sui/gradle/AdbModuleTask.kt": {
+      "git_blob": "c8653959336f84c4bcca701723cf44b5e05e8b32",
+      "mode": "100644",
+      "sha256": "3e8e93fea1fa82943563f02d368eb52dfa2cfb901efea63caa2472e410479855"
+    },
+    "gradle.properties": {
+      "git_blob": "1e43a9a973cf9ea66a630e110c8f071e3215027c",
+      "mode": "100644",
+      "sha256": "430e08b2472bb230bbb73b31f3357e96294adc6bfd5a051aed23cd835799eff1"
+    },
+    "gradle/gradle-daemon-jvm.properties": {
+      "git_blob": "70ab7232332aae368098890a064a44938f7ccd8b",
+      "mode": "100644",
+      "sha256": "c712b42d80a22e26bcf6e46456b0a380935f09f835530b1d21ef3d89ce2b57d1"
+    },
+    "gradle/libs.versions.toml": {
+      "git_blob": "fe02d7562de6aa7dff7cadb97941dc0d0d7a7670",
+      "mode": "100644",
+      "sha256": "d32461db854e36c19cce22b50d4c768444826a8317d7e507d5a4b3c8b209f2bc"
+    },
+    "gradle/wrapper/gradle-wrapper.jar": {
+      "git_blob": "9fa7f288283f81eec4952784c271abd7e0938dee",
+      "mode": "100644",
+      "sha256": "3b8a25775a69158b5ad2b1d17a80a88dc7b40a352a73eb27d06c612a7ce68e98"
+    },
+    "gradle/wrapper/gradle-wrapper.properties": {
+      "git_blob": "2e7bb9fd6ab07c0350540fe458e1865de3ed5185",
+      "mode": "100644",
+      "sha256": "3cbe35d0020d8393c73f4cc2572838d1db338dd27885dd4d88c46b4d28f762e0"
+    },
+    "gradlew": {
+      "git_blob": "249efbb032ce46a80c687c0723eb172e85f6a136",
+      "mode": "100755",
+      "sha256": "a5a5c199ba02189ae8c46a334223371a20599d9c298ef65e7540ede4a3f72d59"
+    },
+    "gradlew.bat": {
+      "git_blob": "3185a43f78fabec15ca99b0ca6bf1e666218d5ca",
+      "mode": "100644",
+      "sha256": "31ec098bd961c460b62875950c3eff5c8213bcb0bbde38d769b88512877fd21f"
+    },
+    "module.gradle.kts": {
+      "git_blob": "dcfba213494615fb1d220becb77ddfa3d64b5cd3",
+      "mode": "100644",
+      "sha256": "eb7dd4dfe07731203d3933668a72e0b4201796a451bb06b930b186e4cf7af890"
+    },
+    "module/.gitignore": {
+      "git_blob": "9833d4bf2c59ce93da945715598428ab3cfdddba",
+      "mode": "100644",
+      "sha256": "d316b9e827c7909024b9f621326bc850846fc67f3281cfc4718701bd6be87d22"
+    },
+    "module/build.gradle.kts": {
+      "git_blob": "5bb60ed96346cc0919e5ef49e2e5ec731abd7154",
+      "mode": "100644",
+      "sha256": "d6749fdb4e5de101cb8d3cf735dd5334de8c5f72c209f8fabbf697d3a3904efe"
+    },
+    "module/proguard-rules.pro": {
+      "git_blob": "2d873c2a757c29ba9d9505910157afe05424f2bb",
+      "mode": "100644",
+      "sha256": "1ee6b6c1be259a6ddf3da88b60fb2dbdd6ca94bbcea9fde42795768b7ca2d194"
+    },
+    "module/src/main/AndroidManifest.xml": {
+      "git_blob": "e33e02769c06ebb3d650a489368b272d568977a4",
+      "mode": "100644",
+      "sha256": "d5a6bb241cdccd61942ab8d8c59d680c6a88770c7c0d10f89bffb11d6516f4d6"
+    },
+    "module/src/main/cpp/CMakeLists.txt": {
+      "git_blob": "51ef8ddf602216d39b75360107ec9b1be8b033ed",
+      "mode": "100644",
+      "sha256": "7604429a1d9c538faf14385759f71232dee2ff629973f027fe03edfbbb2763c5"
+    },
+    "module/src/main/cpp/adbd/adbd_preload.cpp": {
+      "git_blob": "175fee68dbc5da1f195273af062938cc5fcacb9c",
+      "mode": "100644",
+      "sha256": "5fe854fae446d2ece2cfd1d37b44824a0e2278e99f2ea0c51f711e1c4c7b975d"
+    },
+    "module/src/main/cpp/adbd/adbd_wrapper_main.cpp": {
+      "git_blob": "2289d45c68c425c827d1e21f49dca3a8854ec76e",
+      "mode": "100644",
+      "sha256": "2344607266d0a83df26dd0b6ebd31e962fa6d2b3fda55e2fec71d8ab9ca9ecdf"
+    },
+    "module/src/main/cpp/checker/checker_main.cpp": {
+      "git_blob": "46fb3fbdef5a56cfaf7ab540db23bf767eab2d0f",
+      "mode": "100644",
+      "sha256": "8878cc5febe057f9d8f113e3cb4436247e2c4b221e6c23954cfd7b49f75750ae"
+    },
+    "module/src/main/cpp/core/binder_hook.cpp": {
+      "git_blob": "8e36541aa7ba0afb059e704daafd5392861d6a5c",
+      "mode": "100644",
+      "sha256": "e3d74684917f5247a6824fe317d8b83eccde2155d7363bf3a82cebdfdfdac009"
+    },
+    "module/src/main/cpp/core/binder_hook.h": {
+      "git_blob": "794c3b01b159569ff4de8e0b87a886225159f6a9",
+      "mode": "100644",
+      "sha256": "54464952364575620d95b76fe5c58970e4787368e2e4e867bcadbab67f8ba038"
+    },
+    "module/src/main/cpp/core/bridge_service.cpp": {
+      "git_blob": "236b9f7c67a377500f6c5fb3db3fbd6a87032784",
+      "mode": "100644",
+      "sha256": "f611a954ee669177d2c5d511bbee704e7112926adead096db9050fe8c0dbd194"
+    },
+    "module/src/main/cpp/core/bridge_service.h": {
+      "git_blob": "42ed0ff306dda3e94ea10c223289f5e3cd77bbc1",
+      "mode": "100644",
+      "sha256": "5b06c8b76a12cd9de7acf583d5898c6c1671f9d518cd8ee8a2cc99099f47269b"
+    },
+    "module/src/main/cpp/core/main.cpp": {
+      "git_blob": "3c950e79ed885f2af490f04603c344606a5d7ee6",
+      "mode": "100644",
+      "sha256": "31d557276b0c2ca55dfe172d34a7490ec44bc8b721f59688f35c0afabeb2e44b"
+    },
+    "module/src/main/cpp/core/main_zygisk.cpp": {
+      "git_blob": "666da0a2fd87cb1641d72f46e6b7f73429d29871",
+      "mode": "100644",
+      "sha256": "8b94f9ed46d8943cf6f23ef984f71a9d74a73363300ea31b77a37052c38dadc4"
+    },
+    "module/src/main/cpp/core/manager_process.cpp": {
+      "git_blob": "24e4c821aba1c01510e678fc1163a40d09dc8997",
+      "mode": "100644",
+      "sha256": "53e4857f6966da15673423d09b46f4f25bd97d0ad77d8bbe204cce4dd7da4003"
+    },
+    "module/src/main/cpp/core/manager_process.h": {
+      "git_blob": "95124471b713b70fad29d34bf335cb289e225896",
+      "mode": "100644",
+      "sha256": "0d51850903d49e62978aa6a7a230221b575e9bb7c5dc2647db005c5ce57b0c40"
+    },
+    "module/src/main/cpp/core/patcher_main.h": {
+      "git_blob": "d81dcf4e555ca942dd9e4fa8fc2011cb355ee923",
+      "mode": "100644",
+      "sha256": "fd8e9a13d7e9baf05147e984d61c6e492bd7b1e418e46f0d890ca6abb26cfd10"
+    },
+    "module/src/main/cpp/core/settings_process.cpp": {
+      "git_blob": "fb7bc053b4b67260b0635833fb29c38890abcf77",
+      "mode": "100644",
+      "sha256": "707663658eab0faf24e2a8bc55f137bfd918176eb8e44d82559657e663afdb30"
+    },
+    "module/src/main/cpp/core/settings_process.h": {
+      "git_blob": "463fa727f809a73a2d7e7bcb343e09072ddc5c50",
+      "mode": "100644",
+      "sha256": "b48d94464471b8f35a70e317395fac0276b2944b180bba0d558d9a5bb7b2e95b"
+    },
+    "module/src/main/cpp/core/system_server.cpp": {
+      "git_blob": "5ecb75f228e333c412c365d59c7ff4670639392c",
+      "mode": "100644",
+      "sha256": "e02ec459b4bdccb3746fe4571dfb21833878fad7b1d3cde471edee80e6d2ee6d"
+    },
+    "module/src/main/cpp/core/system_server.h": {
+      "git_blob": "cff2f3883ef707bbbcbaf9beb468049ab16d6080",
+      "mode": "100644",
+      "sha256": "5395ef9c82ee9af26053c133e3a83cbe39e2bc410cf3e0e0dab5f5440a8c565d"
+    },
+    "module/src/main/cpp/include/config.h": {
+      "git_blob": "ca61410e482d9ae86d34e31ebb549be470685b0e",
+      "mode": "100644",
+      "sha256": "4d46bc1e3567bd7b10d0d20cad6745b266728bda3cc591d86ea261bd27d353f2"
+    },
+    "module/src/main/cpp/include/logging.h": {
+      "git_blob": "f7ba666f57dd2e1a4e67078f698064f420999923",
+      "mode": "100644",
+      "sha256": "74161285be4a244a695c182b4918cf97b4bc2b387d7925cb5e38bc3ccf320a62"
+    },
+    "module/src/main/cpp/include/zygisk.hpp": {
+      "git_blob": "9f9e0d2f4321bb9e8a0abb8b62d0b946f70601c6",
+      "mode": "100644",
+      "sha256": "aca2582de068c514590a236412a32c25b930152ecc93ed378e21120aec6b3355"
+    },
+    "module/src/main/cpp/main/adb_root.hpp": {
+      "git_blob": "b00ce669e2ba5411c070a3c0c8a2071d63c70e02",
+      "mode": "100644",
+      "sha256": "7be8b04bf848183d9ca66699fb00c92c5565c818e9c6bb69c812dea41d360597"
+    },
+    "module/src/main/cpp/main/main.cpp": {
+      "git_blob": "f55f6b78de0c705e674527e7137583fa93d4c6ae",
+      "mode": "100644",
+      "sha256": "cec883aac495b87717ca07fedd94cb273576e28c4704b0545d5a63d6d5a3dc27"
+    },
+    "module/src/main/cpp/main/sui_main.hpp": {
+      "git_blob": "93b3218ebac7af5ae93b86d08f5e16feb0bbf4ad",
+      "mode": "100644",
+      "sha256": "b7e084123c66790af3e628df3b154f716fb28ad23fad814f9176d51fb7036b7b"
+    },
+    "module/src/main/cpp/main/uninstall_main.hpp": {
+      "git_blob": "1309b3fae8dfb618359744c00658f8c33abe7d4c",
+      "mode": "100644",
+      "sha256": "0d32693e6f9aed62a9bdc73007654bd8d88f64c9ded4a21c85e9009a20ffbcab"
+    },
+    "module/src/main/cpp/util/android.cpp": {
+      "git_blob": "7120540e2b50f014707b2d9a90cecba1550be5a2",
+      "mode": "100644",
+      "sha256": "8c40b7a2c18e979045da9cd11835fa197402533168ed9e141cb608b332b7135c"
+    },
+    "module/src/main/cpp/util/app_process.cpp": {
+      "git_blob": "93c743a610bf05033306609f28f4752bd17b0389",
+      "mode": "100644",
+      "sha256": "a4339ca787941b7f2dbc5d10728b15bfa72e54fbe38aa2958e191093cb999bcf"
+    },
+    "module/src/main/cpp/util/dex_file.cpp": {
+      "git_blob": "85cb83ed8d31a43deaa1ef08af9f1f462fa0a1de",
+      "mode": "100644",
+      "sha256": "95e58c53bfbb44417c4a3d090264f3341d8a278e403319beb042d783baa1b0e3"
+    },
+    "module/src/main/cpp/util/include/android.h": {
+      "git_blob": "6f43c08c3c75adb06944dd16520d9a72e3083280",
+      "mode": "100644",
+      "sha256": "f4526ad444fd7e05986efc66cbbcfbfc93af421eae26a0bbc1738b6638398dca"
+    },
+    "module/src/main/cpp/util/include/app_process.h": {
+      "git_blob": "69b623509b4f5805b2f1966d2ebe90ca2e62a82e",
+      "mode": "100644",
+      "sha256": "50a5251639c3528bc8182ef8153b1df0724e9cf8dfd4d549122e89701ac50527"
+    },
+    "module/src/main/cpp/util/include/dex_file.h": {
+      "git_blob": "905935d8e9faee5bdf7e8019744f631c9756ef82",
+      "mode": "100644",
+      "sha256": "f41e041f3009a5a8f120f6837a632baec5c4d54411e7d3bb94e2b1baa2a2964e"
+    },
+    "module/src/main/cpp/util/include/ksu.h": {
+      "git_blob": "57aa4b3edaac91b004ba662f53ddf885ce302f0e",
+      "mode": "100644",
+      "sha256": "10622e14fd69bf1c7e860e0cad6336141336dfa428a98ec98cddcbf524cf94d1"
+    },
+    "module/src/main/cpp/util/include/memory.h": {
+      "git_blob": "e4a413854580a53270288a03cc5a048cc31c1c3a",
+      "mode": "100644",
+      "sha256": "4a40a2a4a355d52af8cf9b2500db00ddb1f6e6be9c8ca3f005dadd492263d62f"
+    },
+    "module/src/main/cpp/util/include/misc.h": {
+      "git_blob": "d8d9345a0170a488e0dbef1679d3c7ffe4b48c2d",
+      "mode": "100644",
+      "sha256": "091bb0918bb8340072e3dd1bdb64d59ff9361e26457a186a0c0ebf77b86965a7"
+    },
+    "module/src/main/cpp/util/include/plt.h": {
+      "git_blob": "e4c13cbc140e2ba335a3ba432adbb7581762554f",
+      "mode": "100644",
+      "sha256": "a3d685437391b516ed0b67a030f67ec723d8165b0ff677a7a4e8be8bc9f75327"
+    },
+    "module/src/main/cpp/util/include/selinux.h": {
+      "git_blob": "04eb07529969e641e017554caedb19c32f2ddcee",
+      "mode": "100644",
+      "sha256": "b45f36803927a1806d9e8d2f2cafbe6947989e0ce1a0849e11d24872eaa14b9a"
+    },
+    "module/src/main/cpp/util/include/socket.h": {
+      "git_blob": "45e73605cca890766742623cb8e9e93a77ab4f91",
+      "mode": "100644",
+      "sha256": "7f8c0232abdf888185fb5d24def07f316a7234f0c9daa70a5789db62f8a4f597"
+    },
+    "module/src/main/cpp/util/ksu.cpp": {
+      "git_blob": "e70478e6446f4384fdb1fb618f6c4463dbff0edd",
+      "mode": "100644",
+      "sha256": "ed7de03c3c17899ab4520ecdeac0b01d7629dc3a26ad82c0d728a8fe1d81680e"
+    },
+    "module/src/main/cpp/util/memory.cpp": {
+      "git_blob": "d02c7b1cf7616f5861fd31a94bc4a49c19451c56",
+      "mode": "100644",
+      "sha256": "9cc8a529e0973180418fca644849edde3e21587d3a9a39b39fb831d6719122cb"
+    },
+    "module/src/main/cpp/util/misc.cpp": {
+      "git_blob": "33c7440bbc6862c17da838ec8b5456c2b97106c6",
+      "mode": "100644",
+      "sha256": "7ef9e01efa4c096498507f3b9689a75e339fd763d2c676907f1540a9e40b71d0"
+    },
+    "module/src/main/cpp/util/plt.c": {
+      "git_blob": "7c00a4a82a08c2d70c37cda468490fa5e7a3376a",
+      "mode": "100644",
+      "sha256": "bf2f0f648ad48eef9c3a3847a91bb5007b208ac44637a743bf8b10202b315ee1"
+    },
+    "module/src/main/cpp/util/selinux.cpp": {
+      "git_blob": "ed172f9498d4b082fdf297f13768d8723b2e30a9",
+      "mode": "100644",
+      "sha256": "b07b70dbf7089c8e556424ec7449fee8642644d53bf0c0993d9760a7a910d177"
+    },
+    "module/src/main/cpp/util/socket.cpp": {
+      "git_blob": "7d1e275fb8246b2dbccfec5e8a1daf787788e90d",
+      "mode": "100644",
+      "sha256": "1b8f6be7c2f7628a79f3ca81c880289e95f4fb55d72f12466b50f90f79ababc2"
+    },
+    "module/src/main/java/rikka/sui/binder/HookedBinderProxy.java": {
+      "git_blob": "d24a9f364ff6bd080515671bfc82b2285a6b63bc",
+      "mode": "100644",
+      "sha256": "cbbe2d341bb30849bbf8b8dfadff580e2942614c42772432d89f9b0ccb8df0b7"
+    },
+    "module/src/main/java/rikka/sui/binder/IBinderWrapper.java": {
+      "git_blob": "72372d833176f84c78377f97da87bbdf2d50034f",
+      "mode": "100644",
+      "sha256": "436b2ef5ab32f20f8f5a4db7d41ad526775e7e5e65cc5168ff85a1a396e110dc"
+    },
+    "module/src/main/java/rikka/sui/binder/Transaction.java": {
+      "git_blob": "75402f89e5d533b0093770bf722cd828d657d046",
+      "mode": "100644",
+      "sha256": "d03e941b4a3ee5d0e9c175191876878526864ba610abe412e3b4fb90f6759142"
+    },
+    "module/src/main/java/rikka/sui/binder/TransactionCodeExporter.java": {
+      "git_blob": "ea0d5e337920d34f408eb5c8a57fdbd99835c798",
+      "mode": "100644",
+      "sha256": "2bc9e09854c08c85cea94a27ec3bc7e38e456e2d767c0d427182effc3f64910d"
+    },
+    "module/src/main/java/rikka/sui/installer/Installer.java": {
+      "git_blob": "2c1d1b887bb1b0e937844b3328e4ea3f82d68ba6",
+      "mode": "100644",
+      "sha256": "67d8617a0057731faa09ab97841801a703d3ef4a02fe58cf0cfd0cac363f08d6"
+    },
+    "module/src/main/java/rikka/sui/installer/Uninstaller.java": {
+      "git_blob": "fa9c54191b6665a3d293bc4c1b776f0773e0b82e",
+      "mode": "100644",
+      "sha256": "e96769941fdeb778921ebe53c6fd2c96dcf7c4782df42714eaa3eb8fa07c2604"
+    },
+    "module/src/main/java/rikka/sui/manager/ManagerConstants.java": {
+      "git_blob": "c700e3c8e66244c9d2ed802b986b3b060311cca5",
+      "mode": "100644",
+      "sha256": "4069cbed77b6916c48573cdd9d0e53abd08c4aad6189d31be5fde053ad6b11ba"
+    },
+    "module/src/main/java/rikka/sui/manager/ManagerProcess.java": {
+      "git_blob": "86105afe6f8f3e11d4c69000f89798af554d1ebb",
+      "mode": "100644",
+      "sha256": "af8c28560f7e877f35403490adae479badd998b9650eed4aad1c4c355b941414"
+    },
+    "module/src/main/java/rikka/sui/manager/WorkerHandler.java": {
+      "git_blob": "195ada0c628132ed971e756aa8a83e23c200bcde",
+      "mode": "100644",
+      "sha256": "bb5a6cf5fca8ea958d340a45c2321077ae156905ca19d3e3f746a673e529cc20"
+    },
+    "module/src/main/java/rikka/sui/model/AppInfo.java": {
+      "git_blob": "149be9a96d1703b5013292a4f2c0603eff0afd26",
+      "mode": "100644",
+      "sha256": "36349bfcf48dcf4c2431b946417b8ac961113f44d1a42ba5e9765bc21e418e73"
+    },
+    "module/src/main/java/rikka/sui/resource/SuiApk.java": {
+      "git_blob": "77b4cc66da46fb50eb0b2c0482800735672312f4",
+      "mode": "100644",
+      "sha256": "b0c1b61a94ca082946988f725b7c456b5b5e5a1b02b93dc4f041dc9ca423ea91"
+    },
+    "module/src/main/java/rikka/sui/server/AppListBuilder.java": {
+      "git_blob": "9ca605ce6871a3676191564fd188a5f59bd31b21",
+      "mode": "100644",
+      "sha256": "58f7ccf70ba52c047b504182f0c5ade20dcc830a19c86f822c54baa91bedefdf"
+    },
+    "module/src/main/java/rikka/sui/server/FinasuManagerGate.java": {
+      "git_blob": "f57de6bd958bb928ff82f25e739317b404cd0b39",
+      "mode": "100644",
+      "sha256": "95ccc3ad61ff947792bbe603b8bbb5d248ac925de2eabfd6b92e57c593cac9eb"
+    },
+    "module/src/main/java/rikka/sui/server/RootBridgeDelegate.java": {
+      "git_blob": "17ef254bc12647a11fea40fe27eea94cd08adabe",
+      "mode": "100644",
+      "sha256": "e273cf74b8ce68a53e6b1579d3446b1cebb89e730e64fa220a36a0f50218a311"
+    },
+    "module/src/main/java/rikka/sui/server/ServerConstants.java": {
+      "git_blob": "20b655f4e6779947184592d4b495c24e0dd7cd6c",
+      "mode": "100644",
+      "sha256": "5fae0c07fd41268a9cbc745b81306618681ece7a6635144c8310240855d73b47"
+    },
+    "module/src/main/java/rikka/sui/server/Starter.java": {
+      "git_blob": "276761ffcd5243e19fccf0977487692b70121142",
+      "mode": "100644",
+      "sha256": "9e67d2a5bfa83634804a557a9202bfeb8874f95f906ce9b0d86f633e613644af"
+    },
+    "module/src/main/java/rikka/sui/server/SuiClientManager.java": {
+      "git_blob": "e89daa7716507254a471e2ef8540a93c45e209a8",
+      "mode": "100644",
+      "sha256": "5f4287cb676bec88baf74799da8510f44c8d28bcc71a6ec8eabbf09fb19e45ff"
+    },
+    "module/src/main/java/rikka/sui/server/SuiConfig.java": {
+      "git_blob": "4a19ef0bf48bf6034c9435ec78fbb605057498ea",
+      "mode": "100644",
+      "sha256": "41ae532a536b757e631972bf0cac4482e077388cbb7584c710925316a890b100"
+    },
+    "module/src/main/java/rikka/sui/server/SuiConfigManager.java": {
+      "git_blob": "a18acf5304fd88ad1d1abfbaa079b782e7082f5e",
+      "mode": "100644",
+      "sha256": "0ba639ec470352fa36d0f10e0e21ef08d65231c6d7c8c1e3c6adda8b5b6f83ae"
+    },
+    "module/src/main/java/rikka/sui/server/SuiDatabase.java": {
+      "git_blob": "65238b16950d5979c04596f2d95915d7fc3d85f1",
+      "mode": "100644",
+      "sha256": "3aea0cf06952bdc8c0fab77cea64f2c563e2f41104f452a2db4061fed605f132"
+    },
+    "module/src/main/java/rikka/sui/server/SuiDiagnostics.java": {
+      "git_blob": "6c6c32dd83b27cc8604a1b8916b25e628e788b81",
+      "mode": "100644",
+      "sha256": "3cdf047d54fefb750cd68894d49385e3c83c9d5241f5d88f8d0f06ee3b43c504"
+    },
+    "module/src/main/java/rikka/sui/server/SuiService.java": {
+      "git_blob": "99862b72c5e00ba4e17e206c964c83d589fa1ce9",
+      "mode": "100644",
+      "sha256": "c08225973e6bd8f78b8be38c3d1c1b3bee6bd37538887e1e145306beb0b50267"
+    },
+    "module/src/main/java/rikka/sui/server/SuiUserServiceManager.java": {
+      "git_blob": "75455231d86951eaabf0d15cdae2df4f3e7119fe",
+      "mode": "100644",
+      "sha256": "069102e9db3c2b20d5dbcb6f24d2583c370254e0e831c296d0238c8a34118cb6"
+    },
+    "module/src/main/java/rikka/sui/server/bridge/BridgeServiceClient.java": {
+      "git_blob": "f2075485af12c97b04812ad545befac6431d94d8",
+      "mode": "100644",
+      "sha256": "c2452ef6312e1196e3b09b3673d943e8907ec9040c6ac18f59006e8b545d1324"
+    },
+    "module/src/main/java/rikka/sui/server/userservice/Starter.java": {
+      "git_blob": "d3b6f13d315291385249b70b2e1abf86e3df0065",
+      "mode": "100644",
+      "sha256": "92b0cd7d3d382ccc6b1d70106e06528d5f305bddf18c1071d7b314603da197e9"
+    },
+    "module/src/main/java/rikka/sui/settings/ActivityThreadUtil.java": {
+      "git_blob": "8936c51c2ecd4bc9e80f3fb758df8f294f0b72ca",
+      "mode": "100644",
+      "sha256": "57e78b6061ff199d15f12c0c18c44a320036357e04dceb1db3b2c59b74af6b26"
+    },
+    "module/src/main/java/rikka/sui/settings/HandlerUtil.java": {
+      "git_blob": "9386e9034e99a006f22c9fa7258246e62c5a9b07",
+      "mode": "100644",
+      "sha256": "9e5aecb5ecdc3a9d9fab0cef0711b62309ddaef10cd82ad8beb851adc3cca4cf"
+    },
+    "module/src/main/java/rikka/sui/settings/SettingsConstants.java": {
+      "git_blob": "6839c9d9aa7844b01bc369dfa21b04d9b56036db",
+      "mode": "100644",
+      "sha256": "c571eab22a54d834a1ee41a47ab49c701ab17123db414be7eb3804da01be44b7"
+    },
+    "module/src/main/java/rikka/sui/settings/SettingsInstrumentation.java": {
+      "git_blob": "5fc62cf47373f1d3d18f0698eac621e0d31e684b",
+      "mode": "100644",
+      "sha256": "55117f400b604c934db09f44f60733bc15133dce5d8faa4e13b888dfb7b1e73d"
+    },
+    "module/src/main/java/rikka/sui/settings/SettingsProcess.java": {
+      "git_blob": "75a63e6099999e1860d57d878a8bb4104968f7fb",
+      "mode": "100644",
+      "sha256": "b36d1677fda061a5654e19adabb789c4a9adb3ff2200844e7a1419283a616665"
+    },
+    "module/src/main/java/rikka/sui/settings/WorkerHandler.java": {
+      "git_blob": "3dc903e1a06d027f733535fe6754d099ef47ae4e",
+      "mode": "100644",
+      "sha256": "2ad27cd9174e340a06b05252f7589f32af290fa89430e8169866834d8c8f25dd"
+    },
+    "module/src/main/java/rikka/sui/shell/Shell.java": {
+      "git_blob": "0579a2c510ba8a07423374bd48fa00f33df1dfc9",
+      "mode": "100644",
+      "sha256": "a7bee09284c4d765efaf2486a119777e7f3aa25b6536f2bfa446d500821f30d0"
+    },
+    "module/src/main/java/rikka/sui/shortcut/ShortcutConstants.java": {
+      "git_blob": "0c2576c779b86a6ebf088fcedf9305e9c3be1c4d",
+      "mode": "100644",
+      "sha256": "5fdffdb031d5fa13f1600b9f1eb925051f334b8d9e3f0857e53f58c82e1b2739"
+    },
+    "module/src/main/java/rikka/sui/shortcut/SuiShortcut.java": {
+      "git_blob": "8a16974967ae67db6b4042aa4fa1f886d19cc06f",
+      "mode": "100644",
+      "sha256": "0bc6a371556cf04526d01cf513d132058692196fda5e032bd30a7f3fbdd8582f"
+    },
+    "module/src/main/java/rikka/sui/systemserver/Bridge.java": {
+      "git_blob": "dcc713f41b445973e3e41bdd86068a2771ba9dda",
+      "mode": "100644",
+      "sha256": "98f6be63f760e5501182276300904a510008c48218223a29f0069ca7afee77a4"
+    },
+    "module/src/main/java/rikka/sui/systemserver/BridgeService.java": {
+      "git_blob": "0be386ca9fd69eaf2a3addf62a205f5e5bcd2b78",
+      "mode": "100644",
+      "sha256": "1ec8459acdf32f981838b39e6b0c5072b703356e705be3bee89e0b901d836fe0"
+    },
+    "module/src/main/java/rikka/sui/systemserver/LegacyShizukuBinderCompat.java": {
+      "git_blob": "ca9d1aaec5643c996b22b2c612e3b514b7d69afd",
+      "mode": "100644",
+      "sha256": "bf5b153b999d3a9ed74a642943d405f3b819fbfe9e3472e2a782d995c9d624d8"
+    },
+    "module/src/main/java/rikka/sui/systemserver/PackageReceiver.java": {
+      "git_blob": "27f160fadf778704e581fa50edf9efdf0ccadc78",
+      "mode": "100644",
+      "sha256": "e94b10f3365edd05a10e265f393d528b6ac948362826fcb45ca8c1628828c0a8"
+    },
+    "module/src/main/java/rikka/sui/systemserver/SystemProcess.java": {
+      "git_blob": "1101284b68cac69fdd58bf4e4fe33a55e16e0fb8",
+      "mode": "100644",
+      "sha256": "e449e10f81ceb11e1e8bd8f53e0a88c0f0a00e75a6c08bc6ef596a10230eedff"
+    },
+    "module/src/main/java/rikka/sui/systemserver/SystemServerConstants.java": {
+      "git_blob": "dff8257a99cebc30d6f5ab2e9862c59d0b2257da",
+      "mode": "100644",
+      "sha256": "21be80537aca0811c656a27a1fea58625f29a5e4f85a76c4b20d9eee4e38a3ac"
+    },
+    "module/src/main/java/rikka/sui/util/AppLaunchUtils.java": {
+      "git_blob": "25fb5827d4df0306c26591ffa8049cfcfb179579",
+      "mode": "100644",
+      "sha256": "8670736e01b6b2d4a76115f8936319f043b11d5a9aaf1940cfdb0d9437f03d26"
+    },
+    "module/src/main/java/rikka/sui/util/BridgeServiceClient.java": {
+      "git_blob": "ef75fb10425ebabc6a66fb00e7624c2e0dc4a372",
+      "mode": "100644",
+      "sha256": "57535a19dc9c891895527e1896d0be196540b616b151150dface76b6cb51c115"
+    },
+    "module/src/main/java/rikka/sui/util/BuildUtils.java": {
+      "git_blob": "d0f9f7525f1cf2553fda8514f4fee5e3be695096",
+      "mode": "100644",
+      "sha256": "8627d73d082bbe9d29fda257f428eba8edc40444909d53d4cafb0dd882a1d006"
+    },
+    "module/src/main/java/rikka/sui/util/InstrumentationUtil.java": {
+      "git_blob": "a76f89c7962d40f3968029db36997d9ca44e4ecb",
+      "mode": "100644",
+      "sha256": "ef839ac7446d704a2649ac88af586b1ddd8100f876cc5f933b00e2a60e44e1dc"
+    },
+    "module/src/main/java/rikka/sui/util/Logger.java": {
+      "git_blob": "a856236c7f2e3c3581bdb67aa586352e6dc86efd",
+      "mode": "100644",
+      "sha256": "5d7a11cc8f049ec2a2f5ed8456da34f7b231b9d9c80a9049dc9203d9176e0abe"
+    },
+    "module/src/main/java/rikka/sui/util/MapUtil.java": {
+      "git_blob": "9fd8ec5474f82c0e7779b125ca3a58931bee9b07",
+      "mode": "100644",
+      "sha256": "38bb33b59f2c942d963302e20a01ed137689593532be708e711ecd29349d3aef"
+    },
+    "module/src/main/java/rikka/sui/util/OsUtils.java": {
+      "git_blob": "467b486214d285f095fc6a6b9ca958f9861212d2",
+      "mode": "100644",
+      "sha256": "f7391e59bc70b3af14fe86947eeac5442211cc31e8ac532b7c0319980bec3027"
+    },
+    "module/src/main/java/rikka/sui/util/ParcelFileDescriptorUtil.java": {
+      "git_blob": "d529e23fa72d47a1e7301ca4e3ee5cb979693196",
+      "mode": "100644",
+      "sha256": "70c3d46142583b295ac754c75824ff2529a58684657903301a9a6d14bb193b14"
+    },
+    "module/src/main/java/rikka/sui/util/ParcelUtils.java": {
+      "git_blob": "663a3e8ee7faf9fd89b0191e08a28aef4c3dd2a3",
+      "mode": "100644",
+      "sha256": "4af173cc8c6531864ebb564dde2cb10d80db9b559746765ffbbd2d817398147b"
+    },
+    "module/src/main/java/rikka/sui/util/SQLiteDataBaseRemoteCompat.java": {
+      "git_blob": "a310707ff92b72d12dda28315f807dbcf4bd8636",
+      "mode": "100644",
+      "sha256": "6774ce5ec51151c7e02ecbc05a7d98fb34e0eeb0cff27c076a28d069821c634c"
+    },
+    "module/src/main/java/rikka/sui/util/SystemPackages.java": {
+      "git_blob": "d06818277cc755252fdb510987de50ac7265c168",
+      "mode": "100644",
+      "sha256": "0ac53226d6ede8c5b60c748491d0c9c3cc8903653cd5a7948cbcdf6c6193c9ca"
+    },
+    "package.py": {
+      "git_blob": "90179b96cc9c3eade6457f7602afe27def7073c6",
+      "mode": "100644",
+      "sha256": "8fd7d912d7f3bc7d407a48f98d506d47762f8cb649a60afcddc72a67be7a0f84"
+    },
+    "payload-version.txt": {
+      "git_blob": "7351847f075a143eced608813157e6b0cf240be3",
+      "mode": "100644",
+      "sha256": "6d8e4d5f2e6f854aed5b7590400ce1dce2da2769f97b8190bc238a10b55ed941"
+    },
+    "requester/.gitignore": {
+      "git_blob": "796b96d1c402326528b4ba3c12ee9d92d0e212e9",
+      "mode": "100644",
+      "sha256": "5b46eb48d96e8571e8c93e4ef4f6ffbe6807b6d7350664a36a064e1167a32718"
+    },
+    "requester/build.gradle.kts": {
+      "git_blob": "eaf6e412992a5e80ac86bcf1553306d5d6b2084d",
+      "mode": "100644",
+      "sha256": "e90dab3eece7a28ac99cd7dfd3a8fd380bc870ea29b83aa0fc8626ae2a3c4e98"
+    },
+    "requester/src/main/AndroidManifest.xml": {
+      "git_blob": "3e76071df437381e879aa7dc5ac16470ffc21e7d",
+      "mode": "100644",
+      "sha256": "2d003661d98cf3def7f427842db563a450be2bc787062d74cdcae555cf04995a"
+    },
+    "requester/src/main/java/me/yuki/suirequester/MainActivity.java": {
+      "git_blob": "5ff9a3fb603c7f81e945c1290afef436bf932782",
+      "mode": "100644",
+      "sha256": "e7fe0566cfc969da6d14259966f5d86e48ffe5d9b8e8034e2527480587ca4cf4"
+    },
+    "settings.gradle.kts": {
+      "git_blob": "cd6dcc19a79b0969cd9a848c0879293a6ec06364",
+      "mode": "100644",
+      "sha256": "07404d914c8c1ffe9cfcc9ba6bd26ddb4d99d9b2d04d0ab2f2c4ca7e22266f81"
+    },
+    "template/magisk_module/.gitattributes": {
+      "git_blob": "1643c10a68f119ccd49f0e21cebbcea72f359177",
+      "mode": "100644",
+      "sha256": "96bf29cdc1c556e6450d493f839c64cb276f3fe2f324bf2d86afef9f54fcf768"
+    },
+    "template/magisk_module/CHANGELOG.md": {
+      "git_blob": "04cdbc6761e9790991e4919075724273b3747a00",
+      "mode": "100644",
+      "sha256": "4489d061362207ebeda9b34a4535cca56ce25df72f861efd67a86a9f48097f63"
+    },
+    "template/magisk_module/META-INF/com/google/android/update-binary": {
+      "git_blob": "28b48e580a9b605038bd3de15c5aba08d2258b14",
+      "mode": "100644",
+      "sha256": "bcf4b1d9913f3af17755569c853e0b5a75b8005f6a18eb3f86dadcc0e968c29d"
+    },
+    "template/magisk_module/META-INF/com/google/android/updater-script": {
+      "git_blob": "11d5c96e0b07d20bbd25208ae15ff24f1da0b0ab",
+      "mode": "100644",
+      "sha256": "d2b8203193a083e43ad076fde01b9c7821e0aa521e1f8077b8628fb1cdb70c60"
+    },
+    "template/magisk_module/action.sh": {
+      "git_blob": "87f872192945fb42b021bb20865a72c27248a936",
+      "mode": "100644",
+      "sha256": "4ca151d6aff0457c26846c665fdcdc5447dd4aace888be5e209d5b57b4a45f5a"
+    },
+    "template/magisk_module/customize.sh": {
+      "git_blob": "c80c88004b05fa8def61f3350fb48956c91bb08e",
+      "mode": "100644",
+      "sha256": "890b862adee7d09d7a43b1f18bf3addac3c0aa602ff0bd1f68f8c19dfe9516f9"
+    },
+    "template/magisk_module/logging.sh": {
+      "git_blob": "7cd9e33f805145aaad76684c657e274a0971f766",
+      "mode": "100644",
+      "sha256": "72ad0db1726e2cbec916e6158b556abff29964f4a112c935056618da7a728a01"
+    },
+    "template/magisk_module/module.prop": {
+      "git_blob": "236bd20a212a04003255fa3d850328014d5f1340",
+      "mode": "100644",
+      "sha256": "902ad25a752e114a8443341a8d3c83a6b6ba2527ae4cec0e1c9314e0878490ab"
+    },
+    "template/magisk_module/post-fs-data.sh": {
+      "git_blob": "131394d0040471c5c99a19d0a9beeabf8f1a2196",
+      "mode": "100644",
+      "sha256": "11c65bd2b14325ef9221d1273e338223cbb8b7aaabcc57a1c3e1fee3369bd893"
+    },
+    "template/magisk_module/post-install.example.sh": {
+      "git_blob": "70325b6b5d9995bb2b5268408142c52fc8b9ae07",
+      "mode": "100644",
+      "sha256": "f846377d088b4eaee4f355bbb6c8b6372801ce4d15b1476ddc239a112664e873"
+    },
+    "template/magisk_module/rish": {
+      "git_blob": "4952d34ee5f75bec980490f3af91e6d718be6f9d",
+      "mode": "100644",
+      "sha256": "19b8b525dcdb47b9e202663f3c10c99a145c387a88b035eac6f3d041c9f2d90d"
+    },
+    "template/magisk_module/sepolicy.rule": {
+      "git_blob": "296d2347cea61210bcea8344d2d50d5fff4ddb23",
+      "mode": "100644",
+      "sha256": "93a9b5446974c73c86944542e20be2b1638c24fb5ad9c05f7eaf09caef1536fb"
+    },
+    "template/magisk_module/service.sh": {
+      "git_blob": "f81ad159239062ae2b5b9b834755d51aa8400e80",
+      "mode": "100644",
+      "sha256": "e35e3665f6ec78bc3cbab1963151d3bc22fd36a9e493c2a9715e900ee19fca75"
+    },
+    "template/magisk_module/uninstall.sh": {
+      "git_blob": "10c37f1d54973192c2b7b9e71b06d882c7d63302",
+      "mode": "100644",
+      "sha256": "211f08d8423c69c4e74f5ed2d1b2dbca16f38fa1606b75c0fd84ef996321935b"
+    },
+    "template/magisk_module/util_functions.sh": {
+      "git_blob": "feeb6ec8e7bebb83a1a48ea8a542fe11331dd5eb",
+      "mode": "100644",
+      "sha256": "bcaffd37dd488a2ffa5844da4e3735b73198fac9456f38c0e52b78ad7b736c69"
+    },
+    "template/magisk_module/verify.sh": {
+      "git_blob": "9260d44ef0147cd6f3be91e74c7c57391a66f595",
+      "mode": "100644",
+      "sha256": "c1ae78354a7fcecbfa3d3a7959ffc3ed0362c098828c58514f2d1d0e3082a119"
+    },
+    "ui/.gitignore": {
+      "git_blob": "9833d4bf2c59ce93da945715598428ab3cfdddba",
+      "mode": "100644",
+      "sha256": "d316b9e827c7909024b9f621326bc850846fc67f3281cfc4718701bd6be87d22"
+    },
+    "ui/aapt2-resources.cfg": {
+      "git_blob": "15d1d3180c3096ad71d4b8af83290b7d82409333",
+      "mode": "100644",
+      "sha256": "7cfbb420e612ac38deba9852e9ed740ccfeea1132b059a06c7211ec9fcddd594"
+    },
+    "ui/build.gradle.kts": {
+      "git_blob": "35aff4704bbc32209179ef5a99d65b90f533d275",
+      "mode": "100644",
+      "sha256": "4a024c90d8387aaf79b3799a460690874e21778450de16ab15f5ee3fd2390d49"
+    },
+    "ui/proguard-rules.pro": {
+      "git_blob": "a06111380ced770603d8b2577d849e1594ae6fb4",
+      "mode": "100644",
+      "sha256": "d40334f85b6a360a6eec31df9a638329bae5f9f35bf17ee8285be05c75377198"
+    },
+    "ui/src/debug/AndroidManifest.xml": {
+      "git_blob": "c500a441efb440c7779b8431fcb7122e4170ec33",
+      "mode": "100644",
+      "sha256": "bcc2cdcecf1206f2eb13dac5c866a490c9a50afdcf0808bfbdab2e71f9b8dc04"
+    },
+    "ui/src/debug/java/rikka/sui/DebugActivity.kt": {
+      "git_blob": "92495e434b2c3cf57312f6a6d31624a899504738",
+      "mode": "100644",
+      "sha256": "63126fcc72ea90a5396d6726b784c6090a9642243c59f6022423c25beca66ec0"
+    },
+    "ui/src/main/AndroidManifest.xml": {
+      "git_blob": "e33e02769c06ebb3d650a489368b272d568977a4",
+      "mode": "100644",
+      "sha256": "d5a6bb241cdccd61942ab8d8c59d680c6a88770c7c0d10f89bffb11d6516f4d6"
+    },
+    "ui/src/main/java/rikka/sui/SuiActivity.java": {
+      "git_blob": "4c9c1844d8eba0d99e199462efcd19db04cdb767",
+      "mode": "100644",
+      "sha256": "8ab53ef8e4fc3c49e382b76440ca4e5176274ab4eca0e56e91c50b6102c0c00e"
+    },
+    "ui/src/main/java/rikka/sui/SuiRequestPermissionDialog.java": {
+      "git_blob": "ad63983ff0fc74fe4eed1e240094686c4b47ecc5",
+      "mode": "100644",
+      "sha256": "cec2f28882c82cafb632e641e3e2c90884e14aecf13e605acd1c1d5f59f6c8cf"
+    },
+    "ui/src/main/java/rikka/sui/app/AppActivity.java": {
+      "git_blob": "908d38979e5232ad8479fe171d8be9f660a03f37",
+      "mode": "100644",
+      "sha256": "978883b8abd9708338d347d8732ba4a095a7aad940532c836763e44f49199158"
+    },
+    "ui/src/main/java/rikka/sui/app/AppFragment.java": {
+      "git_blob": "9be94d9cd54d32615abadfd96bb10b19c666f353",
+      "mode": "100644",
+      "sha256": "f57506446f4776c86e7d1f7662bf2aca7cc409d5a845fe3abcd24469919bd3c1"
+    },
+    "ui/src/main/java/rikka/sui/ktx/Drawable.kt": {
+      "git_blob": "155d72a91105ef0b90548759a726cbf9e04ba012",
+      "mode": "100644",
+      "sha256": "154d08bfdd57947a7e91c670dd7da485b84fd35faf40c770836ed81688586886"
+    },
+    "ui/src/main/java/rikka/sui/ktx/Handler.kt": {
+      "git_blob": "0c75bb4e122a2faa68cf1a23c9a78f1d128cdd18",
+      "mode": "100644",
+      "sha256": "d46c2c0539dc2602949ff77d62a8174da2fc16436c43e6d74f03782f9171272e"
+    },
+    "ui/src/main/java/rikka/sui/ktx/LayoutInflater.kt": {
+      "git_blob": "70e1058107043888f32a65e2dce906c90192d77b",
+      "mode": "100644",
+      "sha256": "51cf5038080b860e382ca4d07db73f527c8791cf860e25114d0b51346293b2cf"
+    },
+    "ui/src/main/java/rikka/sui/ktx/Resources.kt": {
+      "git_blob": "5fcd2173ba88412fec68825a6fda31805ba6545f",
+      "mode": "100644",
+      "sha256": "fc043d46f6db8e26743769cf045f98e926718d16d29d647cd6eb7e1764ca900c"
+    },
+    "ui/src/main/java/rikka/sui/ktx/TextView.kt": {
+      "git_blob": "8cc8eae35b1e2b9110b007d07638df5f88553ec8",
+      "mode": "100644",
+      "sha256": "85ee9e271221470952081f96d6de88f4abf99694e0055644b22a1dbc73b91772"
+    },
+    "ui/src/main/java/rikka/sui/ktx/Window.kt": {
+      "git_blob": "a281ece0d096d3b174983d4da3041f3ecbc6a765",
+      "mode": "100644",
+      "sha256": "2580c74ff3ec4b2db7410ea9de26ac084cc0b7c20930adc6cd2ce636f133e613"
+    },
+    "ui/src/main/java/rikka/sui/management/ManagementAdapter.kt": {
+      "git_blob": "c56c7479142e12c3b4b7ed2ea050d2f8671d0606",
+      "mode": "100644",
+      "sha256": "8e0cd35c6b477376fa23927ffcbe4ff4693ba94bc2d261d6115b84f4108680ce"
+    },
+    "ui/src/main/java/rikka/sui/management/ManagementAppItemViewHolder.kt": {
+      "git_blob": "4bf8ce70d5c890f35cb807d7ab2171e3c90029f5",
+      "mode": "100644",
+      "sha256": "b25911a6b9a9521f2da4686ec0bd45e5c2319ee78d9383cc15aeaedc3b209bb4"
+    },
+    "ui/src/main/java/rikka/sui/management/ManagementFragment.kt": {
+      "git_blob": "0da531e5dcf59b2dedfcc119a07e089415f02d20",
+      "mode": "100644",
+      "sha256": "ddf980dd5f9a557b0f9886fe405e4169675c345f9aaa819399e1eb4c7d6de948"
+    },
+    "ui/src/main/java/rikka/sui/management/ManagementViewModel.kt": {
+      "git_blob": "8bd94120e9292109bacce1532bbadc333c0967e2",
+      "mode": "100644",
+      "sha256": "596badb47a3785a8a2e72007c7d65b3a8543877aba7276b6788a37ec443c4b00"
+    },
+    "ui/src/main/java/rikka/sui/management/Resource.kt": {
+      "git_blob": "6033916696bd024082f3e1d847c54e529772ce07",
+      "mode": "100644",
+      "sha256": "1951040dbc8920c8a4cfc8058778317acda6c62a8a7c00821b172f2db9421663"
+    },
+    "ui/src/main/java/rikka/sui/model/AppInfo.java": {
+      "git_blob": "774a7f6c87f081db9a92958e7535b3cb539e6972",
+      "mode": "100644",
+      "sha256": "6f7e762765d15492d5ba9868f9e04360b0e67c2d66eaacdc85876c82e2261f0a"
+    },
+    "ui/src/main/java/rikka/sui/permission/ConfirmationDialog.java": {
+      "git_blob": "162b913114b831c3f3f3da25924399da8c642961",
+      "mode": "100644",
+      "sha256": "6c3ba724bb67fc08497bf0143c8f7cb72417af955a2400915ce05a363b544de8"
+    },
+    "ui/src/main/java/rikka/sui/permission/SystemDialogRootView.java": {
+      "git_blob": "84b1a13508f934f8a7b34af020cf2f9063248e69",
+      "mode": "100644",
+      "sha256": "b9c06cab5ea6a1acc6a1e5c14e4e04b8185a5c16388bc29074f4135d4466deda"
+    },
+    "ui/src/main/java/rikka/sui/server/SuiConfig.java": {
+      "git_blob": "aa9dff18070afa812d1cd0d405f77c6c06cf6f09",
+      "mode": "100644",
+      "sha256": "2d20bfdff1e86e544cb8fb31eba19f7f002831ee948b67ae6067a4c8c540968d"
+    },
+    "ui/src/main/java/rikka/sui/util/AppIconCache.kt": {
+      "git_blob": "5bffd3f3da0b9d65b9983638ace9a8954304ef1f",
+      "mode": "100644",
+      "sha256": "ba8700549052d8b2ca1c818e7dc6e9b4f1685e5bc8338e308388319dcd7170c7"
+    },
+    "ui/src/main/java/rikka/sui/util/AppIconUtil.java": {
+      "git_blob": "fd19be5212f186fa8ff8bc28c37de18778fcfab4",
+      "mode": "100644",
+      "sha256": "f0db23700c0c8f7851d6cf450021ed9ce25db8a94759615f876183162b41e488"
+    },
+    "ui/src/main/java/rikka/sui/util/AppInfoComparator.java": {
+      "git_blob": "a04a6056687621d31879776236f4ce8f2a721488",
+      "mode": "100644",
+      "sha256": "56a6289f0404b8da4b05f5f6c64b8d310d11660963aa63e6107aacfb16974652"
+    },
+    "ui/src/main/java/rikka/sui/util/AppLabel.java": {
+      "git_blob": "cab059fb3a6d51b841b44d39a76a277ef7581b0e",
+      "mode": "100644",
+      "sha256": "beb3f5b26bb66a9e7e2f202e533395db299a6fa849670d735f25171ba35c448c"
+    },
+    "ui/src/main/java/rikka/sui/util/AppLabelCache.kt": {
+      "git_blob": "a5d41e4cd1c3ccb35f26a8dd3fb1112b777bfde8",
+      "mode": "100644",
+      "sha256": "7bf5a05e863fd4f3862c27c930d1f62edb1f258f4db4444dcfc9252c7f66503c"
+    },
+    "ui/src/main/java/rikka/sui/util/BridgeServiceClient.java": {
+      "git_blob": "4ee7037fedc3a14ad9a117c439e61942389f20d4",
+      "mode": "100644",
+      "sha256": "ac2995de6a5252e1c8b1c7d80718b96cb60056c36e2c8b7c71c8a2cbba1347f0"
+    },
+    "ui/src/main/java/rikka/sui/util/EdgeDragFastScroller.kt": {
+      "git_blob": "c3a4375800abccbd4819e3c95e94da42e6b0363b",
+      "mode": "100644",
+      "sha256": "176aa56f27a2b5cdaf18da2133f864a085f09182df99dddbc3d493fbf0b6fbed"
+    },
+    "ui/src/main/java/rikka/sui/util/Logger.java": {
+      "git_blob": "a856236c7f2e3c3581bdb67aa586352e6dc86efd",
+      "mode": "100644",
+      "sha256": "5d7a11cc8f049ec2a2f5ed8456da34f7b231b9d9c80a9049dc9203d9176e0abe"
+    },
+    "ui/src/main/java/rikka/sui/util/MiuixBounceEdgeEffectFactory.kt": {
+      "git_blob": "5a86d4dec03ee95f9ecb81eb38a939c3967a500a",
+      "mode": "100644",
+      "sha256": "48267aa71fd47dd3902e242a8a18128cdb46fe6d1e188c4b5a1cf8acb4b80ecc"
+    },
+    "ui/src/main/java/rikka/sui/util/MiuixPopupTransition.kt": {
+      "git_blob": "cedb3d2db6e84f9d2ef0e13696de6e747e561e74",
+      "mode": "100644",
+      "sha256": "33ab737a611389450fa5d912fa50443f6fd837a0ca463c6f80da9999cd5bc361"
+    },
+    "ui/src/main/java/rikka/sui/util/MiuixPressHelper.kt": {
+      "git_blob": "cb0055f4738b97096fd8e020855d25cabea01f57",
+      "mode": "100644",
+      "sha256": "69a074441bb122f468e85f53e6d3002f99393cc03e742aad7fd5b26768e9c2e5"
+    },
+    "ui/src/main/java/rikka/sui/util/MiuixPullToRefreshView.kt": {
+      "git_blob": "af8271d9943029dfd15d5d5c4250cd747bf2991a",
+      "mode": "100644",
+      "sha256": "cbbaee1daed3a93ec294ceeb7a3964bc16931a57f28de858a629f0ab2a4f9045"
+    },
+    "ui/src/main/java/rikka/sui/util/MiuixRefreshHeader.kt": {
+      "git_blob": "5b19b4940b3d04c91c63bc377dbf44258667bbb9",
+      "mode": "100644",
+      "sha256": "667d816b49eb0ca5474e883cce5100efc09973f604b58391ff214dbcd101a5a9"
+    },
+    "ui/src/main/java/rikka/sui/util/MiuixSmoothCardDrawable.kt": {
+      "git_blob": "abeb549720108ebd0536a5bd73633b52cbf31b41",
+      "mode": "100644",
+      "sha256": "fcda3ac96af532a93b714b18ee3364c5de85e8d126404865998deaf1c19ee71c"
+    },
+    "ui/src/main/java/rikka/sui/util/MiuixSpringMath.kt": {
+      "git_blob": "dcfa819a23a9a2669a6b35e1ecb9eebed8c6df62",
+      "mode": "100644",
+      "sha256": "1fa362a421de873a0f026b9dd2a4954c15f4bfd559ed777615e9b758b4785af1"
+    },
+    "ui/src/main/java/rikka/sui/util/MonetSettings.java": {
+      "git_blob": "597ce1ad9b9318e8b88af7fb9dee2838f53ed025",
+      "mode": "100644",
+      "sha256": "bc0c5b6046421f2692882f0e7ee5785d4caccd60ad6c86e9583037f57bd034b5"
+    },
+    "ui/src/main/java/rikka/sui/util/TextUtilsCompat.java": {
+      "git_blob": "346ce874163b288b2ebfc9a0a019e1d0d9164899",
+      "mode": "100644",
+      "sha256": "e1fc95bbd48c865b456e9a2d57e35db02945e6ed84284c3182af7de369c145a6"
+    },
+    "ui/src/main/java/rikka/sui/util/refresh/RefreshHeader.kt": {
+      "git_blob": "0c1ee2a4a4197c5eb3cafc1bb1ef1f13fcde92d8",
+      "mode": "100644",
+      "sha256": "edbff9dc8e553acfc35178b91f3093e611056db031ae68bca1b6210ab2cad9de"
+    },
+    "ui/src/main/java/rikka/sui/widget/MiuixBottomSheetDialog.kt": {
+      "git_blob": "4c057bd048e733258f6a626c4aab30accfa3d3f9",
+      "mode": "100644",
+      "sha256": "5590e5044b63408f19af1e9f6e3793a1ec63e47edb5e8077feb128be1e81f625"
+    },
+    "ui/src/main/java/rikka/sui/widget/MiuixBottomSheetLayout.kt": {
+      "git_blob": "c5c6b3726413099b5f07d959ba609a0b526c8944",
+      "mode": "100644",
+      "sha256": "a3fe65c4e98a2a5dc9bc0a4a3f8f9b198e62ebe576e0998963890b0c685b5f09"
+    },
+    "ui/src/main/java/rikka/sui/widget/MiuixDragHandleView.kt": {
+      "git_blob": "236ed982da33997066ec5512e1a59cd8676694d4",
+      "mode": "100644",
+      "sha256": "78d1e5fade12fe5ac25c7ff2bb3fb089a2577db1c0a1f7c96c98ab6715fa98a5"
+    },
+    "ui/src/main/res/anim/miuix_popup_enter.xml": {
+      "git_blob": "d07e9c5025e4d7519a0d926faca9a9543dc5658f",
+      "mode": "100644",
+      "sha256": "9c5119cccb0f4b12c82b0767a54c0cbea8178cc9e500c8b67ee795194521e369"
+    },
+    "ui/src/main/res/anim/miuix_popup_exit.xml": {
+      "git_blob": "c96004f8cbc8956ed98d23fd037e2fd265e11e0a",
+      "mode": "100644",
+      "sha256": "dc6a227f2484d6472513e70b291d8b1f28399af60df1ccbe29894aafb076d64e"
+    },
+    "ui/src/main/res/anim/stagger_layout_animation.xml": {
+      "git_blob": "ebda3b1d63f139b3b6806a0fd2518df486eea4fa",
+      "mode": "100644",
+      "sha256": "ba2b4f32c9b84b4f61c623731aa57922aa96f72f274218e5d17a5cf1bf3ce342"
+    },
+    "ui/src/main/res/color/confirmation_dialog_button_text.xml": {
+      "git_blob": "436053da93e80f1f9b37e6a60c84bd01e1f99c52",
+      "mode": "100644",
+      "sha256": "52aee4be5373246d4c72444affc4cd3486e0e9ef0f6be2cfbbbab9ff1285d3cc"
+    },
+    "ui/src/main/res/drawable-night/miuix_icon_button_bg.xml": {
+      "git_blob": "6776d04f9a4219700a751b5b1ae48798925886d5",
+      "mode": "100644",
+      "sha256": "89e6cb2489197d65173de035b8da924ab56f0770c78f34c7aea91f0f129e1236"
+    },
+    "ui/src/main/res/drawable/confirmation_dialog_background.xml": {
+      "git_blob": "23bc37e5e7b9fb90838ffb2a6767ad837ef077ee",
+      "mode": "100644",
+      "sha256": "38774da9eeb6b3c00a0ee3519a31109ba5869f378c8ecead97b8ce29b1010f33"
+    },
+    "ui/src/main/res/drawable/ic_close_24.xml": {
+      "git_blob": "ae58ae4b78db8e9799682a12e169ccd07c5c7c5b",
+      "mode": "100644",
+      "sha256": "f025b1f8819f60c5630da12c8a76f3f25199ca97e028a0c2bbbbc3285a34e10a"
+    },
+    "ui/src/main/res/drawable/ic_miuix_check.xml": {
+      "git_blob": "b756b11944b027cc1a45688bd8923699cd5f0e73",
+      "mode": "100644",
+      "sha256": "8713edc50d7b059d00bae80f394cb818d23379b3e1b705cbea5b4cb0ba1898b7"
+    },
+    "ui/src/main/res/drawable/ic_miuix_dropdown_arrow.xml": {
+      "git_blob": "40d6f90d3e73a28bc5fa76e596741c2da641fa43",
+      "mode": "100644",
+      "sha256": "9924a717d842a5222eea5914404943f45a056b913b44f1bd833869e842141b6b"
+    },
+    "ui/src/main/res/drawable/ic_miuix_more_circle.xml": {
+      "git_blob": "7a1b04156ec5e7bc9b43265a17f4190dbed81932",
+      "mode": "100644",
+      "sha256": "636a29e984d4f2cfdc30a619a6392f1e7d83446207f81d74f211efc9d56ac520"
+    },
+    "ui/src/main/res/drawable/ic_search_24.xml": {
+      "git_blob": "e9570321e72878e6ecad0bd2ad6041e05e3351d8",
+      "mode": "100644",
+      "sha256": "119ea88610ce6f85650d8a9746ff7db963883be7b254b90cf8c2a97fb7da9b49"
+    },
+    "ui/src/main/res/drawable/ic_shortcut_24.xml": {
+      "git_blob": "370c6a2dfa7b1290e70394cb403abc83c6785944",
+      "mode": "100644",
+      "sha256": "ad57c9e3b2a00c226017e83fd351f944c04aeda4be6cc7f10ffa7afeb783daad"
+    },
+    "ui/src/main/res/drawable/ic_su_24.xml": {
+      "git_blob": "c41c78bd3be0fe5b9752de7d9f560435ad4ed65a",
+      "mode": "100644",
+      "sha256": "d6bb22abe1b6debe70441038ed789f641deb2621ef23267b11f8a81b1dd31529"
+    },
+    "ui/src/main/res/drawable/miuix_action_icon_bg.xml": {
+      "git_blob": "d42ff6208b8cc0f385ffbbddb7f872dc52d4f665",
+      "mode": "100644",
+      "sha256": "d908729866e8840f7f17efbe518a27ef4d2d4867a33057f96bc2ca7491305109"
+    },
+    "ui/src/main/res/drawable/miuix_bottom_sheet_bg.xml": {
+      "git_blob": "1f39478a9139322b9197e7ef55d96ccdb3f7d2b4",
+      "mode": "100644",
+      "sha256": "b06a59e0e7c25cfeee2e7b3193ea5573ef94778850a304a77e30c7a72688af37"
+    },
+    "ui/src/main/res/drawable/miuix_button_bg.xml": {
+      "git_blob": "4a0e9782548f75913689fa8bc907c9158da50d32",
+      "mode": "100644",
+      "sha256": "bfb0d8fd7cef8a24ef8b41e40a7de7f7fd4295a114fde0cd7ce15dad61c06cba"
+    },
+    "ui/src/main/res/drawable/miuix_drag_handle.xml": {
+      "git_blob": "0cdca3cd3cbc3fc6e5d8afb0d9188ca700924b14",
+      "mode": "100644",
+      "sha256": "528f35e2b1835a36ca9ac9b109415e860d8c9e3be43b2d7ecb295df724ecdb3e"
+    },
+    "ui/src/main/res/drawable/miuix_icon_button_bg.xml": {
+      "git_blob": "3930e5caee222754bbc392ed931b8e164d1eb09a",
+      "mode": "100644",
+      "sha256": "667e38f4e7cdc69d5fd29bdd447c1a8a6a558d8f694fc75521deb25dad4f9f76"
+    },
+    "ui/src/main/res/drawable/miuix_popup_background.xml": {
+      "git_blob": "1b65740b9ade9578b2a484289451e827bec378c6",
+      "mode": "100644",
+      "sha256": "959519a40ae4dda7ca78b41ae82b5e82ef407aa6039f9d7b0e1bfa2c6e8e7a2e"
+    },
+    "ui/src/main/res/drawable/miuix_popup_checkbox_selector.xml": {
+      "git_blob": "a84ae814ecb19430c31155fb9ff2facb194d921f",
+      "mode": "100644",
+      "sha256": "8542d618a7ccec23058de6024c06f194745c362e1ba7ca0099b18be0e511b6dc"
+    },
+    "ui/src/main/res/layout/appbar.xml": {
+      "git_blob": "329a141e67f275be5d549445d601286a50698035",
+      "mode": "100644",
+      "sha256": "9cc7a25335482dfe3c52fd6fb5f86bd1131a11ddf4dbaee0566c6f7c8ee4e0ea"
+    },
+    "ui/src/main/res/layout/appbar_fragment_activity.xml": {
+      "git_blob": "11798ea51f9ade63e455bb09b2524a9b0fceefa8",
+      "mode": "100644",
+      "sha256": "18edfcda75c821a932c5999c469a9375b10d62dad10d2888590476ce72b9f938"
+    },
+    "ui/src/main/res/layout/confirmation_dialog.xml": {
+      "git_blob": "a8b61ea872844c7bba62e24eb247b59ddda70fc4",
+      "mode": "100644",
+      "sha256": "8f89e6c0145997fce2f8f60be4c8018af3d4192a999565a3dddb29693cdc710d"
+    },
+    "ui/src/main/res/layout/main.xml": {
+      "git_blob": "1a6c63bb704fc53545636c698c2123273707d470",
+      "mode": "100644",
+      "sha256": "e197cfc62bacaa19159e49ef9fc6d58b5384548302acbd05b4ec5a56ef1ea351"
+    },
+    "ui/src/main/res/layout/management.xml": {
+      "git_blob": "abb10228d54f9d4fce9655e3755e66aeccc7c8c6",
+      "mode": "100644",
+      "sha256": "e692e09e7dcb98eaae0b93e1a1973854c9e0d83f1b06d556c6ef89b213f8134b"
+    },
+    "ui/src/main/res/layout/management_app_item.xml": {
+      "git_blob": "bc2d91a9c01ccebc307e0edfbdec95015b74fd16",
+      "mode": "100644",
+      "sha256": "b2f88b5627ccf5330aa17a8ba6df12beccbf824f3ebdbdfd0515e30094221253"
+    },
+    "ui/src/main/res/layout/miuix_about_bottom_sheet.xml": {
+      "git_blob": "e6c55ea394fbb1db9bce40b0d344d80bb9a8e9c4",
+      "mode": "100644",
+      "sha256": "26435b76252e15fd2a2cdde73fd70ca036b263e921b7737d8211e97ab8ef66d4"
+    },
+    "ui/src/main/res/menu/adb_root_options_menu.xml": {
+      "git_blob": "9fcab37f18f5a69b7891dfed1d8ceb06f0685270",
+      "mode": "100644",
+      "sha256": "a1e2b8defee88e7240e05fca18087ef49f90ed20428ff8d64c5fd6c676d42902"
+    },
+    "ui/src/main/res/menu/app_item_options_menu.xml": {
+      "git_blob": "c533e006b9684ee689bf6f9303661adfc3b8cf84",
+      "mode": "100644",
+      "sha256": "89c252db8ab46cc61d4cc4177c807d00df9eba9797ad693a45bf8ba0082860e4"
+    },
+    "ui/src/main/res/menu/batch_options_menu.xml": {
+      "git_blob": "c5905f049eedd51bd22e1798e8fce7f392e80b86",
+      "mode": "100644",
+      "sha256": "5b55ce57e3574e4aebd51c6e407d54c908a5f17fcb609c0fe16500a16ed9c151"
+    },
+    "ui/src/main/res/menu/management_menu.xml": {
+      "git_blob": "7f3ec3d64ba5200267558f6830cdb5065a49c8f3",
+      "mode": "100644",
+      "sha256": "99cca925fdb79958d13a4603007f8d6e28b1a854dc91eb09152dc21ba0d5b8e1"
+    },
+    "ui/src/main/res/menu/overflow_popup_menu.xml": {
+      "git_blob": "2d6479e6d4fdfa44a793d14c4692c7dbd610942f",
+      "mode": "100644",
+      "sha256": "db1ec2ca024912c3c4a4e33deddc6de21b1404c73c6212f23432f3abb5e34345"
+    },
+    "ui/src/main/res/raw/keep.xml": {
+      "git_blob": "77c8cf9663be19afee45042213d995c1d5d4a5a0",
+      "mode": "100644",
+      "sha256": "a6d5480fc2fc05866a197e7a2e57a354d29eb3114f367dadd4cb1f75ca2bc84c"
+    },
+    "ui/src/main/res/transition/miuix_popup_enter.xml": {
+      "git_blob": "75627190eca6b190db194f99ebbaedc2abc74e8a",
+      "mode": "100644",
+      "sha256": "afc52c411461976027a128efe3675c59c950b0cefc3687a3f8f5b038caae5a21"
+    },
+    "ui/src/main/res/transition/miuix_popup_exit.xml": {
+      "git_blob": "75627190eca6b190db194f99ebbaedc2abc74e8a",
+      "mode": "100644",
+      "sha256": "afc52c411461976027a128efe3675c59c950b0cefc3687a3f8f5b038caae5a21"
+    },
+    "ui/src/main/res/values-ja/strings.xml": {
+      "git_blob": "9fe95d7a5c3b8549dad38bd8ab01c23a05666ca2",
+      "mode": "100644",
+      "sha256": "ea73dbd41bf9d015982d1aed4b37fb68063a38f5217770700c1cbac2d65cc351"
+    },
+    "ui/src/main/res/values-night/colors.xml": {
+      "git_blob": "643fa818a8c85193a23df8c8fbe434b7cb07d210",
+      "mode": "100644",
+      "sha256": "f4359943455e9c597b3ea73988581e48b84a7044f0cae286645afc400268f9c8"
+    },
+    "ui/src/main/res/values-v24/styles.xml": {
+      "git_blob": "6ac930d9d004329267a444c09fb15ce37676e022",
+      "mode": "100644",
+      "sha256": "02a91a4411dddc738d9efc49e728617d51fbf233ebc01dfea47ce9068d229010"
+    },
+    "ui/src/main/res/values-v31/colors.xml": {
+      "git_blob": "ad7fe4bdd670624c2908f3bf1e96d6b964af5286",
+      "mode": "100644",
+      "sha256": "fe82659bc87d99cef621b84a5e5bd66e5aa94d2ab18649d986c1d11f366aa07d"
+    },
+    "ui/src/main/res/values-zh-rCN/strings.xml": {
+      "git_blob": "cba23aceec1af306f86fcbd935d3baeaa6180a79",
+      "mode": "100644",
+      "sha256": "c367c13c1fa6fd30a3c8de955c82ba222d32777d89c04c493895c21cb3c7f0e0"
+    },
+    "ui/src/main/res/values-zh-rTW/strings.xml": {
+      "git_blob": "a1e0eb465bc3d36826e883cc84bdb797087c9d59",
+      "mode": "100644",
+      "sha256": "ffdc6ce6f6c5486fc38e715df891f7f8facc315b4d7546d3de3b3000f17d9b83"
+    },
+    "ui/src/main/res/values/colors.xml": {
+      "git_blob": "51a48b00ab1416005ebdc2b3c9162e49bbc3724b",
+      "mode": "100644",
+      "sha256": "908e3537e538f5cbd3a8a997dcc164eb4e617978584d03d5166e36b390e853b3"
+    },
+    "ui/src/main/res/values/dimens.xml": {
+      "git_blob": "cd4efaf3df37b1e461fa41ab5069813b90faccd3",
+      "mode": "100644",
+      "sha256": "a7473fd9534d3226e5acecab5d8112189d61e528406c9c737c2a2190bffba418"
+    },
+    "ui/src/main/res/values/ids.xml": {
+      "git_blob": "728caefbe8bb65a182d29b971c2963cc7dc08c54",
+      "mode": "100644",
+      "sha256": "1cfbd3d1364120a0426ebba7828977fe8e122226d1fd51018dcb0214c9e3c659"
+    },
+    "ui/src/main/res/values/strings.xml": {
+      "git_blob": "721cd37945a5ab4b8f3eafd225c47416e47e4b95",
+      "mode": "100644",
+      "sha256": "98c6e0a1c95bd0756179f21bc48c25e126026579fe2043b5de50de1dd1497ece"
+    },
+    "ui/src/main/res/values/styles.xml": {
+      "git_blob": "41579271d3dbb4cb62477aea4ffb1fc134f892c1",
+      "mode": "100644",
+      "sha256": "b805eb198e76a42fdccd81d7c3499063aa029e7c4d6facda1d2c349d442b11a1"
+    },
+    "ui/src/main/res/values/themes.xml": {
+      "git_blob": "de6f20aa9783c422bcd7048908b893fe54f70e1d",
+      "mode": "100644",
+      "sha256": "d796b62b70faf2ed155c471fd918e066baea1c69e2a481409f82e1d1ac406ba7"
+    }
+  },
+  "repository": "LyraVoid/FinaSU"
+}

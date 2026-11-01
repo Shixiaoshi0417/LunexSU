@@ -35,6 +35,12 @@ enum Commands {
         command: crate::susfs::Command,
     },
 
+    /// Inspect the optional managed Sui payload (deployment is not yet exposed)
+    Sui {
+        #[command(subcommand)]
+        command: crate::sui::Command,
+    },
+
     /// Trigger `post-fs-data` event
     PostFsData,
 
@@ -543,6 +549,7 @@ pub fn run() -> Result<()> {
 
     let result = match cli.command {
         Commands::Susfs { command } => crate::susfs::run(command),
+        Commands::Sui { command } => crate::sui::run(&command),
         Commands::PostFsData => init_event::on_post_fs_data(),
         Commands::BootCompleted => {
             init_event::on_boot_completed();
