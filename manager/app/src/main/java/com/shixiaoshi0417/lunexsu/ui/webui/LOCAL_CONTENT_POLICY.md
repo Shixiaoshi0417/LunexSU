@@ -21,12 +21,23 @@ requests are independently denied. Never reuse this profile for other browsing.
   lookalike/trailing-dot hosts, backslashes, control characters, dot segments,
   encoded separators and double-encoded paths are rejected.
 - Local HTML, JS, CSS, local frames, inline scripts, eval, and the existing
-  `ksu` methods remain supported. The module's entire webroot is root-trusted,
+  `ksu` methods remain supported. The upstream `ksu.io()` (root file I/O via
+  SuFile) and `ksu.pm()` (package list) objects are part of the same full-trust
+  bridge and are revoked with it. In NoRootDemo `ksu.io()` reports version 0
+  and every factory throws, so SuFile never asks libsu for root. The module's entire webroot is root-trusted,
   including local SVG/HTML and any HTML it constructs in inherited-origin
   `about:blank`/`srcdoc` frames. The policy is not an HTML sanitizer.
 - `ksu://icon/<package>` is a non-main-frame GET-only image endpoint returning
   generated PNG bytes, never a document or arbitrary file. Data URLs are
   permitted only for images, fonts, and media by CSP, not executable sources.
+- `ksu_download` (not attached in NoRootDemo) saves files the page hands over
+  into the public Downloads folder via MediaStore. `download.js`, installed as a
+  document-start script for this origin, only handles `<a download>` links to
+  `blob:`, `data:` or this origin; any other link keeps the navigation rules below.
+  The bridge cannot open URLs, choose a directory or overwrite files; names are
+  stripped of paths and control characters, sizes and concurrent saves are
+  capped, and it is revoked together with `ksu`. Unlike upstream KernelSU, it has
+  no `openExternal` method and no internal blob-download host.
 - A user-initiated, non-redirect top-level external HTTP(S) navigation opens
   an ACTION_VIEW/BROWSABLE system handler, never this WebView. User-clicked
   external `_blank` anchors are similarly handed off when the hit-test exposes
@@ -38,7 +49,7 @@ requests are independently denied. Never reuse this profile for other browsing.
 
 Remote CDN scripts/styles/fonts/images, remote frames, fetch/XHR/WebSockets,
 remote forms, workers/service-worker registration, plugins/objects, custom
-scheme links, downloads, file/content URL access, and blob/data executable
+scheme links, WebView-initiated downloads, file/content URL access, and blob/data executable
 documents are no longer supported inside the bridged view. Bundle dependencies
 in `webroot` instead. `base` elements are disabled. The enforced CSP is attached
 to every intercepted response (including errors) so module meta tags cannot

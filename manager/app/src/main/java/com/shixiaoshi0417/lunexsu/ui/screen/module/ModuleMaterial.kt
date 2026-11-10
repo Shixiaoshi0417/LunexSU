@@ -126,6 +126,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.nav.gesture.WindowNavigationEventBridge
 import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.data.model.Module
 import com.shixiaoshi0417.lunexsu.data.model.ModuleUpdateInfo
@@ -589,6 +590,7 @@ private fun ModuleShortcutSheet(
             enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
         )
     ) {
+        WindowNavigationEventBridge()
         Column(
             verticalArrangement = Arrangement.spacedBy(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

@@ -19,6 +19,7 @@ typedef uint64_t u64;
 #define POLICYDB_VERSION_XPERMS_IOCTL 30
 #define pr_info(...) do { if (0) fprintf(stderr, __VA_ARGS__); } while (0)
 #define pr_err(...) do { if (0) fprintf(stderr, __VA_ARGS__); } while (0)
+#define pr_warn(...) do { if (0) fprintf(stderr, __VA_ARGS__); } while (0)
 #define IS_ERR(p) ((intptr_t)(p) < 0 && (intptr_t)(p) >= -4095)
 #define PTR_ERR(p) ((intptr_t)(p))
 struct policydb { unsigned changes, policyvers; };
@@ -46,7 +47,12 @@ static void mutex_unlock(int *lock) { (void)lock; assert(locks-- == 1); }
 #define rcu_dereference_protected(p, held) (assert(held), (p))
 #define rcu_assign_pointer(p, value) do { assert(locks); published++; (p) = (value); } while (0)
 static void synchronize_rcu(void) { assert(locks && published); }
-static void reset_avc_cache(void) { assert(locks); reset++; }
+static void reset_avc_cache(unsigned seqno) { (void)seqno; assert(locks); reset++; }
+/* Original-type generation metadata is advisory (lookups fall back to the backup). */
+static bool ksu_set_original_types(struct policydb *db, struct policydb *orig, unsigned gen)
+{ (void)db; (void)orig; (void)gen; return true; }
+static bool ksu_advance_original_types(struct policydb *db, struct policydb *orig, unsigned old_gen, unsigned gen)
+{ (void)db; (void)orig; (void)old_gen; (void)gen; return true; }
 static struct selinux_policy *ksu_dup_sepolicy(struct selinux_policy *old)
 {
     if (dup_fails) return (void *)(intptr_t)-ENOMEM;

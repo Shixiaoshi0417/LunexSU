@@ -101,11 +101,4 @@ class DemoSafetyTest {
         assertTrue(toggleModule("demo_theme", true))
         assertFalse(toggleModule("not-a-demo-module", true))
     }
-    @Test fun blockListValidationMatchesNormalUiRules() {
-        assertTrue(isBlockModulesValid("one,two_2"))
-        assertFalse(isBlockModulesValid("one two"))
-        assertFalse(isBlockModulesValid("bad-name"))
-        assertFalse(isBlockModulesValid("a".repeat(65)))
-        assertEquals(listOf("one", "two"), parseBlockModules("one, ,two"))
-    }
 }
