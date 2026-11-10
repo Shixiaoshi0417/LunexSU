@@ -27,6 +27,8 @@ class WebUIState {
     var webView: WebView? = null
     var rootShell: Shell? = null
     var webViewInterface: WebViewInterface? = null
+    var downloadInterface: WebUIDownloadInterface? = null
+    var downloadScript: String? = null
     lateinit var modDir: String
     var moduleName: String = ""
 
@@ -76,6 +78,8 @@ class WebUIState {
         activity.setTaskDescription(activity.getString(R.string.app_name))
         webViewInterface?.destroy()
         webViewInterface = null
+        downloadInterface?.destroy()
+        downloadInterface = null
         webView?.let { view ->
             (view.parent as? android.view.ViewGroup)?.removeView(view)
             view.destroy()

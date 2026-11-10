@@ -17,9 +17,12 @@ import android.webkit.WebChromeClient
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import androidx.webkit.WebViewAssetLoader
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import com.shixiaoshi0417.lunexsu.BuildConfig
 import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.data.model.AppInfo
 import com.shixiaoshi0417.lunexsu.data.repository.ModuleRepositoryImpl
@@ -133,6 +136,7 @@ internal suspend fun prepareWebView(
                 override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
                     webUIState.webCanGoBack = view?.canGoBack() ?: false
                     if (webUIState.isInsetsEnabled) webUIState.webView?.evaluateJavascript(webUIState.currentInsets.js, null)
+                    webUIState.downloadScript?.let { view?.evaluateJavascript(it, null) }
                     super.doUpdateVisitedHistory(view, url, isReload)
                 }
             }
@@ -190,11 +194,26 @@ internal suspend fun prepareWebView(
 
             // Keep the existing local-module API (and demo's non-executing shell stubs).
             // These settings, client and CSP must remain installed for the bridge lifetime.
-            // Downloads stay disabled by configureLocalModuleWebView (see LOCAL_CONTENT_POLICY.md).
+            // WebView downloads stay disabled by configureLocalModuleWebView; only the
+            // ksu_download bridge can save page-provided files (see LOCAL_CONTENT_POLICY.md).
             val webviewInterface = WebViewInterface(webUIState)
             webUIState.webViewInterface = webviewInterface
             webUIState.webView = webView
             webView.addJavascriptInterface(webviewInterface, "ksu")
+            if (!BuildConfig.NO_ROOT_DEMO) {
+                val downloadInterface = WebUIDownloadInterface(activity)
+                webUIState.downloadInterface = downloadInterface
+                val script = activity.assets.open("webview/download.js")
+                    .bufferedReader(Charsets.UTF_8).use { it.readText() }
+                webView.addJavascriptInterface(downloadInterface, WEBUI_DOWNLOAD_BRIDGE)
+                // Install before page scripts so blob URLs created early are still known;
+                // older engines fall back to injecting after each committed navigation.
+                if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+                    WebViewCompat.addDocumentStartJavaScript(webView, script, setOf(WebUIOriginPolicy.ORIGIN))
+                } else {
+                    webUIState.downloadScript = script
+                }
+            }
             webUIState.uiEvent = WebUIEvent.WebViewReady
         }
     }

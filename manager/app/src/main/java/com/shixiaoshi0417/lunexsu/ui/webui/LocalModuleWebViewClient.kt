@@ -69,6 +69,7 @@ internal open class LocalModuleWebViewClient(
         // override callback (e.g. POST). This is NOT a JS frame-caller authentication check.
         if (url == null || !WebUIOriginPolicy.isLocal(url)) {
             view.removeJavascriptInterface("ksu")
+            view.removeJavascriptInterface(WEBUI_DOWNLOAD_BRIDGE)
             view.settings.javaScriptEnabled = false
             view.stopLoading()
         }
@@ -129,3 +130,4 @@ internal fun configureLocalModuleWebView(view: WebView): Boolean {
 }
 
 internal const val LOCAL_MODULE_PROFILE = "lunexsu-local-modules-v1"
+internal const val WEBUI_DOWNLOAD_BRIDGE = "ksu_download"

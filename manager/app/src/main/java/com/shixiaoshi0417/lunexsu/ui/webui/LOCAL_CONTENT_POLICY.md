@@ -30,6 +30,14 @@ requests are independently denied. Never reuse this profile for other browsing.
 - `ksu://icon/<package>` is a non-main-frame GET-only image endpoint returning
   generated PNG bytes, never a document or arbitrary file. Data URLs are
   permitted only for images, fonts, and media by CSP, not executable sources.
+- `ksu_download` (not attached in NoRootDemo) saves files the page hands over
+  into the public Downloads folder via MediaStore. `download.js`, installed as a
+  document-start script for this origin, only handles `<a download>` links to
+  `blob:`, `data:` or this origin; any other link keeps the navigation rules below.
+  The bridge cannot open URLs, choose a directory or overwrite files; names are
+  stripped of paths and control characters, sizes and concurrent saves are
+  capped, and it is revoked together with `ksu`. Unlike upstream KernelSU, it has
+  no `openExternal` method and no internal blob-download host.
 - A user-initiated, non-redirect top-level external HTTP(S) navigation opens
   an ACTION_VIEW/BROWSABLE system handler, never this WebView. User-clicked
   external `_blank` anchors are similarly handed off when the hit-test exposes
@@ -41,8 +49,7 @@ requests are independently denied. Never reuse this profile for other browsing.
 
 Remote CDN scripts/styles/fonts/images, remote frames, fetch/XHR/WebSockets,
 remote forms, workers/service-worker registration, plugins/objects, custom
-scheme links, downloads (including upstream's blob-download bridge, which is not
-merged), file/content URL access, and blob/data executable
+scheme links, WebView-initiated downloads, file/content URL access, and blob/data executable
 documents are no longer supported inside the bridged view. Bundle dependencies
 in `webroot` instead. `base` elements are disabled. The enforced CSP is attached
 to every intercepted response (including errors) so module meta tags cannot
