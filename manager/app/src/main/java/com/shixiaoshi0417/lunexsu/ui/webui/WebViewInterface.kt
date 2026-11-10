@@ -265,14 +265,17 @@ class WebViewInterface(private val state: WebUIState) {
         state.requestExit()
     }
 
+    // Per-WebUI so that closing one module WebUI never closes another's open handles.
+    private val ksuIO = KsuIO()
+
     @JavascriptInterface
-    fun io() = KsuIO
+    fun io() = ksuIO
 
     @JavascriptInterface
     fun pm() = KsuPm
 
     fun destroy() {
-        KsuIO.destroy()
+        ksuIO.destroy()
     }
 }
 

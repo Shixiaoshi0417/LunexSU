@@ -7,15 +7,13 @@ import java.util.concurrent.ConcurrentHashMap
 
 const val TAG = "KsuIO"
 
-object KsuIO {
-    private const val KSU_IO_VERSION = 1
-    private const val MAX_OPEN_STREAMS = 50
-
+/** One instance per WebUI bridge: closing a WebUI must not close another WebUI's handles. */
+class KsuIO {
     internal val openInputStreams = ConcurrentHashMap<String, ManagedInputStream>()
     internal val openOutputStreams = ConcurrentHashMap<String, OutputStream>()
 
-    private val fileOutputStream = FileOutputStreamInterface()
-    private val fileInputStream = FileInputStreamInterface()
+    private val fileOutputStream = FileOutputStreamInterface(this)
+    private val fileInputStream = FileInputStreamInterface(this)
     private val randomAccessFile = RandomAccessFileInterface()
 
     // SuFile would ask libsu's main shell for root. NoRootDemo must never request su,
@@ -30,7 +28,7 @@ object KsuIO {
     @JavascriptInterface
     fun File(path: String): FileInterface {
         requireRootIo()
-        return FileInterface(path)
+        return FileInterface(path, this)
     }
 
     @JavascriptInterface
@@ -63,5 +61,10 @@ object KsuIO {
         fileInputStream.closeAll()
         fileOutputStream.closeAll()
         randomAccessFile.closeAll()
+    }
+
+    private companion object {
+        const val KSU_IO_VERSION = 1
+        const val MAX_OPEN_STREAMS = 50
     }
 }
