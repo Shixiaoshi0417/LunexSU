@@ -331,7 +331,6 @@ fun InstallScreen() {
         },
         onSuperkeyChange = { superkey = it },
         onSuperkeyConfirmation = { superkeyConfirmation = it },
-        }
     )
 
     when (LocalUiMode.current) {
