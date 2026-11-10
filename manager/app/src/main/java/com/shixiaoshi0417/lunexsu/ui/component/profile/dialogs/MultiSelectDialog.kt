@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import top.yukonga.miuix.kmp.nav.gesture.WindowNavigationEventBridge
 import com.shixiaoshi0417.lunexsu.ui.component.material.SegmentedCheckboxItem
 import com.shixiaoshi0417.lunexsu.ui.component.material.SegmentedColumn
 
@@ -59,6 +60,7 @@ fun <T> MultiSelectDialog(
         onDismissRequest = onDismiss,
         sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden, enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded))
     ) {
+        WindowNavigationEventBridge()
         Column(
             modifier = Modifier
                 .fillMaxWidth()

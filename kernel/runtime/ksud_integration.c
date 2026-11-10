@@ -413,11 +413,7 @@ static bool is_init_rc(struct file *fp)
         return false;
     }
 
-    const char *short_name = fp->f_path.dentry->d_name.name;
-    if (strcmp(short_name, "init.rc")) {
-        // we are only interest `init.rc` file name file
-        return false;
-    }
+    // Bind mounts retain the source dentry name, so match the mounted path.
     char path[256];
     char *dpath = d_path(&fp->f_path, path, sizeof(path));
 
@@ -492,7 +488,6 @@ int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code, int *v
 {
     if (*type == EV_KEY && *code == KEY_VOLUMEDOWN) {
         int val = *value;
-        pr_info("KEY_VOLUMEDOWN val: %d\n", val);
         if (val) {
             // key pressed, count it
             volumedown_pressed_count += 1;
@@ -654,8 +649,7 @@ void ksu_stop_input_hook_runtime(void)
         return;
     }
     input_hook_stopped = true;
-    bool ret = schedule_work(&stop_input_hook_work);
-    pr_info("unregister input kprobe: %d!\n", ret);
+    schedule_work(&stop_input_hook_work);
 }
 
 // ksud: module support

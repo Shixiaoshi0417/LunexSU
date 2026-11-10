@@ -17,7 +17,8 @@ import com.topjohnwu.superuser.internal.UiThreadHandler
 import com.shixiaoshi0417.lunexsu.ui.util.createRootShell
 import com.shixiaoshi0417.lunexsu.ui.util.listModules
 import com.shixiaoshi0417.lunexsu.ui.util.withNewRootShell
-import com.shixiaoshi0417.lunexsu.ui.viewmodel.SuperUserViewModel
+import com.shixiaoshi0417.lunexsu.ui.webui.file.KsuIO
+import com.shixiaoshi0417.lunexsu.ui.webui.pm.KsuPm
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -44,9 +45,7 @@ class WebViewInterface(private val state: WebUIState) {
     }
 
     private fun processOptions(sb: StringBuilder, options: String?) {
-        val opts = if (options == null) JSONObject() else {
-            JSONObject(options)
-        }
+        val opts = if (options == null) JSONObject() else JSONObject(options)
 
         val cwd = opts.optString("cwd")
         if (!TextUtils.isEmpty(cwd)) {
@@ -93,13 +92,11 @@ class WebViewInterface(private val state: WebUIState) {
 
         processOptions(finalCommand, options)
 
-        if (!TextUtils.isEmpty(args)) {
+        if (args.isNotEmpty()) {
             finalCommand.append(command).append(" ")
-            JSONArray(args).let { argsArray ->
-                for (i in 0 until argsArray.length()) {
-                    finalCommand.append(argsArray.getString(i))
-                    finalCommand.append(" ")
-                }
+            val argsArray = JSONArray(args)
+            for (i in 0 until argsArray.length()) {
+                finalCommand.append(argsArray.getString(i)).append(" ")
             }
         } else {
             finalCommand.append(command)
@@ -210,9 +207,10 @@ class WebViewInterface(private val state: WebUIState) {
         return currentModuleInfo.toString()
     }
 
+    @Deprecated("Use ksu.pm().listPackages() instead")
     @JavascriptInterface
     fun listPackages(type: String): String {
-        val packageNames = SuperUserViewModel.apps
+        val packageNames = webUIApps()
             .filter { appInfo ->
                 if (appInfo.special) return@filter false
                 val flags = appInfo.packageInfo.applicationInfo?.flags ?: 0
@@ -232,11 +230,12 @@ class WebViewInterface(private val state: WebUIState) {
         return jsonArray.toString()
     }
 
+    @Deprecated("Use ksu.pm().getPackagesInfo() instead")
     @JavascriptInterface
     fun getPackagesInfo(packageNamesJson: String): String {
         val packageNames = JSONArray(packageNamesJson)
         val jsonArray = JSONArray()
-        val appMap = SuperUserViewModel.apps.filterNot { it.special }.associateBy { it.packageName }
+        val appMap = webUIApps().filterNot { it.special }.associateBy { it.packageName }
         for (i in 0 until packageNames.length()) {
             val pkgName = packageNames.getString(i)
             val appInfo = appMap[pkgName]
@@ -248,7 +247,7 @@ class WebViewInterface(private val state: WebUIState) {
                 obj.put("versionName", pkg.versionName ?: "")
                 obj.put("versionCode", PackageInfoCompat.getLongVersionCode(pkg))
                 obj.put("appLabel", appInfo.label)
-                obj.put("isSystem", if (app != null) ((app.flags and ApplicationInfo.FLAG_SYSTEM) != 0) else JSONObject.NULL)
+                obj.put("isSystem", app?.let { (it.flags and ApplicationInfo.FLAG_SYSTEM) != 0 } ?: JSONObject.NULL)
                 obj.put("uid", app?.uid ?: JSONObject.NULL)
                 jsonArray.put(obj)
             } else {
@@ -264,6 +263,16 @@ class WebViewInterface(private val state: WebUIState) {
     @JavascriptInterface
     fun exit() {
         state.requestExit()
+    }
+
+    @JavascriptInterface
+    fun io() = KsuIO
+
+    @JavascriptInterface
+    fun pm() = KsuPm
+
+    fun destroy() {
+        KsuIO.destroy()
     }
 }
 

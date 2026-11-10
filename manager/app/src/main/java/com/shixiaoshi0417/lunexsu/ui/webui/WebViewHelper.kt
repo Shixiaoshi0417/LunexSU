@@ -18,14 +18,21 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import androidx.webkit.WebViewAssetLoader
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import com.shixiaoshi0417.lunexsu.R
+import com.shixiaoshi0417.lunexsu.data.model.AppInfo
 import com.shixiaoshi0417.lunexsu.data.repository.ModuleRepositoryImpl
 import com.shixiaoshi0417.lunexsu.ui.util.AppIconCache
 import com.shixiaoshi0417.lunexsu.ui.util.createRootShell
 import com.shixiaoshi0417.lunexsu.ui.util.withMainUserUid
 import com.shixiaoshi0417.lunexsu.ui.viewmodel.SuperUserViewModel
 import java.io.File
+
+// Shared by the icon endpoint and the pm bridge; joins an in-flight app-list scan.
+internal fun webUIApps(): List<AppInfo> = runBlocking {
+    SuperUserViewModel.loadApps(useCache = true).getOrNull()?.first.orEmpty()
+}
 
 fun Activity.setTaskDescription(label: String) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
@@ -67,9 +74,6 @@ internal suspend fun prepareWebView(
         webUIState.moduleName = moduleInfo.name
         webUIState.modDir = "/data/adb/modules/${moduleId}"
 
-        if (SuperUserViewModel.apps.isEmpty()) {
-            SuperUserViewModel().fetchAppList()
-        }
         val shell = createRootShell(true)
         webUIState.rootShell = shell
 
@@ -108,7 +112,7 @@ internal suspend fun prepareWebView(
                 loadLocal = { url -> webViewAssetLoader.shouldInterceptRequest(url) },
                 loadIcon = { url ->
                     val packageName = url.path?.substring(1)
-                    val appInfo = SuperUserViewModel.apps
+                    val appInfo = webUIApps()
                         .find { it.packageName == packageName }
                         ?.packageInfo?.applicationInfo
                     if (appInfo == null) {
@@ -186,7 +190,9 @@ internal suspend fun prepareWebView(
 
             // Keep the existing local-module API (and demo's non-executing shell stubs).
             // These settings, client and CSP must remain installed for the bridge lifetime.
+            // Downloads stay disabled by configureLocalModuleWebView (see LOCAL_CONTENT_POLICY.md).
             val webviewInterface = WebViewInterface(webUIState)
+            webUIState.webViewInterface = webviewInterface
             webUIState.webView = webView
             webView.addJavascriptInterface(webviewInterface, "ksu")
             webUIState.uiEvent = WebUIEvent.WebViewReady

@@ -21,7 +21,10 @@ requests are independently denied. Never reuse this profile for other browsing.
   lookalike/trailing-dot hosts, backslashes, control characters, dot segments,
   encoded separators and double-encoded paths are rejected.
 - Local HTML, JS, CSS, local frames, inline scripts, eval, and the existing
-  `ksu` methods remain supported. The module's entire webroot is root-trusted,
+  `ksu` methods remain supported. The upstream `ksu.io()` (root file I/O via
+  SuFile) and `ksu.pm()` (package list) objects are part of the same full-trust
+  bridge and are revoked with it. In NoRootDemo `ksu.io()` reports version 0
+  and every factory throws, so SuFile never asks libsu for root. The module's entire webroot is root-trusted,
   including local SVG/HTML and any HTML it constructs in inherited-origin
   `about:blank`/`srcdoc` frames. The policy is not an HTML sanitizer.
 - `ksu://icon/<package>` is a non-main-frame GET-only image endpoint returning
@@ -38,7 +41,8 @@ requests are independently denied. Never reuse this profile for other browsing.
 
 Remote CDN scripts/styles/fonts/images, remote frames, fetch/XHR/WebSockets,
 remote forms, workers/service-worker registration, plugins/objects, custom
-scheme links, downloads, file/content URL access, and blob/data executable
+scheme links, downloads (including upstream's blob-download bridge, which is not
+merged), file/content URL access, and blob/data executable
 documents are no longer supported inside the bridged view. Bundle dependencies
 in `webroot` instead. `base` elements are disabled. The enforced CSP is attached
 to every intercepted response (including errors) so module meta tags cannot

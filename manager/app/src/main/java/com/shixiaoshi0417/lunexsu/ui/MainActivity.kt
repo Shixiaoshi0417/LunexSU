@@ -12,6 +12,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.os.SystemClock
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -52,8 +53,11 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -143,6 +147,7 @@ import com.shixiaoshi0417.lunexsu.ui.viewmodel.MainActivityViewModel
 import com.shixiaoshi0417.lunexsu.ui.viewmodel.MainPagerConfig
 import com.shixiaoshi0417.lunexsu.ui.viewmodel.ModuleViewModel
 import com.shixiaoshi0417.lunexsu.ui.viewmodel.SuperUserViewModel
+import com.shixiaoshi0417.lunexsu.R
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
@@ -219,12 +224,23 @@ class MainActivity : ComponentActivity() {
             }
 
             val navigator = rememberNavigator(Route.Main)
+            val context = LocalContext.current
+            val uriHandler = LocalUriHandler.current
             val systemDensity = LocalDensity.current
             val density = remember(systemDensity, uiState.pageScale) {
                 Density(systemDensity.density * uiState.pageScale, systemDensity.fontScale)
             }
 
             CompositionLocalProvider(
+                LocalUriHandler provides object : UriHandler {
+                    override fun openUri(uri: String) {
+                        try {
+                            uriHandler.openUri(uri)
+                        } catch (_: IllegalArgumentException) {
+                            Toast.makeText(context, R.string.external_link_open_failed, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                },
                 LocalNavigator provides navigator,
                 LocalDensity provides density,
                 LocalColorMode provides appSettings.colorMode.value,

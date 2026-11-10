@@ -26,8 +26,6 @@ OWNERS = {
     "component/profile/RootProfileConfigMaterial.kt": "profile/template viewport or scrolling SELinux dialog",
     "component/profile/RootProfileConfigMiuix.kt": "profile/template viewport or scrolling native overlay",
     "screen/home/HomeSuperkey.kt": "resizing dialogs; scrollable body above actions",
-    "screen/install/InstallMaterial.kt": "scrolling IME-padded page",
-    "screen/install/InstallMiuix.kt": "scrolling IME-padded page",
     "screen/install/InstallSuperkey.kt": "install viewport or Superkey dialog",
     "screen/module/ModuleMaterial.kt": "Material sheet owns IME; shortcut form scrolls",
     "screen/module/ModuleMiuix.kt": "native overlay owns IME; shortcut form scrolls",
