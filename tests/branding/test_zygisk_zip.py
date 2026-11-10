@@ -73,24 +73,24 @@ class ZygiskZipTests(unittest.TestCase):
         match = re.search(r'val nextNextZip = PinnedAsset\(\s*"([^"]+)",\s*"([0-9a-f]{64})"', build)
         self.assertIsNotNone(match)
         url, digest = match.groups()
-        self.assertEqual(url, "https://github.com/VeryBaaad/ZygiskNextNext/releases/download/"
-                              "v1.12.0/Zygisk-Next-Next-v1.12.0-202-ca4d4b7-release.zip")
-        self.assertEqual(digest, "d7bf2cc7eda22fa2e918029eddf71f2b368c3613f6cbf671acb21e38af498d74")
+        self.assertEqual(url, "https://github.com/VeryBaaad/ZNNext/releases/download/"
+                              "v2.16.0/ZNNext-v2.16.0-371-52b358c-release.zip")
+        self.assertEqual(digest, "0915c496189e2130b4cbd754f3de0cefc5b35a74951115d0e0610ce8b89f2534")
         stored = re.search(r'val nextNextStoredSha256 = "([0-9a-f]{64})"', build).group(1)
-        self.assertEqual(stored, "e818e03c522a6c1e5e513c76aa8e365589b2f17d87c0085dc5b348dee1f7330e")
+        self.assertEqual(stored, "61f06452f111f4a7b9e140f605bf6a0017952fff950e57f7648f26856a7ab88b")
         for value in (url.rsplit("/", 1)[-1], digest, stored):
             self.assertIn(value, docs)
 
     def test_nextnext_source_and_license_are_commit_pinned(self):
-        commit = "ca4d4b7a5dd06f83c228ec23cb25ea49dfe5c8f2"
+        commit = "52b358c6a9de6b2f32aa848a95121ae61c624c3b"
         build = (ROOT / "manager/app/build.gradle.kts").read_text(encoding="utf-8")
         docs = (ROOT / "docs/lunexsu-zygisk.md").read_text(encoding="utf-8")
-        self.assertIn(f"https://raw.githubusercontent.com/VeryBaaad/ZygiskNextNext/{commit}/LICENSE", build)
-        self.assertIn(f"https://github.com/VeryBaaad/ZygiskNextNext/tree/{commit}", docs)
+        self.assertIn(f"https://raw.githubusercontent.com/VeryBaaad/ZNNext/{commit}/LICENSE", build)
+        self.assertIn(f"https://github.com/VeryBaaad/ZNNext/tree/{commit}", docs)
 
     def test_demo_nextnext_version_matches_bundle(self):
         demo = ROOT / "manager/app/src/noRootDemo/java/com/shixiaoshi0417/lunexsu/data/zygisk/DemoBuiltinZygisk.kt"
-        self.assertIn('ZygiskModule.NextNext.moduleId to ZygiskModuleVersion(installed = "1.12.0 (DEMO)")',
+        self.assertIn('ZygiskModule.NextNext.moduleId to ZygiskModuleVersion(installed = "2.16.0 (DEMO)")',
                       demo.read_text(encoding="utf-8"))
 
 
