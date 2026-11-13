@@ -87,7 +87,9 @@ internal fun SegmentedColumn(modifier: Modifier = Modifier, title: String = "", 
     } else {
         val scope = SegmentedColumnScope().apply(content)
         Column(modifier) {
-            if (title.isNotEmpty()) Text(title, Modifier.padding(start = 16.dp, bottom = 8.dp), style = MaterialTheme.typography.titleSmall)
+            // Match MIUIX SmallTitle: muted section labels, so cards stay the visual focus.
+            if (title.isNotEmpty()) Text(title, Modifier.padding(start = 16.dp, bottom = 8.dp),
+                style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Card(Modifier.fillMaxWidth()) {
                 Column {
                     scope.entries.filter { it.visible }.forEachIndexed { index, entry ->
