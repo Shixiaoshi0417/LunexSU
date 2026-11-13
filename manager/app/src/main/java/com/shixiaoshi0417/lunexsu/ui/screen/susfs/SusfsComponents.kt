@@ -114,12 +114,13 @@ internal fun SegmentedListItem(headlineContent: @Composable () -> Unit,
             selected = selected, onClick = onClick)
     } else {
         Row(Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier)
-            .alpha(if (enabled) 1f else 0.38f).padding(horizontal = 16.dp, vertical = 14.dp),
+            .alpha(if (enabled) 1f else 0.38f).padding(16.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             leadingContent?.invoke()
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                ProvideTextStyle(MaterialTheme.typography.bodyLarge, headlineContent)
-                supportingContent?.let { ProvideTextStyle(MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant), it) }
+                // Same type scale as the MIUIX preference rows that share these cards.
+                ProvideTextStyle(MiuixTheme.textStyles.headline1, headlineContent)
+                supportingContent?.let { ProvideTextStyle(MiuixTheme.textStyles.body2.copy(color = MaterialTheme.colorScheme.onSurfaceVariant), it) }
             }
             trailingContent?.invoke()
         }
@@ -136,11 +137,15 @@ internal fun SegmentedSwitchItem(title: String, summary: String? = null, checked
 @Composable
 internal fun AlertDialog(onDismissRequest: () -> Unit, title: @Composable () -> Unit,
     text: @Composable () -> Unit, confirmButton: @Composable () -> Unit, dismissButton: (@Composable () -> Unit)? = null) {
-    if (miuix) SusfsNativeColors { WindowDialog(show = true, title = "", onDismissRequest = onDismissRequest) {
+    // A null title skips the native title slot; an empty string would still reserve its spacing.
+    if (miuix) SusfsNativeColors { WindowDialog(show = true, title = null, onDismissRequest = onDismissRequest) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             ProvideTextStyle(MaterialTheme.typography.titleLarge, title)
             // Bound the editor's own scroll container above the action row.
-            Column(Modifier.weight(1f, fill = false)) { text() }
+            // Material dialogs default their body to bodyMedium; keep both skins on one scale.
+            ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
+                Column(Modifier.weight(1f, fill = false)) { text() }
+            }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 dismissButton?.invoke()
                 Spacer(Modifier.width(12.dp))
