@@ -3,6 +3,11 @@ package com.shixiaoshi0417.lunexsu.ui.screen.home
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Key
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.data.SavedSuperkey
 import com.shixiaoshi0417.lunexsu.data.SuperkeyAuthenticationResult
@@ -29,9 +35,10 @@ import com.shixiaoshi0417.lunexsu.ui.component.material.SegmentedListItem
 import com.shixiaoshi0417.lunexsu.ui.screen.install.SuperkeyField
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
+import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
 
@@ -39,11 +46,27 @@ import top.yukonga.miuix.kmp.window.WindowDialog
 internal fun SuperkeyEntry(onClick: () -> Unit) {
     if (LocalUiMode.current == UiMode.Miuix) {
         Card(Modifier.fillMaxWidth()) {
-            BasicComponent(title = stringResource(R.string.superkey_enter), onClick = onClick)
+            ArrowPreference(
+                title = stringResource(R.string.superkey_enter),
+                startAction = {
+                    MiuixIcon(
+                        Icons.Rounded.Key,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 6.dp),
+                        tint = MiuixTheme.colorScheme.onBackground,
+                    )
+                },
+                onClick = onClick,
+            )
         }
     } else {
         SegmentedColumn(content = listOf({
-            SegmentedListItem(headlineContent = { Text(stringResource(R.string.superkey_enter)) }, onClick = onClick)
+            SegmentedListItem(
+                headlineContent = { Text(stringResource(R.string.superkey_enter)) },
+                leadingContent = { Icon(Icons.Rounded.Key, contentDescription = null) },
+                trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
+                onClick = onClick,
+            )
         }))
     }
 }
