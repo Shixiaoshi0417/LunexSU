@@ -210,9 +210,11 @@ private fun SusfsNotice(state: SusfsUiState) {
                 supportingContent = state.status.error?.let { detail -> ({ Text(detail) }) },
                 leadingContent = { Icon(Icons.Rounded.Info, null) }) } }
             state.message?.let { item { SegmentedListItem(headlineContent = { Text(it, color = MaterialTheme.colorScheme.error) },
-                supportingContent = { Text(stringResource(R.string.susfs_error_hint)) }) } }
+                supportingContent = { Text(stringResource(R.string.susfs_error_hint)) },
+                leadingContent = { Icon(Icons.Rounded.ErrorOutline, null, tint = MaterialTheme.colorScheme.error) }) } }
             if (state.savedNotice) item { SegmentedListItem(headlineContent = { Text(stringResource(R.string.susfs_save_success)) },
-                supportingContent = { Text(stringResource(R.string.susfs_save_success_hint)) }) }
+                supportingContent = { Text(stringResource(R.string.susfs_save_success_hint)) },
+                leadingContent = { Icon(Icons.Rounded.CheckCircle, null, tint = MaterialTheme.colorScheme.primary) }) }
         }
     }
 }
@@ -231,9 +233,11 @@ private fun SusfsOverview(state: SusfsUiState, config: JSONObject?, writable: Bo
         })) }, supportingContent = { Text(listOf(status.version, status.implementation, status.variant).filter(String::isNotEmpty).joinToString(" · ")) },
             leadingContent = { Icon(Icons.Rounded.VisibilityOff, null) }) }
         item { SegmentedListItem(headlineContent = { Text(susfsManagementLabel(status.management)) },
-            supportingContent = { Text(stringResource(R.string.susfs_ack_hint)) }) }
+            supportingContent = { Text(stringResource(R.string.susfs_ack_hint)) },
+            leadingContent = { SusfsStatusIcon(status.management) }) }
         item { SegmentedListItem(headlineContent = { Text(stringResource(R.string.susfs_saved_counts,
-            config?.optJSONArray("rules")?.length() ?: 0)) }, supportingContent = { Text(stringResource(R.string.susfs_ownership)) }) }
+            config?.optJSONArray("rules")?.length() ?: 0)) }, supportingContent = { Text(stringResource(R.string.susfs_ownership)) },
+            leadingContent = { Icon(Icons.Rounded.Checklist, null) }) }
         item { SegmentedSwitchItem(title = stringResource(R.string.susfs_automatic),
             summary = stringResource(R.string.susfs_automatic_hint), checked = status.automatic, enabled = writable,
             onCheckedChange = { value -> vm.change { it.put("automatic", value) } }) }
@@ -245,13 +249,14 @@ private fun SusfsOverview(state: SusfsUiState, config: JSONObject?, writable: Bo
     state.report?.let { report ->
         SegmentedColumn(title = stringResource(R.string.susfs_last_report)) {
             item { SegmentedListItem(headlineContent = { Text(susfsManagementLabel(report.status)) },
-                supportingContent = { Text(stringResource(R.string.susfs_report_hint)) }) }
+                supportingContent = { Text(stringResource(R.string.susfs_report_hint)) },
+                leadingContent = { SusfsStatusIcon(report.status) }) }
             report.applied.forEach { key -> item(key = "ok:$key") { SegmentedListItem(
                 headlineContent = { Text(susfsOperationName(key)) }, supportingContent = { Text(stringResource(R.string.susfs_acknowledged)) },
-                leadingContent = { Icon(Icons.Rounded.CheckCircle, null) }) } }
+                leadingContent = { Icon(Icons.Rounded.CheckCircle, null, tint = MaterialTheme.colorScheme.primary) }) } }
             report.failures.forEach { (key, error) -> item(key = "error:$key") { SegmentedListItem(
                 headlineContent = { Text(susfsOperationName(key)) }, supportingContent = { Text(error, color = MaterialTheme.colorScheme.error) },
-                leadingContent = { Icon(Icons.Rounded.ErrorOutline, null) }) } }
+                leadingContent = { Icon(Icons.Rounded.ErrorOutline, null, tint = MaterialTheme.colorScheme.error) }) } }
             report.pendingReboot.forEach { key -> item(key = "pending:$key") { SegmentedListItem(
                 headlineContent = { Text(susfsOperationName(key)) }, supportingContent = { Text(stringResource(R.string.susfs_pending)) },
                 leadingContent = { Icon(Icons.Rounded.Schedule, null) }) } }
@@ -264,9 +269,29 @@ private fun SusfsOverview(state: SusfsUiState, config: JSONObject?, writable: Bo
             headlineContent = { Text(stringResource(R.string.susfs_export)) }, leadingContent = { Icon(Icons.Rounded.SaveAlt, null) }) }
     }
     SegmentedColumn(title = stringResource(R.string.susfs_capabilities)) {
-        status.features.forEach { feature -> item(key = feature) { SegmentedListItem(headlineContent = { Text(feature.removePrefix("CONFIG_KSU_SUSFS_")) }) } }
-        if (status.features.isEmpty()) item { SegmentedListItem(headlineContent = { Text(stringResource(R.string.susfs_unsupported)) }) }
+        // One wrapped chip group instead of a full-height row per kernel option.
+        if (status.features.isNotEmpty()) item { SegmentedListItem(headlineContent = {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                status.features.forEach { feature -> SusfsFeatureChip(feature.removePrefix("CONFIG_KSU_SUSFS_")) }
+            }
+        }) }
+        else item { SegmentedListItem(headlineContent = { Text(stringResource(R.string.susfs_unsupported)) }) }
     }
+}
+
+@Composable
+private fun SusfsStatusIcon(status: String) = when (status) {
+    "applied" -> Icon(Icons.Rounded.CheckCircle, null, tint = MaterialTheme.colorScheme.primary)
+    "failed" -> Icon(Icons.Rounded.ErrorOutline, null, tint = MaterialTheme.colorScheme.error)
+    "pending_reboot" -> Icon(Icons.Rounded.Schedule, null)
+    else -> Icon(Icons.Rounded.Save, null)
+}
+
+@Composable
+private fun SusfsFeatureChip(name: String) {
+    Text(name, Modifier.background(MaterialTheme.colorScheme.secondaryContainer, FolkShape.CornerFull)
+        .padding(horizontal = 12.dp, vertical = 6.dp),
+        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
 }
 
 @Composable

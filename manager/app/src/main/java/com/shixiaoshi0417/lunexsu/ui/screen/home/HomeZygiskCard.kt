@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.Memory
@@ -38,6 +39,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.shixiaoshi0417.lunexsu.R
 import com.shixiaoshi0417.lunexsu.data.zygisk.ZygiskModuleVersion
@@ -117,8 +119,8 @@ private fun ZygiskCardContent(overview: ZygiskOverview, safeMode: Boolean, expan
             enter = expandVertically(tween(300)) + fadeIn(tween(220)),
             exit = shrinkVertically(tween(260)) + fadeOut(tween(180)),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                HorizontalDivider(Modifier.padding(top = 16.dp), color = summary.copy(alpha = 0.18f))
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                HorizontalDivider(Modifier.padding(top = 16.dp, bottom = 2.dp), color = summary.copy(alpha = 0.18f))
                 if (overview.available) {
                     ZygiskDetail(R.string.home_zygisk_backend, overview.status.configured?.displayName
                         ?: stringResource(R.string.home_zygisk_none), native, foreground, summary)
@@ -126,18 +128,28 @@ private fun ZygiskCardContent(overview: ZygiskOverview, safeMode: Boolean, expan
                         R.string.home_zygisk_detected else R.string.home_zygisk_not_detected), native, foreground, summary)
                     ZygiskDetail(R.string.home_zygisk_znn, stringResource(if (overview.status.nextNextConfigured)
                         R.string.home_zygisk_znn_configured else R.string.home_zygisk_none), native, foreground, summary)
+                    overview.status.conflictId?.let { ZygiskDetail(R.string.home_zygisk_external, it, native, error, summary) }
+                    HorizontalDivider(Modifier.padding(vertical = 2.dp), color = summary.copy(alpha = 0.12f))
                     listOf("rezygisk" to "ReZygisk", "zygisksu" to "NeoZygisk", "zygisknextsu" to "ZNN").forEach { (id, name) ->
                         ZygiskDetailText(name, versionText(overview.versions[id]), native, foreground, summary)
                     }
-                    overview.status.conflictId?.let { ZygiskDetail(R.string.home_zygisk_external, it, native, foreground, error) }
-                    if (overview.status.legacyVex) {
-                        ZygiskText(stringResource(R.string.settings_zygisk_legacy_vex), native, error)
-                    }
-                    ZygiskText(stringResource(R.string.home_zygisk_observation_hint), native, summary)
+                    ZygiskText(stringResource(R.string.home_zygisk_observation_hint), native, summary, small = true,
+                        modifier = Modifier.padding(top = 4.dp))
                 } else {
-                    ZygiskText(stringResource(R.string.home_zygisk_query_hint), native, summary)
+                    ZygiskText(stringResource(R.string.home_zygisk_query_hint), native, summary, small = true)
                 }
-                ZygiskText(stringResource(R.string.settings_zygisk_nextnext_risk_summary), native, error)
+                // Risk notes share one tinted block so they read as warnings, not as more status rows.
+                Column(
+                    Modifier.fillMaxWidth().padding(top = 4.dp)
+                        .background(error.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    if (overview.available && overview.status.legacyVex) {
+                        ZygiskText(stringResource(R.string.settings_zygisk_legacy_vex), native, error, small = true)
+                    }
+                    ZygiskText(stringResource(R.string.settings_zygisk_nextnext_risk_summary), native, error, small = true)
+                }
             }
         }
     }
@@ -156,19 +168,38 @@ private fun ZygiskDetail(label: Int, value: String, native: Boolean, foreground:
 
 @Composable
 private fun ZygiskDetailText(label: String, value: String, native: Boolean, foreground: Color, summary: Color) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        ZygiskText(label, native, summary)
-        ZygiskText(value, native, foreground)
+    // Label and value on one line keep the expanded card short and scannable.
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        ZygiskText(label, native, summary, modifier = Modifier.weight(1f))
+        ZygiskText(value, native, foreground, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
     }
 }
 
 @Composable
-private fun ZygiskText(text: String, native: Boolean, color: Color, title: Boolean = false) {
+private fun ZygiskText(
+    text: String,
+    native: Boolean,
+    color: Color,
+    modifier: Modifier = Modifier,
+    title: Boolean = false,
+    small: Boolean = false,
+    textAlign: TextAlign? = null,
+) {
     if (native) {
-        MiuixText(text, color = color, fontSize = if (title) MiuixTheme.textStyles.headline1.fontSize else MiuixTheme.textStyles.body2.fontSize,
+        val size = when {
+            title -> MiuixTheme.textStyles.headline1.fontSize
+            small -> MiuixTheme.textStyles.footnote1.fontSize
+            else -> MiuixTheme.textStyles.body2.fontSize
+        }
+        MiuixText(text, modifier = modifier, color = color, fontSize = size, textAlign = textAlign,
             fontWeight = if (title) FontWeight.SemiBold else FontWeight.Normal)
     } else {
-        Text(text, color = color, style = if (title) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
+        val style = when {
+            title -> MaterialTheme.typography.titleMedium
+            small -> MaterialTheme.typography.bodySmall
+            else -> MaterialTheme.typography.bodyMedium
+        }
+        Text(text, modifier = modifier, color = color, style = style, textAlign = textAlign,
             fontWeight = if (title) FontWeight.SemiBold else FontWeight.Normal)
     }
 }
