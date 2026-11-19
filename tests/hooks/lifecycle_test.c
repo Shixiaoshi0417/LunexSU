@@ -244,7 +244,7 @@ static struct { pthread_mutex_t status_lock; } selinux_state = { PTHREAD_MUTEX_I
 static struct { int key; } fake_status_initialize_key;
 static int freed_pages, handler_registered = 1;
 static void *fake_status;
-static struct ksu_lsm_hook selinux_setprocattr_hook;
+static struct ksu_lsm_hook selinux_setprocattr_hook, selinux_inode_setxattr_hook;
 #define KSU_FEATURE_SELINUX_HIDE 4
 #define static_key_disable(p) ((void)(p))
 #define static_branch_unlikely(p) ((void)(p), false)
