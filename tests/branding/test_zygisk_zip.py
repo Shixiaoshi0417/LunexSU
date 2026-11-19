@@ -74,23 +74,24 @@ class ZygiskZipTests(unittest.TestCase):
         self.assertIsNotNone(match)
         url, digest = match.groups()
         self.assertEqual(url, "https://github.com/VeryBaaad/ZNNext/releases/download/"
-                              "v2.16.0/ZNNext-v2.16.0-371-52b358c-release.zip")
-        self.assertEqual(digest, "0915c496189e2130b4cbd754f3de0cefc5b35a74951115d0e0610ce8b89f2534")
+                              "v2.18.0.2/ZNNext-v2.18.0.2-424-770efca-release.zip")
+        self.assertEqual(digest, "38340b3ce132abf8dc56ee3af1429a728308cc33037c2778219195632172b746")
         stored = re.search(r'val nextNextStoredSha256 = "([0-9a-f]{64})"', build).group(1)
-        self.assertEqual(stored, "61f06452f111f4a7b9e140f605bf6a0017952fff950e57f7648f26856a7ab88b")
+        self.assertEqual(stored, "dbe0a2ac570873ad62b10a66ed3dd2f0b80bb926be41dd567f08363efff652ce")
         for value in (url.rsplit("/", 1)[-1], digest, stored):
             self.assertIn(value, docs)
 
     def test_nextnext_source_and_license_are_commit_pinned(self):
-        commit = "52b358c6a9de6b2f32aa848a95121ae61c624c3b"
+        commit = "770efca8c4ac2f1ab491962b1529f535807d9c21"
         build = (ROOT / "manager/app/build.gradle.kts").read_text(encoding="utf-8")
         docs = (ROOT / "docs/lunexsu-zygisk.md").read_text(encoding="utf-8")
         self.assertIn(f"https://raw.githubusercontent.com/VeryBaaad/ZNNext/{commit}/LICENSE", build)
+        self.assertIn(f"https://raw.githubusercontent.com/VeryBaaad/ZNNext/{commit}/LICENSE-DCLPL", build)
         self.assertIn(f"https://github.com/VeryBaaad/ZNNext/tree/{commit}", docs)
 
     def test_demo_nextnext_version_matches_bundle(self):
         demo = ROOT / "manager/app/src/noRootDemo/java/com/shixiaoshi0417/lunexsu/data/zygisk/DemoBuiltinZygisk.kt"
-        self.assertIn('ZygiskModule.NextNext.moduleId to ZygiskModuleVersion(installed = "2.16.0 (DEMO)")',
+        self.assertIn('ZygiskModule.NextNext.moduleId to ZygiskModuleVersion(installed = "2.18.0.2 (DEMO)")',
                       demo.read_text(encoding="utf-8"))
 
 
