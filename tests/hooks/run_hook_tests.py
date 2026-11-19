@@ -39,7 +39,9 @@ def function(text, name):
 class StructuralTests(unittest.TestCase):
     def test_all_callbacks_have_sleepable_read_sections(self):
         text = HIDE.read_text()
-        for name in ("my_write_context", "my_write_access", "my_setprocattr", "my_sel_open_handle_status"):
+        for name in (
+            "my_write_context", "my_write_access", "my_setprocattr", "my_inode_setxattr", "my_sel_open_handle_status"
+        ):
             body = function(text, name)
             self.assertLess(body.index("ksu_hook_read_lock"), body.index("= handle_"))
             self.assertLess(body.index("= handle_"), body.index("srcu_read_unlock"))

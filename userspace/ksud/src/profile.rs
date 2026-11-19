@@ -86,32 +86,32 @@ fn remove_profile(base: &Path, id: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn set_sepolicy(pkg: String, policy: String) -> Result<()> {
-    write_profile(Path::new(defs::PROFILE_SELINUX_DIR), &pkg, &policy)?;
+pub fn set_sepolicy(pkg: &str, policy: String) -> Result<()> {
+    write_profile(Path::new(defs::PROFILE_SELINUX_DIR), pkg, &policy)?;
     // Apply the bytes just saved, without reopening an attacker-replaceable path.
     sepolicy::live_patch(&policy)?;
     Ok(())
 }
 
-pub fn get_sepolicy(pkg: String) -> Result<()> {
-    let policy = read_profile(Path::new(defs::PROFILE_SELINUX_DIR), &pkg)?;
+pub fn get_sepolicy(pkg: &str) -> Result<()> {
+    let policy = read_profile(Path::new(defs::PROFILE_SELINUX_DIR), pkg)?;
     println!("{policy}");
     Ok(())
 }
 
 // ksud stores template JSON without interpreting its profile/JNI fields.
-pub fn set_template(id: String, template: String) -> Result<()> {
-    write_profile(Path::new(defs::PROFILE_TEMPLATE_DIR), &id, &template)
+pub fn set_template(id: &str, template: String) -> Result<()> {
+    write_profile(Path::new(defs::PROFILE_TEMPLATE_DIR), id, &template)
 }
 
-pub fn get_template(id: String) -> Result<()> {
-    let template = read_profile(Path::new(defs::PROFILE_TEMPLATE_DIR), &id)?;
+pub fn get_template(id: &str) -> Result<()> {
+    let template = read_profile(Path::new(defs::PROFILE_TEMPLATE_DIR), id)?;
     println!("{template}");
     Ok(())
 }
 
-pub fn delete_template(id: String) -> Result<()> {
-    remove_profile(Path::new(defs::PROFILE_TEMPLATE_DIR), &id)
+pub fn delete_template(id: &str) -> Result<()> {
+    remove_profile(Path::new(defs::PROFILE_TEMPLATE_DIR), id)
 }
 
 pub fn list_templates() -> Result<()> {
