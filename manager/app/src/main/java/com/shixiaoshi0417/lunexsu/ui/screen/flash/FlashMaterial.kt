@@ -66,7 +66,7 @@ fun FlashScreenMaterial(
         snackbarHost = {
             SnackBarHost(
                 hostState = snackBarHost,
-                modifier = Modifier.let { if (state.flashingStatus == FlashingStatus.SUCCESS) it else it.safeDrawingPadding() })
+                modifier = Modifier.let { if (state.flashingStatus == FlashingStatus.SUCCESS || state.showRebootAction) it else it.safeDrawingPadding() })
         },
         topBar = {
             TopAppBar(
@@ -93,7 +93,8 @@ fun FlashScreenMaterial(
             )
         },
         floatingActionButton = {
-            if (state.flashingStatus == FlashingStatus.SUCCESS) {
+            // A failed batch can still leave earlier modules waiting for a reboot.
+            if (state.flashingStatus == FlashingStatus.SUCCESS || state.showRebootAction) {
                 val isRebootAction = state.showRebootAction
                 SmallExtendedFloatingActionButton(
                     onClick = { if (!state.actionInProgress) { if (isRebootAction) actions.onReboot() else actions.onClose() } },

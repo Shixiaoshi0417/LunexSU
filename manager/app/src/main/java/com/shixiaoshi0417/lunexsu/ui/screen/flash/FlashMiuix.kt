@@ -95,7 +95,8 @@ fun FlashScreenMiuix(
             )
         },
         floatingActionButton = {
-            if (state.flashingStatus == FlashingStatus.SUCCESS) {
+            // A failed batch can still leave earlier modules waiting for a reboot.
+            if (state.flashingStatus == FlashingStatus.SUCCESS || state.showRebootAction) {
                 val isRebootAction = state.showRebootAction
                 FloatingActionButton(
                     modifier = Modifier
